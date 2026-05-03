@@ -58,7 +58,7 @@ export default function BrandMark() {
         }}
       >
         <img
-          src="/brand/tutovera-app-icon.png"
+          src="/brand/exact/tutovera-app-icon.png"
           alt=""
           aria-hidden="true"
           style={{
@@ -87,7 +87,7 @@ export default function BrandMark() {
           }}
         >
           <img
-            src="/brand/tutovera-wordmark.svg"
+            src="/brand/transparent/tutovera-wordmark-transparent.svg"
             alt="TutoVera"
             style={{
               display: 'block',

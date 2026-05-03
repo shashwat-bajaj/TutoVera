@@ -45,10 +45,10 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/favicon.ico' },
-      { url: '/brand/tutovera-favicon-source.png', type: 'image/png' },
-      { url: '/brand/tutovera-app-icon.png', type: 'image/png' }
+      { url: '/brand/exact/tutovera-favicon-source.png', type: 'image/png' },
+      { url: '/brand/exact/tutovera-app-icon.png', type: 'image/png' }
     ],
-    apple: [{ url: '/brand/tutovera-app-icon.png', type: 'image/png' }]
+    apple: [{ url: '/brand/exact/tutovera-app-icon.png', type: 'image/png' }]
   },
   manifest: '/manifest.webmanifest',
   openGraph: {

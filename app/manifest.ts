@@ -14,13 +14,13 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['education', 'productivity'],
     icons: [
       {
-        src: '/brand/tutovera-app-icon.png',
+        src: '/brand/exact/tutovera-app-icon.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: '/brand/tutovera-app-icon.png',
+        src: '/brand/exact/tutovera-app-icon.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'
