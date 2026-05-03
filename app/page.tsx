@@ -12,6 +12,8 @@ export default function HomePage() {
       <section className="homeLead">
         <div className="homeLeadGrid">
           <div className="homeLeadCopy">
+            <span className="badge">TutoVera learning platform · Since 2026</span>
+
             <h1 className="homeLeadTitle">Solve. Understand. Improve.</h1>
 
             <p className="homeLeadSubtext">
