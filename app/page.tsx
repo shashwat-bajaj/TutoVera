@@ -12,14 +12,14 @@ export default function HomePage() {
       <section className="homeLead">
         <div className="homeLeadGrid">
           <div className="homeLeadCopy">
-            <span className="badge">TutoVera learning platform</span>
+            <span className="badge">TutoVera learning platform · Since 2026</span>
 
-            <h1 className="homeLeadTitle">Tutoring you can trust, across every subject branch.</h1>
+            <h1 className="homeLeadTitle">Solve. Understand. Improve.</h1>
 
             <p className="homeLeadSubtext">
-              TutoVera is a calm AI learning platform with active support for Math, Physics,
-              Chemistry, and Biology. Each subject has its own learning workspace while sharing one
-              account, one history foundation, and one connected product experience.
+              TutoVera is a calm AI learning platform for Math, Physics, Chemistry, and Biology.
+              Each subject has its own student and parent workspace while sharing one account, one
+              history foundation, and one connected product experience.
             </p>
 
             <div className="buttonRow">
@@ -33,23 +33,24 @@ export default function HomePage() {
 
             <div className="homeLeadProof">
               <div className="homeLeadProofItem">
-                <strong>Trusted guidance</strong>
+                <strong>Solve</strong>
                 <p className="small" style={{ margin: 0 }}>
-                  Built around clearer explanations, follow-ups, and steady learning support.
+                  Get guided help with questions, examples, practice, and follow-ups across active
+                  subject branches.
                 </p>
               </div>
 
               <div className="homeLeadProofItem">
-                <strong>Active branches</strong>
+                <strong>Understand</strong>
                 <p className="small" style={{ margin: 0 }}>
-                  {activeSubjects.map((subject) => subject.name).join(', ')} are active now.
+                  Learn the reasoning behind the answer with clearer explanations and steady support.
                 </p>
               </div>
 
               <div className="homeLeadProofItem">
-                <strong>One foundation</strong>
+                <strong>Improve</strong>
                 <p className="small" style={{ margin: 0 }}>
-                  Shared account, settings, history, deployment, and backend structure.
+                  Save sessions, continue earlier threads, and build stronger study flow over time.
                 </p>
               </div>
             </div>
@@ -71,7 +72,7 @@ export default function HomePage() {
                   <div className="homePreviewPrompt">
                     <p className="small" style={{ margin: 0 }}>
                       I need help learning a topic, but I want the explanation to feel clear,
-                      trustworthy, and easy to continue.
+                      useful, and easy to continue.
                     </p>
                   </div>
 
@@ -166,7 +167,7 @@ export default function HomePage() {
             <h2 style={{ margin: 0 }}>A consistent learning experience across active branches.</h2>
             <p className="small" style={{ margin: 0, maxWidth: 920 }}>
               The current focus is making all active branches feel stable, useful, and consistent
-              before adding larger future tools, premium access, or mobile app features.
+              while preparing launch-ready branding, paid access, and future study tools.
             </p>
           </div>
 
