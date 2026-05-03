@@ -5,25 +5,25 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'TutoVera',
     short_name: 'TutoVera',
     description:
-      'A calm AI learning platform for Math, Physics, Chemistry, and Biology.',
+      'Solve. Understand. Improve. A calm AI learning platform for Math, Physics, Chemistry, and Biology.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    background_color: '#101426',
-    theme_color: '#101426',
+    background_color: '#0B1D3A',
+    theme_color: '#0B1D3A',
     categories: ['education', 'productivity'],
     icons: [
       {
-        src: '/icon',
-        sizes: '32x32',
+        src: '/brand/tutovera-app-icon.png',
+        sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: '/apple-icon',
-        sizes: '180x180',
+        src: '/brand/tutovera-app-icon.png',
+        sizes: '512x512',
         type: 'image/png',
-        purpose: 'any'
+        purpose: 'maskable'
       }
     ]
   };

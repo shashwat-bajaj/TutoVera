@@ -45,9 +45,10 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/favicon.ico' },
-      { url: '/icon', type: 'image/png', sizes: '32x32' }
+      { url: '/brand/tutovera-favicon-source.png', type: 'image/png' },
+      { url: '/brand/tutovera-app-icon.png', type: 'image/png' }
     ],
-    apple: [{ url: '/apple-icon', type: 'image/png', sizes: '180x180' }]
+    apple: [{ url: '/brand/tutovera-app-icon.png', type: 'image/png' }]
   },
   manifest: '/manifest.webmanifest',
   openGraph: {
@@ -80,13 +81,14 @@ export const viewport: Viewport = {
   initialScale: 1,
   colorScheme: 'dark light',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f6f1e8' },
-    { media: '(prefers-color-scheme: dark)', color: '#101426' }
+    { media: '(prefers-color-scheme: light)', color: '#F6F9FD' },
+    { media: '(prefers-color-scheme: dark)', color: '#0B1D3A' }
   ]
 };
 
 const footerLinks = [
   { href: '/about', label: 'About' },
+  { href: '/subjects', label: 'Subjects' },
   { href: '/contact', label: 'Contact' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/settings', label: 'Settings' },
