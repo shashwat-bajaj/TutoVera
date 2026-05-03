@@ -19,13 +19,14 @@ export const metadata: Metadata = {
     template: '%s | TutoVera'
   },
   description:
-    'TutoVera is a calm AI learning platform for Math, Physics, Chemistry, and Biology, with student and parent workspaces, saved history, and guided learning support.',
+    'Solve. Understand. Improve. TutoVera is a calm AI learning platform for Math, Physics, Chemistry, and Biology, with student and parent workspaces, saved history, and guided learning support.',
   applicationName: 'TutoVera',
   authors: [{ name: 'TutoVera' }],
   creator: 'TutoVera',
   publisher: 'TutoVera',
   keywords: [
     'TutoVera',
+    'Solve Understand Improve',
     'AI tutor',
     'AI learning platform',
     'math tutor',
@@ -53,7 +54,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: '/',
     siteName: 'TutoVera',
-    title: 'TutoVera',
+    title: 'TutoVera — Solve. Understand. Improve.',
     description:
       'A calm AI learning platform for Math, Physics, Chemistry, and Biology, built around student and parent workspaces.',
     images: [
@@ -61,13 +62,13 @@ export const metadata: Metadata = {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'TutoVera learning platform preview'
+        alt: 'TutoVera — Solve. Understand. Improve.'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TutoVera',
+    title: 'TutoVera — Solve. Understand. Improve.',
     description:
       'A calm AI learning platform for Math, Physics, Chemistry, and Biology.',
     images: ['/twitter-image']

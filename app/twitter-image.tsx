@@ -79,24 +79,25 @@ export default function TwitterImage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 900 }}>
             <div
               style={{
-                fontSize: 72,
+                fontSize: 74,
                 lineHeight: 0.96,
                 letterSpacing: '-0.06em',
                 fontWeight: 880
               }}
             >
-              A calmer AI learning platform for students and parents.
+              Solve. Understand. Improve.
             </div>
 
             <div
               style={{
-                fontSize: 25,
+                fontSize: 27,
                 lineHeight: 1.35,
                 color: 'rgba(248,243,234,0.76)',
-                maxWidth: 820
+                maxWidth: 840
               }}
             >
-              Guided support, saved sessions, and subject-specific workspaces.
+              Guided support, saved sessions, and subject-specific workspaces for students and
+              parents.
             </div>
           </div>
 

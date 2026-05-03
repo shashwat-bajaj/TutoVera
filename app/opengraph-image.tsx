@@ -76,27 +76,28 @@ export default function OpenGraphImage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 860 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 900 }}>
             <div
               style={{
-                fontSize: 70,
+                fontSize: 74,
                 lineHeight: 0.96,
                 letterSpacing: '-0.06em',
                 fontWeight: 880
               }}
             >
-              Learning support built to feel clearer and more continuous.
+              Solve. Understand. Improve.
             </div>
 
             <div
               style={{
-                fontSize: 25,
+                fontSize: 27,
                 lineHeight: 1.35,
                 color: 'rgba(248,243,234,0.76)',
-                maxWidth: 820
+                maxWidth: 840
               }}
             >
-              Student and parent workspaces for Math, Physics, Chemistry, and Biology.
+              A calm AI learning platform with student and parent workspaces for Math, Physics,
+              Chemistry, and Biology.
             </div>
           </div>
 
