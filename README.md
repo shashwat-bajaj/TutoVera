@@ -1,12 +1,14 @@
 # TutoVera
 
+**Solve. Understand. Improve.**
+
 TutoVera is a calm AI learning platform with subject branches for Math, Physics, Chemistry, and Biology.
 
-The product is designed around the idea of **“Tutoring you can trust”** — clear explanations, guided learning, parent support, saved history, and subject-specific tutor behavior inside one connected platform.
+The product is designed around a simple learning flow: help users solve the immediate question, understand the reasoning behind it, and improve through follow-ups, saved history, practice, and future study tools.
 
 ## Current status
 
-TutoVera is currently in free beta.
+TutoVera is currently in free beta while the final multi-subject launch version is being prepared.
 
 Active subject branches:
 
@@ -30,6 +32,8 @@ TutoVera is built as one connected platform rather than separate cloned apps for
 The current route structure includes:
 
 - `/` — TutoVera homepage
+- `/tutor` — global student workspace selector
+- `/parents` — global parent workspace selector
 - `/math` — Math branch homepage
 - `/physics` — Physics branch homepage
 - `/chemistry` — Chemistry branch homepage
@@ -41,12 +45,12 @@ The current route structure includes:
 - `/history` — global saved history
 - `/account` — account page
 - `/settings` — learning and display preferences
-- `/pricing` — global beta pricing page
+- `/pricing` — global pricing page
 - `/privacy` — privacy policy
 - `/terms` — terms of use
 - `/contact` — feedback/contact page
 
-Some legacy compatibility routes remain intentionally so older links do not break.
+The global `/tutor` and `/parents` pages guide users toward the subject workspace they want instead of defaulting to one subject.
 
 ## Core features
 
@@ -104,10 +108,55 @@ Tutor responses support:
 - translation
 - graph rendering for supported Math graph requests
 
+### Paid feature placeholders
+
+The app currently includes upgrade prompts and paid-only image support placeholders.
+
+Image and worksheet support is planned as a paid feature for Plus and Pro tiers. The actual payment and entitlement system will be integrated in a later launch phase.
+
+## Pricing direction
+
+TutoVera is structured around three planned tiers:
+
+- Free
+- Plus
+- Pro
+
+The intended positioning is:
+
+- Free = try TutoVera
+- Plus = regular study with worksheet/photo support
+- Pro = deeper revision, mistake patterns, and advanced tools
+
+One Plus or Pro subscription should give access to both Student and Parent workspaces. Separate student and parent subscriptions are not planned for the main launch because that would make the product harder to understand and less useful for families.
+
+Future pricing possibilities may include:
+
+- Family plan
+- Teacher plan
+- School plan
+
+## Payment direction
+
+The payment system is not fully integrated yet.
+
+The current likely direction is PayPal instead of Stripe. The final payment setup is expected to include:
+
+- custom pricing page
+- PayPal checkout or subscription flow
+- payment/subscription webhook confirmation
+- Supabase billing records
+- plan-aware feature gates
+- upgrade prompts
+- Free / Plus / Pro entitlements
+
+The existing plan structure in `lib/plans.ts` is intended to make the later payment integration cleaner.
+
 ## Tech stack
 
 - Next.js App Router
 - React
+- TypeScript
 - Supabase Auth
 - Supabase database
 - Gemini API
@@ -115,9 +164,31 @@ Tutor responses support:
 - Remark GFM
 - Remark Math
 - Rehype KaTeX
+- KaTeX
 - Vercel Analytics
 - Vercel Speed Insights
 - Three.js / React Three Fiber dependencies reserved for future visual tools
+
+## Important folders
+
+- `app/`
+- `components/`
+- `components/pages/`
+- `components/workspaces/`
+- `lib/`
+- `db/`
+
+Important files include:
+
+- `lib/subjects.ts`
+- `lib/plans.ts`
+- `app/api/chat/route.ts`
+- `components/SubjectTutor.tsx`
+- `components/workspaces/StudentWorkspacePage.tsx`
+- `components/workspaces/ParentWorkspacePage.tsx`
+- `components/workspaces/HistoryPageContent.tsx`
+- `components/pages/PricingPageContent.tsx`
+- `components/BrandMark.tsx`
 
 ## Local development
 

@@ -10,14 +10,12 @@ type ActiveSubjectNav = {
 };
 
 const tutoveraLinks = [
-  { href: '/math', label: 'Math' },
-  { href: '/physics', label: 'Physics' },
-  { href: '/chemistry', label: 'Chemistry' },
-  { href: '/biology', label: 'Biology' },
+  { href: '/#subjects', label: 'Subjects' },
   { href: '/tutor', label: 'Students' },
   { href: '/parents', label: 'Parents' },
   { href: '/history', label: 'History' },
   { href: '/pricing', label: 'Pricing' },
+  { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' }
 ];
 
@@ -60,13 +58,13 @@ function getActiveSubjectNav(pathname: string): ActiveSubjectNav | null {
 function getSubjectProductLinks(subject: ActiveSubjectNav) {
   return [
     { href: '/', label: 'TutoVera' },
+    { href: '/#subjects', label: 'Subjects' },
     { href: subject.basePath, label: subject.label },
     { href: `${subject.basePath}/tutor`, label: 'Students' },
     { href: `${subject.basePath}/parents`, label: 'Parents' },
     { href: `${subject.basePath}/history`, label: 'History' },
     { href: `${subject.basePath}/about`, label: 'About' },
-    { href: '/pricing', label: 'Pricing' },
-    { href: '/contact', label: 'Contact' }
+    { href: '/pricing', label: 'Pricing' }
   ];
 }
 
