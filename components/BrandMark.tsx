@@ -24,7 +24,7 @@ function getBrandSubtitle(context: BrandContext) {
       return 'Systems, cells, and life';
     case 'platform':
     default:
-      return 'Learning support, made clearer';
+      return 'Solve. Understand. Improve.';
   }
 }
 
