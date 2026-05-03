@@ -20,7 +20,7 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any'
       },
       {
-        src: '/brand/exact/tutovera-app-icon.png',
+        src: '/brand/transparent/tutovera-app-icon-transparent.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'

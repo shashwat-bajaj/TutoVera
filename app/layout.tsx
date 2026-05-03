@@ -45,10 +45,10 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/favicon.ico' },
-      { url: '/brand/exact/tutovera-favicon-source.png', type: 'image/png' },
+      { url: '/icon', type: 'image/png' },
       { url: '/brand/exact/tutovera-app-icon.png', type: 'image/png' }
     ],
-    apple: [{ url: '/brand/exact/tutovera-app-icon.png', type: 'image/png' }]
+    apple: [{ url: '/apple-icon', type: 'image/png' }]
   },
   manifest: '/manifest.webmanifest',
   openGraph: {
@@ -70,8 +70,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'TutoVera — Solve. Understand. Improve.',
-    description:
-      'A calm AI learning platform for Math, Physics, Chemistry, and Biology.',
+    description: 'A calm AI learning platform for Math, Physics, Chemistry, and Biology.',
     images: ['/twitter-image']
   }
 };
@@ -81,7 +80,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   colorScheme: 'dark light',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F6F9FD' },
+    { media: '(prefers-color-scheme: light)', color: '#F2F8FF' },
     { media: '(prefers-color-scheme: dark)', color: '#0B1D3A' }
   ]
 };

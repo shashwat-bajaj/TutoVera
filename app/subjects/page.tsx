@@ -35,14 +35,6 @@ export default function SubjectsPage() {
               }}
             >
               <div style={{ display: 'grid', gap: 8 }}>
-                <span className="badge">
-                  {subject.status === 'active'
-                    ? 'Active'
-                    : subject.status === 'beta'
-                      ? 'Beta preview'
-                      : 'Preparing'}
-                </span>
-
                 <h2 style={{ margin: 0 }}>{subject.name}</h2>
 
                 <p className="small" style={{ margin: 0 }}>
@@ -50,16 +42,21 @@ export default function SubjectsPage() {
                 </p>
               </div>
 
-              <div className="buttonRow" style={{ marginTop: 'auto' }}>
-                <Link className="btn" href={subject.path}>
-                  Open {subject.name}
-                </Link>
-                <Link className="btn secondary" href={`${subject.path}/tutor`}>
-                  Student
-                </Link>
-                <Link className="btn secondary" href={`${subject.path}/parents`}>
-                  Parent
-                </Link>
+              <div style={{ display: 'grid', gap: 10, marginTop: 'auto' }}>
+                <div className="buttonRow">
+                  <Link className="btn" href={subject.path}>
+                    Open {subject.name}
+                  </Link>
+                </div>
+
+                <div className="buttonRow">
+                  <Link className="btn secondary" href={`${subject.path}/tutor`}>
+                    Student
+                  </Link>
+                  <Link className="btn secondary" href={`${subject.path}/parents`}>
+                    Parent
+                  </Link>
+                </div>
               </div>
             </div>
           ))}

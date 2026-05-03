@@ -21,7 +21,7 @@ export default function HomePage() {
             </p>
 
             <div className="buttonRow">
-              <Link className="btn" href="#subjects">
+              <Link className="btn" href="/subjects">
                 Explore Subjects
               </Link>
               <Link className="btn secondary" href="#beta">
@@ -107,11 +107,7 @@ export default function HomePage() {
       </section>
 
       <Reveal delay={0.04}>
-        <section
-          id="subjects"
-          className="card spotlightCard"
-          style={{ display: 'grid', gap: 22 }}
-        >
+        <section className="card spotlightCard" style={{ display: 'grid', gap: 22 }}>
           <div style={{ display: 'grid', gap: 8 }}>
             <span className="badge">Subjects</span>
             <h2 style={{ margin: 0 }}>Choose a TutoVera branch.</h2>

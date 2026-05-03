@@ -1,0 +1,13 @@
+{
+  "brand": "TutoVera",
+  "tagline": "Solve. Understand. Improve.",
+  "colors": {
+    "deepNavy": "#0B1D3A",
+    "teal": "#11B5A6",
+    "skyBlue": "#6EA6E6",
+    "paleBlue": "#CFE1F7",
+    "orangeAccent": "#FF8A3D"
+  },
+  "source_preservation": "Unchanged approved source sheets are included in public/brand/source-generated-exact-sheets/.",
+  "svg_note": "SVG files embed exact PNGs to avoid altering generated artwork."
+}
