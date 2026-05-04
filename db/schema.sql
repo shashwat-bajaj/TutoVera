@@ -2,12 +2,63 @@ create extension if not exists pgcrypto;
 
 create table if not exists subscriptions (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid,
   email text unique not null,
-  stripe_customer_id text,
   plan text not null default 'free',
+  billing_cycle text,
   status text not null default 'inactive',
-  created_at timestamptz not null default now()
+  paypal_subscription_id text unique,
+  paypal_plan_id text,
+  paypal_status text,
+  paypal_payer_id text,
+  current_period_start timestamptz,
+  current_period_end timestamptz,
+  cancel_at_period_end boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+alter table subscriptions
+add column if not exists user_id uuid;
+
+alter table subscriptions
+add column if not exists billing_cycle text;
+
+alter table subscriptions
+add column if not exists paypal_subscription_id text;
+
+alter table subscriptions
+add column if not exists paypal_plan_id text;
+
+alter table subscriptions
+add column if not exists paypal_status text;
+
+alter table subscriptions
+add column if not exists paypal_payer_id text;
+
+alter table subscriptions
+add column if not exists current_period_start timestamptz;
+
+alter table subscriptions
+add column if not exists current_period_end timestamptz;
+
+alter table subscriptions
+add column if not exists cancel_at_period_end boolean not null default false;
+
+alter table subscriptions
+add column if not exists updated_at timestamptz not null default now();
+
+alter table subscriptions
+drop column if exists stripe_customer_id;
+
+create unique index if not exists subscriptions_user_id_unique
+on subscriptions(user_id);
+
+create unique index if not exists subscriptions_paypal_subscription_id_unique
+on subscriptions(paypal_subscription_id);
+
+create index if not exists subscriptions_plan_status_idx
+on subscriptions(plan, status);
 
 create table if not exists learner_conversations (
   id uuid primary key default gen_random_uuid(),

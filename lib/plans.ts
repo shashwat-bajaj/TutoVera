@@ -27,7 +27,7 @@ export const plans: Plan[] = [
   {
     key: 'free',
     name: 'Free',
-    badge: 'Try TutoVera',
+    badge: 'Start here',
     monthlyPrice: '$0',
     annualPrice: '$0',
     annualNote: 'Free beta access',
@@ -78,8 +78,8 @@ export const plans: Plan[] = [
     audience: 'Best for students, parents, and families using TutoVera regularly.',
     positioning: 'The main study plan for regular homework, worksheets, and guided practice.',
     highlighted: true,
-    ctaLabel: 'Join Plus Waitlist',
-    ctaHref: '/contact',
+    ctaLabel: 'Subscribe with PayPal',
+    ctaHref: '/pricing',
     limits: {
       tutorRequestsPerDay: '100/day',
       imageUploadsPerMonth: '100/month',
@@ -122,8 +122,8 @@ export const plans: Plan[] = [
     audience: 'Best for serious users, heavier study periods, and advanced learning workflows.',
     positioning: 'The deeper study system for revision, mistake patterns, and advanced tools.',
     highlighted: false,
-    ctaLabel: 'Join Pro Waitlist',
-    ctaHref: '/contact',
+    ctaLabel: 'Subscribe with PayPal',
+    ctaHref: '/pricing',
     limits: {
       tutorRequestsPerDay: '300/day',
       imageUploadsPerMonth: '500/month',
