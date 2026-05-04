@@ -48,9 +48,6 @@ add column if not exists cancel_at_period_end boolean not null default false;
 alter table subscriptions
 add column if not exists updated_at timestamptz not null default now();
 
-alter table subscriptions
-drop column if exists stripe_customer_id;
-
 create unique index if not exists subscriptions_user_id_unique
 on subscriptions(user_id);
 

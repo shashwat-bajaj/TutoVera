@@ -15,26 +15,6 @@ type ParentHelpStyle =
   | 'practice-questions'
   | 'likely-mistake';
 
-async function getSymbolicCheck(question: string) {
-  const checkerUrl = process.env.MATH_CHECKER_URL;
-  if (!checkerUrl || !question.trim()) return '';
-
-  try {
-    const res = await fetch(`${checkerUrl}/analyze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: question })
-    });
-
-    if (!res.ok) return '';
-
-    const data = await res.json();
-    return JSON.stringify(data, null, 2);
-  } catch {
-    return '';
-  }
-}
-
 function getClientIp(request: NextRequest) {
   const forwardedFor = request.headers.get('x-forwarded-for');
   if (forwardedFor) return forwardedFor.split(',')[0].trim();
@@ -79,10 +59,7 @@ function getConfiguredList(value?: string) {
     .filter(Boolean);
 }
 
-function isAdminUser(args: {
-  userId: string | null;
-  email: string | null;
-}) {
+function isAdminUser(args: { userId: string | null; email: string | null }) {
   const adminUserIds = new Set(getConfiguredList(process.env.ADMIN_USER_IDS));
   const adminEmails = new Set(
     getConfiguredList(process.env.ADMIN_EMAILS).map((email) => email.toLowerCase())
@@ -101,9 +78,7 @@ function isAdminUser(args: {
 
 function getRequestedSubject(value: unknown) {
   const subjectKey =
-    typeof value === 'string' && value.trim()
-      ? value.trim().toLowerCase()
-      : 'math';
+    typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : 'math';
 
   return getSubjectConfig(subjectKey);
 }
@@ -247,8 +222,10 @@ function looksLikeBareMathInput(question: string) {
   if (trimmed.length > 40) return false;
   if (/\n/.test(trimmed)) return false;
 
-  return /^[a-zA-Z0-9\s()+\-*/^.=]+$/.test(trimmed) &&
-    (/[0-9]/.test(trimmed) || containsStandaloneX(trimmed));
+  return (
+    /^[a-zA-Z0-9\s()+\-*/^.=]+$/.test(trimmed) &&
+    (/[0-9]/.test(trimmed) || containsStandaloneX(trimmed))
+  );
 }
 
 function hasExplicitMathIntent(question: string) {
@@ -273,8 +250,10 @@ function isGraphOnlyRequest(question: string) {
 }
 
 function isGraphExplanationRequest(question: string) {
-  return /\b(graph|grpah|plot|curve)\b/i.test(question) &&
-    /\b(explain|describe|what does|how does|why does)\b/i.test(question);
+  return (
+    /\b(graph|grpah|plot|curve)\b/i.test(question) &&
+    /\b(explain|describe|what does|how does|why does)\b/i.test(question)
+  );
 }
 
 function buildStudentQuestion(question: string, mode: string, subject: SubjectConfig) {
@@ -366,11 +345,7 @@ Stay in hint mode unless a full solution is absolutely necessary.`;
 function isRetryableTutorError(error: any) {
   const message = String(error?.message || '');
   const status =
-    error?.status ||
-    error?.code ||
-    error?.error?.code ||
-    error?.cause?.status ||
-    null;
+    error?.status || error?.code || error?.error?.code || error?.cause?.status || null;
 
   return (
     status === 503 ||
@@ -389,11 +364,7 @@ function isRetryableTutorError(error: any) {
 function getUserFacingTutorError(error: any) {
   const message = String(error?.message || '');
   const status =
-    error?.status ||
-    error?.code ||
-    error?.error?.code ||
-    error?.cause?.status ||
-    null;
+    error?.status || error?.code || error?.error?.code || error?.cause?.status || null;
 
   if (
     status === 503 ||
@@ -497,10 +468,7 @@ export async function POST(request: NextRequest) {
     const subjectConfig = getRequestedSubject(subject);
 
     if (!subjectConfig) {
-      return NextResponse.json(
-        { error: 'Invalid subject.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid subject.' }, { status: 400 });
     }
 
     if (subjectConfig.status !== 'active') {
@@ -567,10 +535,7 @@ export async function POST(request: NextRequest) {
 
       if (countError) {
         console.error('SUPABASE COUNT ERROR:', countError);
-        return NextResponse.json(
-          { error: 'Could not verify daily limit.' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Could not verify daily limit.' }, { status: 500 });
       }
 
       if ((count || 0) >= DAILY_FREE_LIMIT) {
@@ -644,7 +609,6 @@ export async function POST(request: NextRequest) {
     ) {
       answer = buildLocalGraphOnlyAnswer(normalizedGraphExpression);
     } else {
-      const symbolicCheck = activeSubject === 'math' ? await getSymbolicCheck(questionText) : '';
       const conversationContext = buildConversationContext(existingTurns);
 
       const effectiveQuestion =
@@ -665,7 +629,7 @@ export async function POST(request: NextRequest) {
           : effectiveQuestion,
         gradeLevel,
         mode,
-        symbolicCheck,
+        symbolicCheck: '',
         audience,
         subject: subjectConfig
       });
@@ -688,17 +652,13 @@ export async function POST(request: NextRequest) {
 
       if (conversationError || !conversation) {
         console.error('SUPABASE CREATE CONVERSATION ERROR:', conversationError);
-        return NextResponse.json(
-          { error: 'Could not create conversation.' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Could not create conversation.' }, { status: 500 });
       }
 
       activeConversationId = conversation.id;
     }
 
-    const turnIndex =
-      existingTurns.reduce((max, turn) => Math.max(max, turn.turn_index || 0), 0) + 1;
+    const turnIndex = existingTurns.reduce((max, turn) => Math.max(max, turn.turn_index || 0), 0) + 1;
 
     try {
       await supabase.from('learner_sessions').insert({
@@ -727,9 +687,6 @@ export async function POST(request: NextRequest) {
 
     const userFacing = getUserFacingTutorError(error);
 
-    return NextResponse.json(
-      { error: userFacing.message },
-      { status: userFacing.status }
-    );
+    return NextResponse.json({ error: userFacing.message }, { status: userFacing.status });
   }
 }
