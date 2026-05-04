@@ -86,13 +86,6 @@ function getSubjectName(value: string) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Unknown Subject';
 }
 
-function getHistoryLabel(subject?: SubjectKey) {
-  if (!subject) return 'Global History';
-
-  const subjectConfig = getSubjectConfig(subject);
-  return subjectConfig ? `${subjectConfig.name} History` : 'History';
-}
-
 function getHistoryTitle(subject?: SubjectKey) {
   if (!subject) {
     return 'Revisit earlier sessions across every subject.';
@@ -329,8 +322,6 @@ export default async function HistoryPageContent({
     <div className="grid" style={{ gap: 24 }}>
       <Reveal delay={0.02}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
-          <span className="badge">{getHistoryLabel(subject)}</span>
-
           <div style={{ display: 'grid', gap: 10 }}>
             <h1 style={{ margin: 0 }}>{getHistoryTitle(subject)}</h1>
             <p className="small" style={{ margin: 0, maxWidth: 860 }}>
@@ -443,7 +434,8 @@ export default async function HistoryPageContent({
                   {isGlobalHistory ? 'Saved conversations by subject' : 'Saved conversations'}
                 </h2>
                 <p className="small" style={{ margin: 0 }}>
-                  {conversations.length} saved {conversations.length === 1 ? 'conversation' : 'conversations'}
+                  {conversations.length} saved{' '}
+                  {conversations.length === 1 ? 'conversation' : 'conversations'}
                   {historyMode === 'account' ? ' in your account.' : ' found from email lookup.'}
                 </p>
               </div>
@@ -458,7 +450,7 @@ export default async function HistoryPageContent({
                     >
                       <summary className="subjectHistorySummary">
                         <span className="subjectHistorySummaryMain">
-                          <span className="badge">{group.subjectName}</span>
+                          <strong>{group.subjectName}</strong>
                           <span className="small">
                             {group.conversations.length}{' '}
                             {group.conversations.length === 1 ? 'session' : 'sessions'}
