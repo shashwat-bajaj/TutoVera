@@ -133,11 +133,11 @@ function getQuestionPlaceholder({
   }
 
   if (audience === 'parent') {
-    return `Describe what the child is learning in ${subject.name.toLowerCase()}, where they are stuck, and how much help you want.`;
+    return `Describe what the child is learning in ${subject.name.toLowerCase()}, where they are stuck, and how you want to help.`;
   }
 
   if (subject.key === 'math') {
-    return 'Type a math problem, paste your work, or ask for a quiz on a topic. Ask explicitly to graph or plot if you want a graph shown.';
+    return 'Type a math problem, paste your work, or ask for a quiz, explanation, graph, or mistake check.';
   }
 
   return subject.tutor.placeholder;
@@ -214,6 +214,14 @@ function getFollowUpSuggestions(args: {
   ];
 }
 
+function getModeLabel(mode: TutorMode) {
+  if (mode === 'auto') return 'Auto';
+  if (mode === 'teach') return 'Teach step by step';
+  if (mode === 'hint') return 'Hints only';
+  if (mode === 'diagnose') return 'Diagnose mistake';
+  return 'Quiz mode';
+}
+
 export default function SubjectTutor({
   subject = 'math',
   audience = 'student',
@@ -270,20 +278,17 @@ export default function SubjectTutor({
       const preferences = user?.user_metadata?.preferences || {};
 
       if (audience === 'student') {
-        const nextStudentGrade =
-          preferences.studentDefaults?.gradeLevel || 'high-school';
+        const nextStudentGrade = preferences.studentDefaults?.gradeLevel || 'high-school';
         setGradeLevel(nextStudentGrade);
 
         if (!lockedMode) {
-          const nextStudentMode =
-            preferences.studentDefaults?.tutorMode || 'auto';
+          const nextStudentMode = preferences.studentDefaults?.tutorMode || 'auto';
           setMode(nextStudentMode);
         }
       }
 
       if (audience === 'parent') {
-        const nextParentGrade =
-          preferences.parentDefaults?.gradeLevel || 'elementary';
+        const nextParentGrade = preferences.parentDefaults?.gradeLevel || 'elementary';
         setGradeLevel(nextParentGrade);
       }
     }
@@ -478,42 +483,48 @@ export default function SubjectTutor({
   });
 
   return (
-    <div className="grid" style={{ gap: 22 }}>
+    <div className="grid tutorSurface" style={{ gap: 18 }}>
       {(title || description) && (
         <section
           style={{
             display: 'grid',
-            gap: 8,
-            maxWidth: 860
+            gap: 6,
+            maxWidth: 840
           }}
         >
           {title ? <h2 style={{ margin: 0 }}>{title}</h2> : null}
           {description ? (
-            <p className="small" style={{ margin: 0, maxWidth: 820 }}>
+            <p className="small" style={{ margin: 0, maxWidth: 760 }}>
               {description}
             </p>
           ) : null}
         </section>
       )}
 
-      <section className="card" style={{ display: 'grid', gap: 18 }}>
+      <section className="card tutorAskCard" style={{ display: 'grid', gap: 14 }}>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'minmax(0, 1fr) auto',
-            gap: 18,
+            gap: 14,
             alignItems: 'start'
           }}
         >
-          <div style={{ display: 'grid', gap: 10 }}>
-            {accountEmail ? (
-              <p className="small" style={{ margin: 0 }}>
-                Signed in as <strong>{accountEmail}</strong>. Session history will be saved to your
-                account automatically.
-              </p>
-            ) : (
+          <div style={{ display: 'grid', gap: 6 }}>
+            <p className="small" style={{ margin: 0 }}>
+              {accountEmail ? (
+                <>
+                  Signed in as <strong>{accountEmail}</strong>.{' '}
+                </>
+              ) : null}
+              {conversationId
+                ? 'Continuing an existing session.'
+                : 'Ask a question to start a new session.'}
+            </p>
+
+            {!accountEmail ? (
               <div style={{ maxWidth: 420 }}>
-                <label>Email (optional for history and usage tracking)</label>
+                <label>Email (optional for history)</label>
                 <input
                   type="email"
                   value={email}
@@ -521,93 +532,95 @@ export default function SubjectTutor({
                   placeholder="you@example.com"
                 />
               </div>
-            )}
-
-            <p className="small" style={{ margin: 0 }}>
-              {conversationId
-                ? 'You are continuing an existing session.'
-                : 'Your next message will start a new session.'}
-            </p>
+            ) : null}
           </div>
 
-          <div className="buttonRow" style={{ justifyContent: 'flex-end' }}>
-            <button className="secondary" onClick={startNewSession}>
-              New Session
-            </button>
-          </div>
+          <button className="secondary" type="button" onClick={startNewSession}>
+            New Session
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gap: 10 }}>
+          <label>
+            {audience === 'parent' ? 'What is the child stuck on?' : 'What would you like help with?'}
+          </label>
+
+          <textarea
+            ref={questionRef}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={handleQuestionKeyDown}
+            placeholder={questionPlaceholder}
+            style={{ minHeight: 150 }}
+          />
         </div>
 
         <div
           style={{
-            display: 'grid',
-            gap: 18,
-            paddingTop: 18,
-            borderTop: '1px solid var(--border)'
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 14,
+            flexWrap: 'wrap'
           }}
         >
-          <SectionTitle
-            title="Current setup"
-            description="Adjust the help style before sending the next message."
-          />
+          <details className="tutorCustomizeDetails">
+            <summary>Customize guidance</summary>
 
-          {audience === 'parent' ? (
-            <>
-              <div style={splitFieldStyle}>
-                <div>
-                  <label>Mode</label>
-                  <ReadOnlyField value="Guided hints only" />
-                </div>
+            <div className="tutorCustomizePanel">
+              <SectionTitle
+                title="Response settings"
+                description="These are optional. Most questions can be sent without changing anything here."
+              />
 
-                <div>
-                  <label>Level</label>
-                  <select
-                    value={gradeLevel}
-                    onChange={(e) => setGradeLevel(e.target.value as GradeLevel)}
-                  >
-                    <option value="elementary">Elementary</option>
-                    <option value="middle-school">Middle school</option>
-                    <option value="high-school">High school</option>
-                    <option value="college">College</option>
-                  </select>
-                </div>
-              </div>
+              {audience === 'parent' ? (
+                <>
+                  <div style={splitFieldStyle}>
+                    <div>
+                      <label>Mode</label>
+                      <ReadOnlyField value="Guided hints only" />
+                    </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gap: 16,
-                  paddingTop: 6,
-                  borderTop: '1px solid var(--border)'
-                }}
-              >
-                <SectionTitle
-                  title="Parent support options"
-                  description="Shape the response around how you want to help the child learn."
-                />
+                    <div>
+                      <label>Level</label>
+                      <select
+                        value={gradeLevel}
+                        onChange={(e) => setGradeLevel(e.target.value as GradeLevel)}
+                      >
+                        <option value="elementary">Elementary</option>
+                        <option value="middle-school">Middle school</option>
+                        <option value="high-school">High school</option>
+                        <option value="college">College</option>
+                      </select>
+                    </div>
+                  </div>
 
-                <div>
-                  <label>Support style</label>
-                  <select
-                    value={parentHelpStyle}
-                    onChange={(e) => setParentHelpStyle(e.target.value as ParentHelpStyle)}
-                  >
-                    <option value="explain-simply">Explain it simply</option>
-                    <option value="talking-points">Give me parent talking points</option>
-                    <option value="simple-example">Show a simple example</option>
-                    <option value="practice-questions">Create practice questions</option>
-                    <option value="likely-mistake">What mistake is my child likely making?</option>
-                  </select>
-                </div>
+                  <div style={splitFieldStyle}>
+                    <div>
+                      <label>Support style</label>
+                      <select
+                        value={parentHelpStyle}
+                        onChange={(e) => setParentHelpStyle(e.target.value as ParentHelpStyle)}
+                      >
+                        <option value="explain-simply">Explain it simply</option>
+                        <option value="talking-points">Give me parent talking points</option>
+                        <option value="simple-example">Show a simple example</option>
+                        <option value="practice-questions">Create practice questions</option>
+                        <option value="likely-mistake">
+                          What mistake is my child likely making?
+                        </option>
+                      </select>
+                    </div>
 
-                <div style={splitFieldStyle}>
-                  <div>
-                    <label>Topic (optional)</label>
-                    <input
-                      type="text"
-                      value={parentTopic}
-                      onChange={(e) => setParentTopic(e.target.value)}
-                      placeholder={`Example: ${subjectConfig.name.toLowerCase()} topic, concept, or skill`}
-                    />
+                    <div>
+                      <label>Topic (optional)</label>
+                      <input
+                        type="text"
+                        value={parentTopic}
+                        onChange={(e) => setParentTopic(e.target.value)}
+                        placeholder={`Example: ${subjectConfig.name.toLowerCase()} topic, concept, or skill`}
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -619,99 +632,43 @@ export default function SubjectTutor({
                       placeholder="Example: comparing ideas, setting up the first step, or remembering key terms"
                     />
                   </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div style={splitFieldStyle}>
-              {!lockedMode ? (
-                <div>
-                  <label>Study mode (optional)</label>
-                  <select value={mode} onChange={(e) => setMode(e.target.value as TutorMode)}>
-                    <option value="auto">Auto (follow my request)</option>
-                    <option value="teach">Teach me step by step</option>
-                    <option value="hint">Give hints only</option>
-                    <option value="diagnose">Diagnose my mistake</option>
-                    <option value="quiz">Turn this into practice questions</option>
-                  </select>
-                </div>
+                </>
               ) : (
-                <div>
-                  <label>Mode</label>
-                  <ReadOnlyField
-                    value={
-                      lockedMode === 'auto'
-                        ? 'Auto'
-                        : lockedMode === 'hint'
-                          ? 'Guided hints only'
-                          : lockedMode === 'teach'
-                            ? 'Teach step by step'
-                            : lockedMode === 'diagnose'
-                              ? 'Diagnose mistake'
-                              : 'Quiz mode'
-                    }
-                  />
+                <div style={splitFieldStyle}>
+                  {!lockedMode ? (
+                    <div>
+                      <label>Study mode</label>
+                      <select value={mode} onChange={(e) => setMode(e.target.value as TutorMode)}>
+                        <option value="auto">Auto (follow my request)</option>
+                        <option value="teach">Teach me step by step</option>
+                        <option value="hint">Give hints only</option>
+                        <option value="diagnose">Diagnose my mistake</option>
+                        <option value="quiz">Turn this into practice questions</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label>Mode</label>
+                      <ReadOnlyField value={getModeLabel(lockedMode)} />
+                    </div>
+                  )}
+
+                  <div>
+                    <label>Level</label>
+                    <select
+                      value={gradeLevel}
+                      onChange={(e) => setGradeLevel(e.target.value as GradeLevel)}
+                    >
+                      <option value="elementary">Elementary</option>
+                      <option value="middle-school">Middle school</option>
+                      <option value="high-school">High school</option>
+                      <option value="college">College</option>
+                    </select>
+                  </div>
                 </div>
               )}
-
-              <div>
-                <label>Level</label>
-                <select
-                  value={gradeLevel}
-                  onChange={(e) => setGradeLevel(e.target.value as GradeLevel)}
-                >
-                  <option value="elementary">Elementary</option>
-                  <option value="middle-school">Middle school</option>
-                  <option value="high-school">High school</option>
-                  <option value="college">College</option>
-                </select>
-              </div>
             </div>
-          )}
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gap: 16,
-            paddingTop: 18,
-            borderTop: '1px solid var(--border)'
-          }}
-        >
-          <SectionTitle
-            title="Image or worksheet support"
-            description="Image processing is planned as a paid-only feature for Plus and Pro."
-          />
-
-          <PaidImageUploadPlaceholder compact context={audience} />
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gap: 16,
-            paddingTop: 18,
-            borderTop: '1px solid var(--border)'
-          }}
-        >
-          <SectionTitle
-            title={audience === 'parent' ? 'Question or teaching situation' : 'Question or your work'}
-            description={
-              audience === 'parent'
-                ? `Describe what the child is learning in ${subjectConfig.name.toLowerCase()}, where they are stuck, and how you want the explanation to feel.`
-                : `Type a ${subjectConfig.name.toLowerCase()} question, paste your work, or ask for a quiz, explanation, or diagnosis in the same thread.`
-            }
-          />
-
-          <div>
-            <textarea
-              ref={questionRef}
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={handleQuestionKeyDown}
-              placeholder={questionPlaceholder}
-            />
-          </div>
+          </details>
 
           <div
             style={{
@@ -719,7 +676,8 @@ export default function SubjectTutor({
               justifyContent: 'flex-end',
               alignItems: 'start',
               gap: 12,
-              flexWrap: 'wrap'
+              flexWrap: 'wrap',
+              marginLeft: 'auto'
             }}
           >
             <div
@@ -729,7 +687,7 @@ export default function SubjectTutor({
                 justifyItems: 'center'
               }}
             >
-              <button onClick={() => void submitQuestion()} disabled={loading || !question.trim()}>
+              <button type="button" onClick={() => void submitQuestion()} disabled={loading || !question.trim()}>
                 {loading ? 'Thinking...' : conversationId ? 'Send Follow-up' : 'Ask TutoVera'}
               </button>
 
@@ -795,6 +753,65 @@ export default function SubjectTutor({
           </div>
         </section>
       ) : null}
+
+      <details className="card tutorLaterDetails">
+        <summary>Image and worksheet support</summary>
+        <div style={{ display: 'grid', gap: 14, paddingTop: 14 }}>
+          <p className="small" style={{ margin: 0 }}>
+            Image processing is planned as a paid-only feature for Plus and Pro. Text-based tutoring
+            stays available in the main workspace above.
+          </p>
+          <PaidImageUploadPlaceholder compact context={audience} />
+        </div>
+      </details>
+
+      <style>
+        {`
+          .tutorCustomizeDetails,
+          .tutorLaterDetails {
+            min-width: min(100%, 260px);
+          }
+
+          .tutorCustomizeDetails > summary,
+          .tutorLaterDetails > summary {
+            cursor: pointer;
+            color: var(--text);
+            font-weight: 750;
+            list-style: none;
+          }
+
+          .tutorCustomizeDetails > summary::-webkit-details-marker,
+          .tutorLaterDetails > summary::-webkit-details-marker {
+            display: none;
+          }
+
+          .tutorCustomizeDetails > summary::after,
+          .tutorLaterDetails > summary::after {
+            content: '+';
+            color: var(--text-soft);
+            font-weight: 800;
+            margin-left: 8px;
+          }
+
+          .tutorCustomizeDetails[open] > summary::after,
+          .tutorLaterDetails[open] > summary::after {
+            content: '−';
+          }
+
+          .tutorCustomizePanel {
+            display: grid;
+            gap: 16px;
+            padding-top: 14px;
+            max-width: 860px;
+          }
+
+          @media (max-width: 760px) {
+            .tutorAskCard {
+              gap: 16px !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }
