@@ -14,13 +14,6 @@ type ConversationRecord = {
   updated_at: string;
 };
 
-type TurnPreviewRecord = {
-  conversation_id: string;
-  prompt: string;
-  turn_index: number | null;
-  created_at: string;
-};
-
 type TurnRecord = {
   id: string;
   turn_index: number | null;
@@ -36,20 +29,6 @@ type ParentWorkspacePageProps = {
   subject?: SubjectKey;
 };
 
-function makePreview(text: string, max = 88) {
-  if (!text) return '';
-  const cleaned = text.replace(/\s+/g, ' ').trim();
-  return cleaned.length > max ? `${cleaned.slice(0, max)}...` : cleaned;
-}
-
-function formatDate(value: string) {
-  try {
-    return new Date(value).toLocaleString();
-  } catch {
-    return value;
-  }
-}
-
 function getParentWorkspaceCopy(subject: SubjectConfig) {
   if (subject.key === 'math') {
     return {
@@ -58,10 +37,9 @@ function getParentWorkspaceCopy(subject: SubjectConfig) {
         'Guidance for helping a child learn, without jumping straight to the final answer.',
       signedOutDescription:
         'Use this workspace when you want parent-friendly explanation, simple examples, talking points, likely-mistake guidance, and practice prompts that help a child understand the concept more clearly.',
-      signedInTitle:
-        'A calmer support surface for adults helping a child learn math more clearly.',
+      signedInTitle: 'A focused parent workspace for helping a child learn more clearly.',
       signedInDescription:
-        'Ask for simpler explanations, talking points, examples, likely-mistake guidance, and practice prompts without forcing the interaction into a full worked solution.',
+        'Ask for simpler explanations, talking points, examples, likely-mistake guidance, and practice prompts. Sessions opened from history can be continued here.',
       defaultFlow:
         'Guided hint mode with child-level explanation and parent-friendly support.',
       bestFor:
@@ -80,10 +58,9 @@ function getParentWorkspaceCopy(subject: SubjectConfig) {
         'Guidance for helping a child understand physics without simply giving the answer.',
       signedOutDescription:
         'Use this workspace when you want parent-friendly physics explanations, simple examples, talking points, likely-mistake guidance, and practice prompts that help a child understand the concept more clearly.',
-      signedInTitle:
-        'A calmer support surface for adults helping a child learn physics more clearly.',
+      signedInTitle: 'A focused parent workspace for helping a child learn physics more clearly.',
       signedInDescription:
-        'Ask for simpler explanations, everyday analogies, formula setup guidance, unit-checking support, likely-mistake guidance, and practice prompts without turning everything into a full worked solution.',
+        'Ask for simpler explanations, everyday analogies, formula setup guidance, unit-checking support, and likely-mistake guidance. Sessions opened from history can be continued here.',
       defaultFlow:
         'Guided hint mode with concept-first explanation, parent-friendly language, and unit-aware support.',
       bestFor:
@@ -103,9 +80,9 @@ function getParentWorkspaceCopy(subject: SubjectConfig) {
       signedOutDescription:
         'Use this workspace when you want parent-friendly chemistry explanations, simple examples, reaction reasoning, likely-mistake guidance, and practice prompts that help a child understand the concept more clearly.',
       signedInTitle:
-        'A calmer support surface for adults helping a child learn chemistry more clearly.',
+        'A focused parent workspace for helping a child learn chemistry more clearly.',
       signedInDescription:
-        'Ask for simpler explanations, reaction setup guidance, unit conversion support, likely-mistake guidance, and practice prompts without turning everything into a full worked solution.',
+        'Ask for simpler explanations, reaction setup guidance, unit conversion support, and likely-mistake guidance. Sessions opened from history can be continued here.',
       defaultFlow:
         'Guided hint mode with reaction-aware explanation, parent-friendly language, and unit-aware support.',
       bestFor:
@@ -124,10 +101,9 @@ function getParentWorkspaceCopy(subject: SubjectConfig) {
         'Guidance for helping a child understand biology concepts more clearly.',
       signedOutDescription:
         'Use this workspace when you want parent-friendly biology explanations, simple examples, vocabulary support, process comparisons, likely-mistake guidance, and practice prompts.',
-      signedInTitle:
-        'A calmer support surface for adults helping a child learn biology more clearly.',
+      signedInTitle: 'A focused parent workspace for helping a child learn biology more clearly.',
       signedInDescription:
-        'Ask for simpler explanations, everyday analogies, vocabulary breakdowns, process comparisons, likely-mistake guidance, and practice prompts.',
+        'Ask for simpler explanations, everyday analogies, vocabulary breakdowns, process comparisons, and likely-mistake guidance. Sessions opened from history can be continued here.',
       defaultFlow:
         'Guided hint mode with process-aware explanation, parent-friendly language, and vocabulary support.',
       bestFor:
@@ -141,22 +117,16 @@ function getParentWorkspaceCopy(subject: SubjectConfig) {
 
   return {
     badge: `${subject.name} parent workspace`,
-    signedOutTitle:
-      `Guidance for helping a child understand ${subject.name.toLowerCase()} more clearly.`,
-    signedOutDescription:
-      `Use this workspace when you want parent-friendly ${subject.name.toLowerCase()} explanations, examples, talking points, likely-mistake guidance, and practice prompts.`,
-    signedInTitle:
-      `A calmer support surface for adults helping a child learn ${subject.name.toLowerCase()} more clearly.`,
-    signedInDescription:
-      `Ask for simpler explanations, examples, likely-mistake guidance, and practice prompts for ${subject.name.toLowerCase()} learning.`,
+    signedOutTitle: `Guidance for helping a child understand ${subject.name.toLowerCase()} more clearly.`,
+    signedOutDescription: `Use this workspace when you want parent-friendly ${subject.name.toLowerCase()} explanations, examples, talking points, likely-mistake guidance, and practice prompts.`,
+    signedInTitle: `A focused parent workspace for helping a child learn ${subject.name.toLowerCase()} more clearly.`,
+    signedInDescription: `Ask for simpler explanations, examples, likely-mistake guidance, and practice prompts. Sessions opened from history can be continued here.`,
     defaultFlow:
       'Guided hint mode with child-level explanation and parent-friendly support.',
     bestFor:
       'Explaining concepts aloud, giving examples, spotting confusion, and supporting practice.',
-    tutorDescription:
-      `Use this version when you want parent-friendly ${subject.name} guidance without jumping straight to the full answer.`,
-    placeholder:
-      `Example: My child is learning a ${subject.name.toLowerCase()} topic and feels stuck. How can I explain it clearly?`
+    tutorDescription: `Use this version when you want parent-friendly ${subject.name} guidance without jumping straight to the full answer.`,
+    placeholder: `Example: My child is learning a ${subject.name.toLowerCase()} topic and feels stuck. How can I explain it clearly?`
   };
 }
 
@@ -169,6 +139,7 @@ export default async function ParentWorkspacePage({
 
   const subjectConfig = getSubjectConfig(subject) || subjects.math;
   const parentWorkspaceHref = `${subjectConfig.path}/parents`;
+  const parentHistoryHref = `${subjectConfig.path}/history`;
   const copy = getParentWorkspaceCopy(subjectConfig);
 
   const authClient = await createAuthClient();
@@ -178,44 +149,33 @@ export default async function ParentWorkspacePage({
 
   const supabase = createAdminSupabase();
 
-  let conversations: ConversationRecord[] = [];
+  let savedConversationCount = 0;
+  let selectedConversation: ConversationRecord | null = null;
   let turns: TurnRecord[] = [];
-  const firstPromptByConversation: Record<string, string> = {};
 
   if (user?.id) {
-    const { data } = await supabase
+    const { count } = await supabase
       .from('learner_conversations')
-      .select('id, title, audience, created_at, updated_at')
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('subject', subjectConfig.key)
-      .eq('audience', 'parent')
-      .order('updated_at', { ascending: false })
-      .limit(30);
+      .eq('audience', 'parent');
 
-    conversations = (data || []) as ConversationRecord[];
+    savedConversationCount = count || 0;
 
-    if (conversations.length > 0) {
-      const conversationIds = conversations.map((conversation) => conversation.id);
-
-      const { data: firstTurns } = await supabase
-        .from('learner_sessions')
-        .select('conversation_id, prompt, turn_index, created_at')
-        .in('conversation_id', conversationIds)
+    if (selectedConversationId) {
+      const { data } = await supabase
+        .from('learner_conversations')
+        .select('id, title, audience, created_at, updated_at')
+        .eq('id', selectedConversationId)
+        .eq('user_id', user.id)
         .eq('subject', subjectConfig.key)
-        .eq('turn_index', 1)
-        .order('created_at', { ascending: true });
+        .eq('audience', 'parent')
+        .maybeSingle();
 
-      for (const turn of (firstTurns || []) as TurnPreviewRecord[]) {
-        if (!firstPromptByConversation[turn.conversation_id]) {
-          firstPromptByConversation[turn.conversation_id] = turn.prompt || '';
-        }
-      }
+      selectedConversation = (data || null) as ConversationRecord | null;
     }
   }
-
-  const selectedConversation = selectedConversationId
-    ? conversations.find((conversation) => conversation.id === selectedConversationId) || null
-    : null;
 
   if (selectedConversation) {
     const { data } = await supabase
@@ -283,7 +243,7 @@ export default async function ParentWorkspacePage({
                 <strong>Saved sessions</strong>
               </p>
               <p className="small" style={{ margin: 0 }}>
-                {conversations.length} available in your {subjectConfig.name.toLowerCase()} parent history.
+                {savedConversationCount} in your {subjectConfig.name.toLowerCase()} parent history.
               </p>
             </div>
 
@@ -305,128 +265,82 @@ export default async function ParentWorkspacePage({
               </p>
             </div>
           </div>
+
+          <div className="buttonRow">
+            <a className="btn secondary" href={parentHistoryHref}>
+              Open {subjectConfig.name} History
+            </a>
+            <a className="btn secondary" href={parentWorkspaceHref}>
+              New Session
+            </a>
+          </div>
         </section>
       </Reveal>
 
-      <div className="parentWorkspacePaneWrap">
-        <section className="twoPane">
-          <Reveal delay={0.08}>
-            <aside
-              className="card"
-              style={{
-                position: 'sticky',
-                top: 94,
-                alignSelf: 'start',
-                display: 'grid',
-                gap: 14
-              }}
-            >
-              <div style={{ display: 'grid', gap: 6 }}>
-                <h2 style={{ margin: 0 }}>{subjectConfig.name} Parent Sessions</h2>
+      {selectedConversationId && !selectedConversation ? (
+        <Reveal delay={0.06}>
+          <section className="card" style={{ display: 'grid', gap: 12 }}>
+            <h2 style={{ margin: 0 }}>Session not found</h2>
+            <p className="small" style={{ margin: 0 }}>
+              This parent session was not found for your account, or it belongs to another subject
+              or workspace.
+            </p>
+            <div className="buttonRow">
+              <a className="btn secondary" href={parentHistoryHref}>
+                Open History
+              </a>
+              <a className="btn" href={parentWorkspaceHref}>
+                Start New Session
+              </a>
+            </div>
+          </section>
+        </Reveal>
+      ) : null}
+
+      <Reveal delay={0.08}>
+        <SubjectTutor
+          subject={subjectConfig.key}
+          audience="parent"
+          lockedMode="hint"
+          initialConversationId={selectedConversation?.id || null}
+          newSessionHref={parentWorkspaceHref}
+          title={`Tutor Support for ${subjectConfig.name} Parents`}
+          description={copy.tutorDescription}
+          placeholder={copy.placeholder}
+        />
+      </Reveal>
+
+      {selectedConversation && turns.length > 0 ? (
+        <Reveal delay={0.14}>
+          <section className="card" style={{ display: 'grid', gap: 16 }}>
+            <div className="buttonRow" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'grid', gap: 4 }}>
+                <h2 style={{ margin: 0 }}>Current Session Thread</h2>
                 <p className="small" style={{ margin: 0 }}>
-                  Open an earlier parent thread or start a new one.
+                  This parent session was opened from history. Continue the thread above or review
+                  the full question-and-answer flow below.
                 </p>
               </div>
 
-              <div className="buttonRow">
-                <a className="btn secondary" href={parentWorkspaceHref}>
-                  New Session
-                </a>
-              </div>
-
-              {conversations.length === 0 ? (
-                <div className="card questionSurface" style={{ padding: 14 }}>
-                  <p className="small" style={{ margin: 0 }}>
-                    No saved {subjectConfig.name.toLowerCase()} parent sessions yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="sessionList">
-                  {conversations.map((conversation) => {
-                    const isActive = selectedConversation?.id === conversation.id;
-                    const firstPrompt =
-                      firstPromptByConversation[conversation.id] ||
-                      conversation.title ||
-                      'Untitled conversation';
-
-                    return (
-                      <div
-                        key={conversation.id}
-                        className={`sessionItem ${isActive ? 'active' : ''}`}
-                        style={{ display: 'grid', gap: 8 }}
-                      >
-                        <a
-                          href={`${parentWorkspaceHref}?conversation=${conversation.id}`}
-                          style={{ display: 'block' }}
-                        >
-                          <p className="small" style={{ margin: '0 0 6px' }}>
-                            <strong>{makePreview(firstPrompt)}</strong>
-                          </p>
-                          <p className="small" style={{ margin: 0 }}>
-                            Updated {formatDate(conversation.updated_at)}
-                          </p>
-                        </a>
-
-                        <div className="buttonRow">
-                          <DeleteConversationButton
-                            conversationId={conversation.id}
-                            redirectHref={parentWorkspaceHref}
-                            compact
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </aside>
-          </Reveal>
-
-          <Reveal delay={0.14}>
-            <main style={{ display: 'grid', gap: 18, minWidth: 0 }}>
-              <SubjectTutor
-                subject={subjectConfig.key}
-                audience="parent"
-                lockedMode="hint"
-                initialConversationId={selectedConversation?.id || null}
-                newSessionHref={parentWorkspaceHref}
-                title={`Tutor Support for ${subjectConfig.name} Parents`}
-                description={copy.tutorDescription}
-                placeholder={copy.placeholder}
+              <DeleteConversationButton
+                conversationId={selectedConversation.id}
+                redirectHref={parentWorkspaceHref}
               />
+            </div>
 
-              {selectedConversation && turns.length > 0 ? (
-                <section className="card" style={{ display: 'grid', gap: 16 }}>
-                  <div className="buttonRow" style={{ justifyContent: 'space-between' }}>
-                    <div style={{ display: 'grid', gap: 4 }}>
-                      <h2 style={{ margin: 0 }}>Current Session Thread</h2>
-                      <p className="small" style={{ margin: 0 }}>
-                        View the full question-and-answer flow for this {subjectConfig.name.toLowerCase()} parent session.
-                      </p>
-                    </div>
-
-                    <DeleteConversationButton
-                      conversationId={selectedConversation.id}
-                      redirectHref={parentWorkspaceHref}
-                    />
-                  </div>
-
-                  <ConversationThread
-                    title={selectedConversation.title}
-                    audience={selectedConversation.audience}
-                    createdAt={selectedConversation.created_at}
-                    updatedAt={selectedConversation.updated_at}
-                    turns={turns}
-                    showDeleteTurnControls
-                    redirectHref={`${parentWorkspaceHref}?conversation=${selectedConversation.id}`}
-                    graphingEnabled={subjectConfig.features.graphing}
-                  />
-                </section>
-              ) : null}
-            </main>
-          </Reveal>
-        </section>
-      </div>
+            <ConversationThread
+              title={selectedConversation.title}
+              audience={selectedConversation.audience}
+              createdAt={selectedConversation.created_at}
+              updatedAt={selectedConversation.updated_at}
+              turns={turns}
+              showDeleteTurnControls
+              redirectHref={`${parentWorkspaceHref}?conversation=${selectedConversation.id}`}
+              graphingEnabled={subjectConfig.features.graphing}
+            />
+          </section>
+        </Reveal>
+      ) : null}
     </div>
   );
 }
