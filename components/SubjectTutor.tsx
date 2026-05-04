@@ -715,30 +715,42 @@ export default function SubjectTutor({
 
           <div
             style={{
-              display: 'grid',
-              gap: 6,
-              justifyItems: 'end'
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'start',
+              gap: 12,
+              flexWrap: 'wrap'
             }}
           >
-            <div className="buttonRow" style={{ justifyContent: 'flex-end' }}>
+            <div
+              style={{
+                display: 'grid',
+                gap: 5,
+                justifyItems: 'center'
+              }}
+            >
               <button onClick={() => void submitQuestion()} disabled={loading || !question.trim()}>
                 {loading ? 'Thinking...' : conversationId ? 'Send Follow-up' : 'Ask TutoVera'}
               </button>
 
-              {showRetryButton ? (
-                <button type="button" className="secondary" onClick={retryLastRequest}>
-                  Retry Last Request
-                </button>
-              ) : null}
+              <p
+                className="small"
+                title="Press Command + Enter on Mac or Control + Enter on Windows/Linux to submit."
+                style={{
+                  margin: 0,
+                  textAlign: 'center',
+                  lineHeight: 1.2
+                }}
+              >
+                Cmd/Ctrl + Enter
+              </p>
             </div>
 
-            <p
-              className="small"
-              title="Press Command + Enter on Mac or Control + Enter on Windows/Linux to submit."
-              style={{ margin: 0 }}
-            >
-              Cmd/Ctrl + Enter
-            </p>
+            {showRetryButton ? (
+              <button type="button" className="secondary" onClick={retryLastRequest}>
+                Retry Last Request
+              </button>
+            ) : null}
           </div>
         </div>
       </section>
