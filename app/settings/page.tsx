@@ -1,19 +1,28 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminSupabase } from '@/lib/supabase-admin';
 import SettingsForm from '@/components/SettingsForm';
 import Reveal from '@/components/Reveal';
+import { formatPlanName, getUserPlanAccess } from '@/lib/subscriptions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
+  const supabaseAuth = await createClient();
   const {
     data: { user }
-  } = await supabase.auth.getUser();
+  } = await supabaseAuth.auth.getUser();
 
   if (!user) {
     redirect('/login');
   }
+
+  const supabase = createAdminSupabase();
+  const planAccess = await getUserPlanAccess({
+    supabase,
+    userId: user.id,
+    email: user.email || null
+  });
 
   const preferences = user.user_metadata?.preferences || {};
 
@@ -26,15 +35,38 @@ export default async function SettingsPage() {
           <div style={{ display: 'grid', gap: 10 }}>
             <h1 style={{ margin: 0 }}>Adjust TutoVera to fit how you learn and study.</h1>
             <p className="small" style={{ margin: 0, maxWidth: 820 }}>
-              Manage your display preferences, translation defaults, learner levels, and tutor
-              behavior for both Student and Parent experiences. These settings help keep your
-              workspace more consistent from one session to the next.
+              Manage your display preferences, translation defaults, learner levels, tutor behavior,
+              and account plan awareness from one place.
             </p>
           </div>
         </section>
       </Reveal>
 
-      <Reveal delay={0.08}>
+      <Reveal delay={0.06}>
+        <section className="card" style={{ display: 'grid', gap: 14 }}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span className="badge">Plan access</span>
+            <h2 style={{ margin: 0 }}>{formatPlanName(planAccess.plan)}</h2>
+            <p className="small" style={{ margin: 0, maxWidth: 760 }}>
+              Your current plan allows {planAccess.dailyTutorLimit} tutor requests per day
+              {planAccess.imageUploadsPerMonth > 0
+                ? ` and includes ${planAccess.imageUploadsPerMonth} image uploads per month once image support is enabled.`
+                : '. Image and worksheet support are planned for Plus and Pro.'}
+            </p>
+          </div>
+
+          <div className="buttonRow">
+            <a className="btn secondary" href="/pricing">
+              View Pricing
+            </a>
+            <a className="btn secondary" href="/account">
+              Open Account
+            </a>
+          </div>
+        </section>
+      </Reveal>
+
+      <Reveal delay={0.1}>
         <section className="grid cols-3">
           <div className="card innerFeatureCard">
             <h3 style={{ marginTop: 0 }}>Display preferences</h3>

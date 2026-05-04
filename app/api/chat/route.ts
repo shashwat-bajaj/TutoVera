@@ -5,8 +5,9 @@ import { normalizeGraphExpression } from '@/lib/graphing';
 import { createAdminSupabase } from '@/lib/supabase-admin';
 import { createClient as createAuthClient } from '@/lib/supabase/server';
 import { getSubjectConfig, type SubjectConfig } from '@/lib/subjects';
+import { getUserPlanAccess } from '@/lib/subscriptions';
 
-const DAILY_FREE_LIMIT = 20;
+const FALLBACK_DAILY_FREE_LIMIT = 10;
 
 type ParentHelpStyle =
   | 'explain-simply'
@@ -514,6 +515,16 @@ export async function POST(request: NextRequest) {
       email: normalizedEmail
     });
 
+    const planAccess = user?.id
+      ? await getUserPlanAccess({
+          supabase,
+          userId: user.id,
+          email: normalizedEmail
+        })
+      : null;
+
+    const dailyTutorLimit = planAccess?.dailyTutorLimit || FALLBACK_DAILY_FREE_LIMIT;
+
     if (!bypassDailyLimit) {
       const ipAddress = getClientIp(request);
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -538,10 +549,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Could not verify daily limit.' }, { status: 500 });
       }
 
-      if ((count || 0) >= DAILY_FREE_LIMIT) {
+      if ((count || 0) >= dailyTutorLimit) {
         return NextResponse.json(
           {
-            error: `Free beta limit reached. You can send up to ${DAILY_FREE_LIMIT} tutor requests in a 24-hour period. Please try again later.`
+            error: planAccess?.isPaidPlan
+              ? `Daily tutor limit reached for your ${planAccess.plan} plan. You can send up to ${dailyTutorLimit} tutor requests in a 24-hour period. Please try again later.`
+              : `Free plan limit reached. You can send up to ${dailyTutorLimit} tutor requests in a 24-hour period. Upgrade to Plus or Pro for higher limits.`
           },
           { status: 429 }
         );
