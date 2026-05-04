@@ -232,7 +232,6 @@ export default function SubjectTutor({
 
   const [email, setEmail] = useState('');
   const [accountEmail, setAccountEmail] = useState('');
-  const [shortcutLabel, setShortcutLabel] = useState('Ctrl');
 
   const defaultQuestion = useMemo(
     () => getDefaultQuestion({ audience, subject: subjectConfig }),
@@ -256,14 +255,6 @@ export default function SubjectTutor({
     useState<ParentHelpStyle>('explain-simply');
   const [parentTopic, setParentTopic] = useState('');
   const [parentStuckPoint, setParentStuckPoint] = useState('');
-
-  useEffect(() => {
-    setShortcutLabel(
-      typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.platform)
-        ? 'Cmd'
-        : 'Ctrl'
-    );
-  }, []);
 
   useEffect(() => {
     async function loadUser() {
@@ -522,7 +513,7 @@ export default function SubjectTutor({
               </p>
             ) : (
               <div style={{ maxWidth: 420 }}>
-                <label>Email (optional for beta history and usage tracking)</label>
+                <label>Email (optional for history and usage tracking)</label>
                 <input
                   type="email"
                   value={email}
@@ -720,26 +711,18 @@ export default function SubjectTutor({
               onKeyDown={handleQuestionKeyDown}
               placeholder={questionPlaceholder}
             />
-            <p className="small" style={{ marginTop: 8, marginBottom: 0 }}>
-              Tip: press {shortcutLabel} + Enter to run.
-            </p>
           </div>
 
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1fr) auto',
-              gap: 12,
-              alignItems: 'center'
+              gap: 6,
+              justifyItems: 'end'
             }}
           >
-            <p className="small" style={{ margin: 0 }}>
-              Free beta usage is currently limited to 20 tutor requests per 24 hours.
-            </p>
-
             <div className="buttonRow" style={{ justifyContent: 'flex-end' }}>
               <button onClick={() => void submitQuestion()} disabled={loading || !question.trim()}>
-                {loading ? 'Thinking...' : conversationId ? 'Send Follow-up' : 'Get help'}
+                {loading ? 'Thinking...' : conversationId ? 'Send Follow-up' : 'Ask TutoVera'}
               </button>
 
               {showRetryButton ? (
@@ -748,6 +731,14 @@ export default function SubjectTutor({
                 </button>
               ) : null}
             </div>
+
+            <p
+              className="small"
+              title="Press Command + Enter on Mac or Control + Enter on Windows/Linux to submit."
+              style={{ margin: 0 }}
+            >
+              Cmd/Ctrl + Enter
+            </p>
           </div>
         </div>
       </section>
