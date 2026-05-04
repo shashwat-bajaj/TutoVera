@@ -106,13 +106,6 @@ function getAudienceLabel(value: string) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Unknown';
 }
 
-function getWorkspaceLabel(conversation: ConversationRecord) {
-  const subjectName = getSubjectName(conversation.subject);
-  const audienceLabel = getAudienceLabel(conversation.audience);
-
-  return `Continue in ${subjectName} ${audienceLabel} Workspace`;
-}
-
 function buildWorkspaceHref(conversation: ConversationRecord) {
   const subjectConfig = getSubjectConfig(conversation.subject);
 
@@ -152,8 +145,8 @@ function getHistoryDescription({
       return (
         <>
           Signed in as <strong>{userEmail}</strong>. Your saved {subjectName} conversations are split
-          into Student and Parent sessions so you can view the thread or continue it in the correct
-          workspace.
+          into Student and Parent sessions so you can preview the thread or continue it in the
+          correct workspace.
         </>
       );
     }
@@ -169,8 +162,8 @@ function getHistoryDescription({
   if (subject) {
     return (
       <>
-        You are not signed in yet. You can still use the legacy beta email lookup below for older{' '}
-        {subjectName} conversations, but account-linked history is now the preferred way to continue
+        You are not signed in yet. Legacy email history is view-only. Use it for older {subjectName}{' '}
+        conversations that were not attached to an account yet, then log in to continue account-linked
         sessions.
       </>
     );
@@ -178,8 +171,8 @@ function getHistoryDescription({
 
   return (
     <>
-      You are not signed in yet. You can still use the legacy beta email lookup below for older
-      conversations, but account-linked history is now the preferred way to continue sessions.
+      You are not signed in yet. Legacy email history is view-only. Use it for older conversations
+      that were not attached to an account yet, then log in to continue account-linked sessions.
     </>
   );
 }
@@ -265,11 +258,7 @@ function getConversationFirstPrompt({
   conversation: ConversationRecord;
   firstPromptByConversation: Record<string, string>;
 }) {
-  return (
-    firstPromptByConversation[conversation.id] ||
-    conversation.title ||
-    'Untitled conversation'
-  );
+  return firstPromptByConversation[conversation.id] || conversation.title || 'Untitled conversation';
 }
 
 function ConversationHistoryCard({
@@ -313,14 +302,18 @@ function ConversationHistoryCard({
 
       <div className="buttonRow" style={{ justifyContent: 'flex-start' }}>
         <a className="btn secondary" href={viewHref}>
-          View Thread
+          Preview Thread
         </a>
 
         {historyMode === 'account' ? (
           <a className="btn" href={continueHref}>
-            Continue
+            Continue in Workspace
           </a>
-        ) : null}
+        ) : (
+          <a className="btn secondary" href="/login">
+            Log in to Continue
+          </a>
+        )}
 
         {historyMode === 'account' ? (
           <DeleteConversationButton
@@ -462,12 +455,9 @@ export default async function HistoryPageContent({
   const firstNonEmptySubject = conversationGroups.find((group) => group.conversations.length > 0)
     ?.subject;
 
-  const defaultOpenSubject =
-    selectedConversation?.subject || firstNonEmptySubject || '';
+  const defaultOpenSubject = selectedConversation?.subject || firstNonEmptySubject || '';
 
-  const selectedContinueHref = selectedConversation
-    ? buildWorkspaceHref(selectedConversation)
-    : '';
+  const selectedContinueHref = selectedConversation ? buildWorkspaceHref(selectedConversation) : '';
 
   return (
     <div className="grid" style={{ gap: 24 }}>
@@ -491,8 +481,9 @@ export default async function HistoryPageContent({
             <div style={{ display: 'grid', gap: 8 }}>
               <h2 style={{ margin: 0 }}>Load older beta history</h2>
               <p className="small" style={{ margin: 0 }}>
-                Use the email lookup only for earlier beta conversations that were not attached to an
-                account yet. Logged-in history is recommended for continuing sessions.
+                Legacy email history is view-only. Use it for earlier beta conversations that were
+                not attached to an account yet. To continue saved sessions in the Student or Parent
+                workspace, please log in first.
               </p>
             </div>
 
@@ -747,20 +738,31 @@ export default async function HistoryPageContent({
                   </h2>
                   <p className="small" style={{ margin: 0 }}>
                     {selectedConversation
-                      ? 'View the full question-and-answer flow, or continue the session in the correct workspace.'
+                      ? historyMode === 'account'
+                        ? 'Preview the full question-and-answer flow here, or continue the session in the correct workspace.'
+                        : 'Preview the full question-and-answer flow here. Legacy email history is view-only.'
                       : 'Select a saved session to preview the thread here.'}
                   </p>
                 </div>
 
-                {historyMode === 'account' && selectedConversation ? (
+                {selectedConversation ? (
                   <div className="buttonRow" style={{ justifySelf: 'end' }}>
-                    <a className="btn" href={selectedContinueHref}>
-                      Continue
-                    </a>
-                    <DeleteConversationButton
-                      conversationId={selectedConversation.id}
-                      redirectHref={historyHref}
-                    />
+                    {historyMode === 'account' ? (
+                      <a className="btn" href={selectedContinueHref}>
+                        Continue in Workspace
+                      </a>
+                    ) : (
+                      <a className="btn secondary" href="/login">
+                        Log in to Continue
+                      </a>
+                    )}
+
+                    {historyMode === 'account' ? (
+                      <DeleteConversationButton
+                        conversationId={selectedConversation.id}
+                        redirectHref={historyHref}
+                      />
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -792,8 +794,8 @@ export default async function HistoryPageContent({
                 </p>
               ) : (
                 <p className="small" style={{ margin: 0 }}>
-                  Choose a Student or Parent session from the left to view it here. Logged-in users
-                  can continue sessions from the matching workspace.
+                  Choose a Student or Parent session from the left to preview it here. Logged-in
+                  users can continue sessions from the matching workspace.
                 </p>
               )}
             </main>
