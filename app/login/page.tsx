@@ -1,141 +1,217 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getURL } from '@/lib/site-url';
 import Reveal from '@/components/Reveal';
 
-export default function LoginPage() {
+function getFriendlyError(value: string | null) {
+  if (value === 'auth_callback_failed') {
+    return 'We could not finish the sign-in. Please try again.';
+  }
+
+  if (value === 'auth_confirm_failed') {
+    return 'We could not confirm this email link. Please try signing in again or request a new link.';
+  }
+
+  return '';
+}
+
+function LoginPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  const nextPath = searchParams.get('next') || '/account';
+  const errorMessage = getFriendlyError(searchParams.get('error'));
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(errorMessage);
+  const [loading, setLoading] = useState(false);
+
+  const baseUrl = useMemo(() => getURL(), []);
+
+  function getAuthCallbackUrl() {
+    return `${baseUrl}auth/callback?next=${encodeURIComponent(nextPath)}`;
+  }
+
+  function getConfirmUrl() {
+    return `${baseUrl}auth/confirm?next=${encodeURIComponent(nextPath)}`;
+  }
 
   async function handleEmailAuth() {
-    setStatus(mode === 'login' ? 'Signing in...' : 'Creating account...');
+    if (loading) return;
 
-    if (!email.trim() || !password.trim()) {
-      setStatus('Email and password are required.');
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim();
+
+    if (!normalizedEmail || !normalizedPassword) {
+      setStatus('Please enter your email and password.');
       return;
     }
 
+    if (normalizedPassword.length < 6) {
+      setStatus('Please use a password with at least 6 characters.');
+      return;
+    }
+
+    setLoading(true);
+    setStatus(mode === 'login' ? 'Signing in...' : 'Creating your account...');
+
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: normalizedEmail,
         password
       });
 
       if (error) {
         setStatus(error.message);
+        setLoading(false);
         return;
       }
 
-      router.push('/account');
+      router.push(nextPath);
       router.refresh();
       return;
     }
 
     const { error } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${getURL()}auth/confirm`
+        emailRedirectTo: getConfirmUrl()
       }
     });
 
     if (error) {
       setStatus(error.message);
+      setLoading(false);
       return;
     }
 
     setStatus(
-      'Account created. If email confirmation is enabled, check your inbox before signing in.'
+      'Account created. Please check your email to confirm your account before signing in.'
     );
+    setLoading(false);
   }
 
   async function handleGoogleLogin() {
+    if (loading) return;
+
+    setLoading(true);
     setStatus('Redirecting to Google...');
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${getURL()}auth/callback`
+        redirectTo: getAuthCallbackUrl()
       }
     });
 
     if (error) {
       setStatus(error.message);
+      setLoading(false);
     }
   }
 
   return (
-    <div className="grid" style={{ gap: 24, maxWidth: 760 }}>
+    <div className="loginPage grid" style={{ gap: 22, maxWidth: 980 }}>
       <Reveal delay={0.02}>
-        <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
-          <span className="badge">{mode === 'login' ? 'Log in' : 'Create account'}</span>
-
+        <section className="card spotlightCard loginHero">
           <div style={{ display: 'grid', gap: 10 }}>
-            <h1 style={{ margin: 0 }}>
-              {mode === 'login'
-                ? 'Return to your learning workspace.'
-                : 'Create your TutoVera account.'}
-            </h1>
-            <p className="small" style={{ margin: 0, maxWidth: 720 }}>
-              Use email and password or continue with Google. Signing in lets you save sessions,
-              revisit history, and keep your tutor experience more consistent across visits.
+            <span className="badge">TutoVera account</span>
+            <h1 style={{ margin: 0 }}>Continue your learning without losing the thread.</h1>
+            <p className="small" style={{ margin: 0, maxWidth: 760 }}>
+              One account keeps your tutor sessions, history, settings, and plan access connected
+              across TutoVera.
             </p>
+          </div>
+
+          <div className="loginTrustRow">
+            <div className="card innerFeatureCard">
+              <p className="small" style={{ margin: '0 0 4px' }}>
+                <strong>Saved sessions</strong>
+              </p>
+              <p className="small" style={{ margin: 0 }}>
+                Return to earlier Student and Parent threads.
+              </p>
+            </div>
+
+            <div className="card innerFeatureCard">
+              <p className="small" style={{ margin: '0 0 4px' }}>
+                <strong>Plan access</strong>
+              </p>
+              <p className="small" style={{ margin: 0 }}>
+                Keep Free, Plus, and Pro access tied to your account.
+              </p>
+            </div>
+
+            <div className="card innerFeatureCard">
+              <p className="small" style={{ margin: '0 0 4px' }}>
+                <strong>Preferences</strong>
+              </p>
+              <p className="small" style={{ margin: 0 }}>
+                Save your theme, level, and tutor defaults.
+              </p>
+            </div>
           </div>
         </section>
       </Reveal>
 
       <Reveal delay={0.08}>
-        <section className="grid cols-3">
-          <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Saved history</h3>
-            <p className="small" style={{ marginBottom: 0 }}>
-              Keep your sessions attached to your account so you can return to them later without
-              losing the thread.
+        <section className="card loginCard">
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span className="badge">{mode === 'login' ? 'Sign in' : 'Create account'}</span>
+            <h2 style={{ margin: 0 }}>
+              {mode === 'login' ? 'Welcome back.' : 'Start with a TutoVera account.'}
+            </h2>
+            <p className="small" style={{ margin: 0 }}>
+              Google sign-in is the fastest option. Email and password is available too.
             </p>
           </div>
 
-          <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Cleaner continuity</h3>
-            <p className="small" style={{ marginBottom: 0 }}>
-              Follow up on earlier questions more naturally instead of restarting from zero each
-              time.
+          <button
+            className="loginGoogleButton"
+            onClick={handleGoogleLogin}
+            type="button"
+            disabled={loading}
+          >
+            Continue with Google
+          </button>
+
+          <div className="loginDivider">
+            <span />
+            <p className="small" style={{ margin: 0 }}>
+              or use email
             </p>
+            <span />
           </div>
 
-          <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Personal defaults</h3>
-            <p className="small" style={{ marginBottom: 0 }}>
-              Save theme, translation, learner level, and student tutor mode preferences in one
-              place.
-            </p>
-          </div>
-        </section>
-      </Reveal>
-
-      <Reveal delay={0.14}>
-        <section className="card" style={{ display: 'grid', gap: 18 }}>
-          <div className="buttonRow">
+          <div className="buttonRow loginModeRow">
             <button
-              className={mode === 'login' ? 'secondary' : ''}
-              onClick={() => setMode('login')}
+              className={mode === 'login' ? '' : 'secondary'}
+              onClick={() => {
+                setMode('login');
+                setStatus('');
+              }}
               type="button"
+              disabled={loading}
             >
-              Log in
+              Sign in
             </button>
             <button
-              className={mode === 'signup' ? 'secondary' : ''}
-              onClick={() => setMode('signup')}
+              className={mode === 'signup' ? '' : 'secondary'}
+              onClick={() => {
+                setMode('signup');
+                setStatus('');
+              }}
               type="button"
+              disabled={loading}
             >
-              Sign up
+              Create account
             </button>
           </div>
 
@@ -147,6 +223,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
               />
             </div>
 
@@ -156,25 +233,148 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={
-                  mode === 'login' ? 'Enter your password' : 'Choose a secure password'
-                }
+                placeholder={mode === 'login' ? 'Enter your password' : 'Choose a secure password'}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void handleEmailAuth();
+                  }
+                }}
               />
             </div>
 
-            <div className="buttonRow">
-              <button onClick={handleEmailAuth} type="button">
-                {mode === 'login' ? 'Log in with email' : 'Create account'}
-              </button>
-              <button className="secondary" onClick={handleGoogleLogin} type="button">
-                Continue with Google
-              </button>
-            </div>
+            <button onClick={handleEmailAuth} type="button" disabled={loading}>
+              {loading
+                ? mode === 'login'
+                  ? 'Signing in...'
+                  : 'Creating account...'
+                : mode === 'login'
+                  ? 'Sign in with email'
+                  : 'Create account with email'}
+            </button>
 
-            {status ? <p className="small">{status}</p> : null}
+            {status ? (
+              <p className="small loginStatus" style={{ margin: 0 }}>
+                {status}
+              </p>
+            ) : null}
+
+            <p className="small" style={{ margin: 0 }}>
+              {mode === 'login' ? (
+                <>
+                  New to TutoVera?{' '}
+                  <button
+                    type="button"
+                    className="linkButton"
+                    onClick={() => {
+                      setMode('signup');
+                      setStatus('');
+                    }}
+                  >
+                    Create an account
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    className="linkButton"
+                    onClick={() => {
+                      setMode('login');
+                      setStatus('');
+                    }}
+                  >
+                    Sign in instead
+                  </button>
+                </>
+              )}
+            </p>
           </div>
         </section>
       </Reveal>
+
+      <style>
+        {`
+          .loginHero {
+            display: grid;
+            gap: 18px;
+          }
+
+          .loginTrustRow {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+          }
+
+          .loginCard {
+            display: grid;
+            gap: 18px;
+            max-width: 620px;
+          }
+
+          .loginGoogleButton {
+            width: 100%;
+          }
+
+          .loginDivider {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 12px;
+            align-items: center;
+          }
+
+          .loginDivider span {
+            height: 1px;
+            background: var(--border);
+          }
+
+          .loginModeRow {
+            gap: 10px;
+          }
+
+          .loginStatus {
+            color: var(--text-soft);
+          }
+
+          .linkButton {
+            padding: 0;
+            border: 0;
+            min-height: 0;
+            border-radius: 0;
+            background: transparent;
+            color: var(--accent);
+            box-shadow: none;
+            font: inherit;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+          }
+
+          .linkButton:hover {
+            transform: none;
+            box-shadow: none;
+          }
+
+          @media (max-width: 760px) {
+            .loginTrustRow {
+              grid-template-columns: 1fr;
+            }
+
+            .loginCard {
+              max-width: 100%;
+            }
+          }
+        `}
+      </style>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }
