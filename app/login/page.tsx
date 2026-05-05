@@ -93,7 +93,7 @@ function LoginPageInner() {
     }
 
     setStatus(
-      'Account created. Please check your email to confirm your account before signing in.'
+      'Check your email for a confirmation link. If nothing arrives, this email may already be connected to an existing TutoVera account. Try signing in, or use Continue with Google if you used Google before.'
     );
     setLoading(false);
   }
@@ -260,37 +260,46 @@ function LoginPageInner() {
               </p>
             ) : null}
 
-            <p className="small" style={{ margin: 0 }}>
-              {mode === 'login' ? (
-                <>
-                  New to TutoVera?{' '}
-                  <button
-                    type="button"
-                    className="linkButton"
-                    onClick={() => {
-                      setMode('signup');
-                      setStatus('');
-                    }}
-                  >
-                    Create an account
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{' '}
-                  <button
-                    type="button"
-                    className="linkButton"
-                    onClick={() => {
-                      setMode('login');
-                      setStatus('');
-                    }}
-                  >
-                    Sign in instead
-                  </button>
-                </>
-              )}
-            </p>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <p className="small" style={{ margin: 0 }}>
+                {mode === 'login' ? (
+                  <>
+                    New to TutoVera?{' '}
+                    <button
+                      type="button"
+                      className="linkButton"
+                      onClick={() => {
+                        setMode('signup');
+                        setStatus('');
+                      }}
+                    >
+                      Create an account
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      className="linkButton"
+                      onClick={() => {
+                        setMode('login');
+                        setStatus('');
+                      }}
+                    >
+                      Sign in instead
+                    </button>
+                  </>
+                )}
+              </p>
+
+              {mode === 'signup' ? (
+                <p className="small" style={{ margin: 0 }}>
+                  Already used Google with this email? Use <strong>Continue with Google</strong>{' '}
+                  instead.
+                </p>
+              ) : null}
+            </div>
           </div>
         </section>
       </Reveal>
