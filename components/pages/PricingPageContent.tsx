@@ -1,13 +1,15 @@
 import { Fragment } from 'react';
 import { createClient as createAuthClient } from '@/lib/supabase/server';
+import { createAdminSupabase } from '@/lib/supabase-admin';
 import PayPalSubscriptionButton from '@/components/PayPalSubscriptionButton';
 import { plans, type PlanKey } from '@/lib/plans';
+import { formatPlanName, getPlanSummarySentence, getUserPlanAccess } from '@/lib/subscriptions';
 
 const comparisonRows = [
   {
     group: 'Included in every plan',
     rows: [
-      { label: 'All subjects', free: 'Included', plus: 'Included', pro: 'Included' },
+      { label: 'All subject branches', free: 'Included', plus: 'Included', pro: 'Included' },
       { label: 'Student workspaces', free: 'Included', plus: 'Included', pro: 'Included' },
       { label: 'Parent workspaces', free: 'Included', plus: 'Included', pro: 'Included' },
       { label: 'Text-based tutoring', free: 'Included', plus: 'Included', pro: 'Included' },
@@ -24,7 +26,7 @@ const comparisonRows = [
     ]
   },
   {
-    group: 'Included in Plus and Pro',
+    group: 'Plus and Pro advantages',
     rows: [
       { label: 'Image uploads', free: 'Not included', plus: '100/month', pro: '500/month' },
       { label: 'Worksheet/photo help', free: 'Not included', plus: 'Included', pro: 'Advanced' },
@@ -32,14 +34,14 @@ const comparisonRows = [
       {
         label: 'Mistake diagnosis',
         free: 'Not included',
-        plus: 'Basic diagnosis',
+        plus: 'Guided diagnosis',
         pro: 'Advanced diagnosis'
       },
       { label: 'Longer saved continuity', free: 'Limited', plus: 'Included', pro: 'Highest access' }
     ]
   },
   {
-    group: 'Pro-focused advantages',
+    group: 'Pro-focused tools',
     rows: [
       {
         label: 'Advanced worksheet/photo help',
@@ -51,24 +53,24 @@ const comparisonRows = [
         label: 'Revision workflows',
         free: 'Not included',
         plus: 'Guided practice',
-        pro: 'Revision Mode planned'
+        pro: 'Deeper revision support'
       },
       {
         label: 'Mistake pattern tools',
         free: 'Not included',
         plus: 'Basic',
-        pro: 'Mistake Map planned'
+        pro: 'Advanced'
       },
       {
         label: 'Advanced subject tools',
         free: 'Not included',
-        plus: 'Early access',
+        plus: 'Selected access',
         pro: 'Highest access'
       },
       {
         label: 'Future diagrams and simulators',
         free: 'Not included',
-        plus: 'Limited early access',
+        plus: 'Selected access',
         pro: 'Highest access'
       }
     ]
@@ -76,48 +78,48 @@ const comparisonRows = [
 ];
 
 function getPlanHeadline(planKey: string) {
-  if (planKey === 'free') return 'Try TutoVera';
-  if (planKey === 'plus') return 'Study with worksheets and photos';
-  return 'Go deeper with revision and advanced tools';
+  if (planKey === 'free') return 'Start learning with text-based support';
+  if (planKey === 'plus') return 'Best for regular homework and worksheets';
+  return 'Best for deeper study and heavier usage';
 }
 
 function getPlanKeyPoints(planKey: string) {
   if (planKey === 'free') {
     return [
-      'Text-based tutoring across all subjects',
+      'Text-based tutoring across subjects',
       'Student and parent workspaces',
       'Basic saved history',
-      'No worksheet/photo support'
+      'A good way to try TutoVera'
     ];
   }
 
   if (planKey === 'plus') {
     return [
-      'Worksheet/photo support included',
       'Higher daily tutor limits',
+      'Worksheet/photo support access',
       'Extended saved history',
       'Practice and mistake diagnosis'
     ];
   }
 
   return [
-    'Advanced worksheet/photo help',
+    'Highest tutor request limits',
+    'Larger worksheet/photo allowance',
     'Deeper revision workflows',
-    'Mistake pattern tools planned',
-    'Highest access to future tools'
+    'Best access to advanced tools'
   ];
 }
 
 function getPlanShortDescription(planKey: string) {
   if (planKey === 'free') {
-    return 'A simple way to try TutoVera with text-based tutoring and basic saved history.';
+    return 'A simple way to try TutoVera with text-based tutoring, parent support, and basic saved history.';
   }
 
   if (planKey === 'plus') {
-    return 'The main study plan for regular users who want worksheets, photos, and guided practice.';
+    return 'The main study plan for students and families who use TutoVera regularly for homework and guided practice.';
   }
 
-  return 'A deeper study plan for heavier usage, revision workflows, and advanced subject tools.';
+  return 'A deeper plan for heavier study periods, larger worksheet use, advanced review, and stronger continuity.';
 }
 
 function getPayPalPlanIds(planKey: PlanKey) {
@@ -149,30 +151,65 @@ export default async function PricingPageContent() {
 
   const isSignedIn = Boolean(user?.id);
 
+  const supabase = createAdminSupabase();
+  const planAccess = await getUserPlanAccess({
+    supabase,
+    userId: user?.id || null,
+    email: user?.email || null
+  });
+
+  const currentPlanName = formatPlanName(planAccess.plan);
+  const currentPlanSummary = getPlanSummarySentence(planAccess);
+
   return (
     <div className="pricingPage grid" style={{ gap: 24 }}>
       <section className="card spotlightCard pricingHero">
         <div style={{ display: 'grid', gap: 10 }}>
-          <h1 style={{ margin: 0 }}>Choose the support level that fits how you study.</h1>
+          <span className="badge">Pricing</span>
+          <h1 style={{ margin: 0 }}>Choose the TutoVera plan that fits how you learn.</h1>
           <p className="small" style={{ margin: 0, maxWidth: 920 }}>
-            TutoVera is currently in free beta while sandbox billing is being tested. Free helps
-            users try the tutor, Plus unlocks worksheet/photo support for regular study, and Pro is
-            designed for deeper revision, mistake patterns, and advanced tools.
+            Start with free text-based tutoring, then upgrade when you want higher usage, worksheet
+            and photo support, longer saved history, and deeper study workflows.
           </p>
         </div>
 
         <div className="pricingHeroNotes" aria-label="Pricing highlights">
           <div>
-            <strong>Sandbox billing test</strong>
-            <span>PayPal buttons are connected to sandbox plan IDs first.</span>
+            <strong>One account</strong>
+            <span>Your plan, settings, and history stay connected across subjects.</span>
           </div>
           <div>
-            <strong>Plus and Pro</strong>
-            <span>Both include student and parent workspaces.</span>
+            <strong>Student and parent support</strong>
+            <span>Every plan includes both learning workspaces.</span>
           </div>
           <div>
-            <strong>Worksheet/photo help</strong>
-            <span>Planned as a paid-only feature.</span>
+            <strong>Upgrade when ready</strong>
+            <span>Plus and Pro are built for regular study and worksheet-heavy use.</span>
+          </div>
+        </div>
+
+        <div className="card questionSurface pricingCurrentPlan">
+          <div style={{ display: 'grid', gap: 4 }}>
+            <p className="small" style={{ margin: 0 }}>
+              <strong>{isSignedIn ? `Current plan: ${currentPlanName}` : 'Not signed in'}</strong>
+            </p>
+            <p className="small" style={{ margin: 0 }}>
+              {isSignedIn
+                ? currentPlanSummary
+                : 'Log in before subscribing so TutoVera can attach the plan to your account.'}
+            </p>
+          </div>
+
+          <div className="buttonRow" style={{ justifyContent: 'flex-end' }}>
+            {isSignedIn ? (
+              <a className="btn secondary" href="/account">
+                View Account
+              </a>
+            ) : (
+              <a className="btn secondary" href="/login?next=/pricing">
+                Log in
+              </a>
+            )}
           </div>
         </div>
       </section>
@@ -181,6 +218,7 @@ export default async function PricingPageContent() {
         <div className="pricingCards">
           {plans.map((plan) => {
             const paypalPlanIds = getPayPalPlanIds(plan.key);
+            const isCurrentPlan = plan.key === planAccess.plan;
 
             return (
               <div
@@ -192,7 +230,7 @@ export default async function PricingPageContent() {
               >
                 <div className="pricingCardTop">
                   <div className="pricingPlanHeader">
-                    <span className="badge">{plan.badge}</span>
+                    <span className="badge">{isCurrentPlan ? 'Current plan' : plan.badge}</span>
                     {plan.highlighted ? (
                       <span className="pricingPlanAccent">Recommended</span>
                     ) : null}
@@ -264,7 +302,7 @@ export default async function PricingPageContent() {
 
                 <div className="pricingFeatureBlock pricingWhyBlock">
                   <p className="small" style={{ margin: 0 }}>
-                    <strong>Why this plan works</strong>
+                    <strong>Best fit</strong>
                   </p>
 
                   <ul className="list pricingFeatureList">
@@ -275,9 +313,13 @@ export default async function PricingPageContent() {
                 </div>
 
                 <div className="buttonRow pricingButtonRow">
-                  {plan.key === 'free' ? (
+                  {isCurrentPlan ? (
+                    <a className="btn secondary" href="/account">
+                      View Current Plan
+                    </a>
+                  ) : plan.key === 'free' ? (
                     <a className="btn secondary" href={plan.ctaHref}>
-                      {plan.ctaLabel}
+                      {isSignedIn ? 'Open Free Tutor' : plan.ctaLabel}
                     </a>
                   ) : (
                     <PayPalSubscriptionButton
@@ -296,22 +338,23 @@ export default async function PricingPageContent() {
 
       <section className="card spotlightCard" style={{ display: 'grid', gap: 16 }}>
         <div style={{ display: 'grid', gap: 8 }}>
-          <h2 style={{ margin: 0 }}>
-            Paid tiers are built around learning workflows, not just more answers.
-          </h2>
+          <h2 style={{ margin: 0 }}>Paid plans are built around better study workflows.</h2>
           <p className="small" style={{ margin: 0, maxWidth: 900 }}>
-            TutoVera should not compete only as another answer generator. The planned paid value is
-            worksheet/photo support, guided practice, parent-friendly help, mistake diagnosis, saved
-            continuity, and deeper revision workflows over time.
+            TutoVera’s paid value is not just more answers. Plus and Pro are designed around higher
+            usage, worksheet and photo help, guided practice, mistake diagnosis, parent support, and
+            saved continuity across subjects.
           </p>
         </div>
 
         <div className="buttonRow">
-          <a className="btn" href="/contact">
-            Ask About Paid Access
+          <a className="btn" href="/tutor">
+            Try Student Workspace
           </a>
-          <a className="btn secondary" href="/tutor">
-            Try Free Tutor
+          <a className="btn secondary" href="/parents">
+            Try Parent Workspace
+          </a>
+          <a className="btn secondary" href="/contact">
+            Contact Support
           </a>
         </div>
       </section>
@@ -327,10 +370,10 @@ export default async function PricingPageContent() {
 
           <div className="pricingComparePanel">
             <div style={{ display: 'grid', gap: 8 }}>
-              <h2 style={{ margin: 0 }}>What changes when users upgrade?</h2>
+              <h2 style={{ margin: 0 }}>What changes when you upgrade?</h2>
               <p className="small" style={{ margin: 0, maxWidth: 860 }}>
-                The comparison is grouped by inclusiveness: features included in every plan first,
-                then Plus and Pro features, then Pro-focused advantages.
+                Free covers light text-based use. Plus is meant for regular study. Pro is meant for
+                heavier study, more worksheet use, and deeper review workflows.
               </p>
             </div>
 
@@ -371,23 +414,20 @@ export default async function PricingPageContent() {
 
       <section className="card spotlightCard" style={{ display: 'grid', gap: 16 }}>
         <div style={{ display: 'grid', gap: 8 }}>
-          <h2 style={{ margin: 0 }}>Why worksheet and photo support is paid-only</h2>
+          <h2 style={{ margin: 0 }}>Why worksheet and photo support belongs in paid plans</h2>
           <p className="small" style={{ margin: 0, maxWidth: 880 }}>
-            Image and worksheet support is more expensive to operate and more valuable for serious
-            study. Free users can still use text-based tutoring across all subjects, while Plus and
-            Pro are planned to unlock image-based help with monthly usage caps.
+            Image-based learning support is more expensive to operate and most useful for regular
+            study. Free keeps text tutoring available, while Plus and Pro are structured for higher
+            usage, worksheet-heavy questions, and longer learning continuity.
           </p>
         </div>
 
         <div className="buttonRow">
-          <a className="btn" href="/tutor">
-            Try Student Workspaces
-          </a>
-          <a className="btn secondary" href="/parents">
-            Try Parent Workspaces
+          <a className="btn" href="/pricing">
+            Compare Plans
           </a>
           <a className="btn secondary" href="/contact">
-            Ask About Paid Access
+            Ask a Question
           </a>
         </div>
       </section>
@@ -426,6 +466,14 @@ export default async function PricingPageContent() {
             color: var(--text-soft);
             font-size: 0.9rem;
             line-height: 1.5;
+          }
+
+          .pricingCurrentPlan {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: center;
+            padding: 16px;
           }
 
           .pricingCardsSection {
@@ -633,8 +681,13 @@ export default async function PricingPageContent() {
           }
 
           @media (max-width: 820px) {
-            .pricingHeroNotes {
+            .pricingHeroNotes,
+            .pricingCurrentPlan {
               grid-template-columns: 1fr;
+            }
+
+            .pricingCurrentPlan .buttonRow {
+              justify-content: flex-start !important;
             }
           }
 
