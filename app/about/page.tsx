@@ -15,8 +15,8 @@ export default function AboutPage() {
             <h1 style={{ margin: 0 }}>Learning support built to feel clearer and more continuous.</h1>
             <p className="small" style={{ margin: 0, maxWidth: 860 }}>
               TutoVera is a calm AI learning platform where each subject can have its own identity,
-              tutor behavior, examples, and learning flow while still sharing one account system,
-              one deployment, and one coherent product foundation.
+              tutor behavior, examples, and learning flow while still sharing one account system, one
+              deployment, and one coherent product foundation.
             </p>
           </div>
         </section>
@@ -34,8 +34,8 @@ export default function AboutPage() {
               steady, and trustworthy guidance for students and parents.
             </p>
             <p className="small" style={{ margin: 0, maxWidth: 900 }}>
-              Since 2026, TutoVera has been shaped around a simple idea: learning support should
-              feel clear, steady, and useful enough to continue from one question to the next.
+              Since 2026, TutoVera has been shaped around a simple idea: learning support should feel
+              clear, steady, and useful enough to continue from one question to the next.
             </p>
           </div>
 
@@ -121,7 +121,7 @@ export default function AboutPage() {
                   {subject.status === 'active'
                     ? 'Active'
                     : subject.status === 'beta'
-                      ? 'Beta preview'
+                      ? 'Early preview'
                       : 'Preview'}
                 </span>
 

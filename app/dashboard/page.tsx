@@ -21,7 +21,7 @@ async function getTutorSessions() {
     .limit(10);
 }
 
-async function getBetaSignups() {
+async function getEarlyAccessSignups() {
   const supabase = createAdminSupabase();
 
   return supabase
@@ -59,19 +59,15 @@ export default async function DashboardPage({
           <div style={{ display: 'grid', gap: 10 }}>
             <h1 style={{ margin: 0 }}>TutoVera internal dashboard.</h1>
             <p className="small" style={{ margin: 0, maxWidth: 760 }}>
-              This page is restricted and is used to review recent beta signups, contact messages,
-              and tutor activity across active subject branches.
+              This page is restricted and is used to review recent early access signups, contact
+              messages, and tutor activity across active subject branches.
             </p>
           </div>
 
           <form method="GET" className="grid" style={{ gap: 12, maxWidth: 520 }}>
             <div>
               <label>Admin password</label>
-              <input
-                name="password"
-                type="password"
-                placeholder="Enter admin password"
-              />
+              <input name="password" type="password" placeholder="Enter admin password" />
             </div>
 
             <div className="buttonRow">
@@ -87,11 +83,7 @@ export default async function DashboardPage({
     { data: sessions, error: sessionsError },
     { data: signups, error: signupsError },
     { data: messages, error: messagesError }
-  ] = await Promise.all([
-    getTutorSessions(),
-    getBetaSignups(),
-    getContactMessages()
-  ]);
+  ] = await Promise.all([getTutorSessions(), getEarlyAccessSignups(), getContactMessages()]);
 
   return (
     <div className="grid" style={{ gap: 24 }}>
@@ -101,7 +93,7 @@ export default async function DashboardPage({
         <div style={{ display: 'grid', gap: 10 }}>
           <h1 style={{ margin: 0 }}>TutoVera internal overview.</h1>
           <p className="small" style={{ margin: 0, maxWidth: 820 }}>
-            Review recent platform activity across beta signups, contact messages, and tutor
+            Review recent platform activity across early access signups, contact messages, and tutor
             sessions for Math, Physics, Chemistry, Biology, and future branches.
           </p>
         </div>
@@ -109,39 +101,45 @@ export default async function DashboardPage({
 
       <section className="grid cols-3">
         <div className="card innerFeatureCard">
-          <h3 style={{ marginTop: 0 }}>Beta signups</h3>
+          <h3 style={{ marginTop: 0 }}>Early access signups</h3>
           <p className="small" style={{ marginBottom: 0 }}>
-            {signupsError ? 'Unable to load signups.' : `${signups?.length || 0} recent records loaded.`}
+            {signupsError
+              ? 'Unable to load signups.'
+              : `${signups?.length || 0} recent records loaded.`}
           </p>
         </div>
 
         <div className="card innerFeatureCard">
           <h3 style={{ marginTop: 0 }}>Contact messages</h3>
           <p className="small" style={{ marginBottom: 0 }}>
-            {messagesError ? 'Unable to load messages.' : `${messages?.length || 0} recent records loaded.`}
+            {messagesError
+              ? 'Unable to load messages.'
+              : `${messages?.length || 0} recent records loaded.`}
           </p>
         </div>
 
         <div className="card innerFeatureCard">
           <h3 style={{ marginTop: 0 }}>Tutor sessions</h3>
           <p className="small" style={{ marginBottom: 0 }}>
-            {sessionsError ? 'Unable to load sessions.' : `${sessions?.length || 0} recent records loaded.`}
+            {sessionsError
+              ? 'Unable to load sessions.'
+              : `${sessions?.length || 0} recent records loaded.`}
           </p>
         </div>
       </section>
 
       <section className="card" style={{ display: 'grid', gap: 16 }}>
         <div style={{ display: 'grid', gap: 8 }}>
-          <h2 style={{ margin: 0 }}>Recent beta signups</h2>
+          <h2 style={{ margin: 0 }}>Recent early access signups</h2>
           <p className="small" style={{ margin: 0 }}>
-            People who joined the platform beta list from the TutoVera signup form.
+            People who joined the TutoVera early access list from the homepage interest form.
           </p>
         </div>
 
         {signupsError ? (
-          <p className="small">Error loading beta signups: {signupsError.message}</p>
+          <p className="small">Error loading early access signups: {signupsError.message}</p>
         ) : !signups || signups.length === 0 ? (
-          <p className="small">No beta signups yet.</p>
+          <p className="small">No early access signups yet.</p>
         ) : (
           <div className="grid" style={{ gap: 16 }}>
             {signups.map((signup) => (
@@ -156,8 +154,7 @@ export default async function DashboardPage({
                   <strong>Joined:</strong> {formatDate(signup.created_at)}
                 </p>
                 <p className="question-block">
-                  <strong>Goal:</strong>{' '}
-                  {signup.goal || 'No goal provided'}
+                  <strong>Goal:</strong> {signup.goal || 'No goal provided'}
                 </p>
               </div>
             ))}
@@ -205,7 +202,7 @@ export default async function DashboardPage({
           <h2 style={{ margin: 0 }}>Recent tutor sessions</h2>
           <p className="small" style={{ margin: 0 }}>
             Recent tutor requests across active subject branches. This helps review actual usage,
-            response quality, subject coverage, and early product needs.
+            response quality, subject coverage, and product needs.
           </p>
         </div>
 
@@ -222,8 +219,7 @@ export default async function DashboardPage({
                 </p>
                 <p className="small">
                   <strong>Subject:</strong> {session.subject || 'unknown'} |{' '}
-                  <strong>Mode:</strong> {session.mode} | <strong>Level:</strong>{' '}
-                  {session.level}
+                  <strong>Mode:</strong> {session.mode} | <strong>Level:</strong> {session.level}
                 </p>
                 <p className="small">
                   <strong>Asked:</strong> {formatDate(session.created_at)}

@@ -11,16 +11,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminSupabase();
 
-    const { error } = await supabase
-      .from('beta_signups')
-      .upsert(
-        {
-          email: email.trim().toLowerCase(),
-          name: name?.trim() || null,
-          goal: goal?.trim() || null
-        },
-        { onConflict: 'email' }
-      );
+    const { error } = await supabase.from('beta_signups').upsert(
+      {
+        email: email.trim().toLowerCase(),
+        name: name?.trim() || null,
+        goal: goal?.trim() || null
+      },
+      { onConflict: 'email' }
+    );
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -29,7 +27,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Could not save beta signup.' },
+      { error: error?.message || 'Could not save early access interest.' },
       { status: 500 }
     );
   }
