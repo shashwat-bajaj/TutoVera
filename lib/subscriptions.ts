@@ -147,3 +147,49 @@ export function formatBillingCycle(value: string | null | undefined) {
   if (value === 'annual') return 'Annual';
   return 'Not active';
 }
+
+export function formatSubscriptionStatus(value: string | null | undefined) {
+  if (value === 'active') return 'Active';
+  if (value === 'pending') return 'Pending';
+  if (value === 'past_due') return 'Past due';
+  if (value === 'suspended') return 'Suspended';
+  if (value === 'inactive') return 'Inactive';
+
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Inactive';
+}
+
+export function formatDate(value: string | null | undefined) {
+  if (!value) return 'Not available';
+
+  try {
+    return new Intl.DateTimeFormat('en', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+export function getPlanSummarySentence(planAccess: PlanAccessSummary) {
+  if (planAccess.hasActivePaidAccess) {
+    if (planAccess.cancelAtPeriodEnd && planAccess.currentPeriodEnd) {
+      return `Your ${formatPlanName(planAccess.plan)} access is active and scheduled to end on ${formatDate(
+        planAccess.currentPeriodEnd
+      )}.`;
+    }
+
+    return `Your ${formatPlanName(planAccess.plan)} access is active.`;
+  }
+
+  if (planAccess.subscription?.paypal_status === 'CANCELLED') {
+    return 'Your previous PayPal subscription has been cancelled. You are currently on the Free plan.';
+  }
+
+  if (planAccess.subscription?.paypal_status === 'SUSPENDED') {
+    return 'Your previous PayPal subscription is suspended. You are currently on the Free plan.';
+  }
+
+  return 'You are currently on the Free plan.';
+}

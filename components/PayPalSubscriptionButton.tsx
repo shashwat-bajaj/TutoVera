@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { BillingCycle } from '@/lib/paypal';
 import type { PlanKey } from '@/lib/plans';
 
@@ -79,18 +80,30 @@ function loadPayPalScript(clientId: string) {
   return paypalScriptPromise;
 }
 
+function getPlanName(plan: Exclude<PlanKey, 'free'>) {
+  return plan === 'pro' ? 'Pro' : 'Plus';
+}
+
+function getBillingLabel(cycle: BillingCycle) {
+  return cycle === 'annual' ? 'Annual' : 'Monthly';
+}
+
 export default function PayPalSubscriptionButton({
   plan,
   monthlyPlanId,
   annualPlanId,
   isSignedIn
 }: PayPalSubscriptionButtonProps) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
+
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [statusMessage, setStatusMessage] = useState('');
+  const [statusKind, setStatusKind] = useState<'idle' | 'info' | 'success' | 'error'>('idle');
   const [isSaving, setIsSaving] = useState(false);
 
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
+  const planName = getPlanName(plan);
 
   const selectedPlanId = useMemo(() => {
     return billingCycle === 'monthly' ? monthlyPlanId : annualPlanId;
@@ -101,22 +114,22 @@ export default function PayPalSubscriptionButton({
     let renderedButtons: PayPalButtonInstance | null = null;
 
     async function renderButtons() {
-      setStatusMessage('');
-
       if (!containerRef.current) return;
 
       containerRef.current.innerHTML = '';
 
-      if (!isSignedIn) {
+      if (!isSignedIn || statusKind === 'success') {
         return;
       }
 
       if (!clientId) {
+        setStatusKind('error');
         setStatusMessage('PayPal client ID is not configured yet.');
         return;
       }
 
       if (!selectedPlanId) {
+        setStatusKind('error');
         setStatusMessage('PayPal plan ID is not configured yet.');
         return;
       }
@@ -142,12 +155,14 @@ export default function PayPalSubscriptionButton({
             const subscriptionId = data.subscriptionID;
 
             if (!subscriptionId) {
+              setStatusKind('error');
               setStatusMessage('PayPal did not return a subscription ID.');
               return;
             }
 
             setIsSaving(true);
-            setStatusMessage('Saving your subscription...');
+            setStatusKind('info');
+            setStatusMessage('Confirming your TutoVera subscription...');
 
             const response = await fetch('/api/paypal/subscription', {
               method: 'POST',
@@ -167,17 +182,28 @@ export default function PayPalSubscriptionButton({
             setIsSaving(false);
 
             if (!response.ok) {
-              setStatusMessage(result.error || 'Subscription was approved, but could not be saved.');
+              setStatusKind('error');
+              setStatusMessage(
+                result.error ||
+                  'PayPal approved the subscription, but TutoVera could not save it. Please contact support.'
+              );
               return;
             }
 
-            setStatusMessage('Subscription saved. Your TutoVera access is being updated.');
+            setStatusKind('success');
+            setStatusMessage(
+              `You're subscribed to TutoVera ${planName}. Your account access has been updated.`
+            );
+
+            router.refresh();
           },
           onCancel: () => {
+            setStatusKind('info');
             setStatusMessage('PayPal subscription approval was cancelled.');
           },
           onError: (error) => {
             console.error(error);
+            setStatusKind('error');
             setStatusMessage('PayPal could not load the subscription approval flow.');
           }
         });
@@ -185,11 +211,12 @@ export default function PayPalSubscriptionButton({
         await renderedButtons.render(containerRef.current);
       } catch (error) {
         console.error(error);
+        setStatusKind('error');
         setStatusMessage(error instanceof Error ? error.message : 'PayPal button failed to load.');
       }
     }
 
-    renderButtons();
+    void renderButtons();
 
     return () => {
       isMounted = false;
@@ -198,17 +225,56 @@ export default function PayPalSubscriptionButton({
         renderedButtons.close();
       }
     };
-  }, [billingCycle, clientId, isSignedIn, monthlyPlanId, annualPlanId, plan, selectedPlanId]);
+  }, [
+    billingCycle,
+    clientId,
+    isSignedIn,
+    monthlyPlanId,
+    annualPlanId,
+    plan,
+    planName,
+    router,
+    selectedPlanId,
+    statusKind
+  ]);
 
   if (!isSignedIn) {
     return (
       <div style={{ display: 'grid', gap: 10, width: '100%' }}>
-        <a className="btn" href="/login">
+        <a className="btn" href="/login?next=/pricing">
           Log in to subscribe
         </a>
         <p className="small" style={{ margin: 0 }}>
           Sign in first so TutoVera can attach the subscription to your account.
         </p>
+      </div>
+    );
+  }
+
+  if (statusKind === 'success') {
+    return (
+      <div
+        className="card questionSurface"
+        style={{
+          display: 'grid',
+          gap: 12,
+          width: '100%',
+          padding: 16,
+          borderColor: 'var(--accent-border)'
+        }}
+      >
+        <p className="small" style={{ margin: 0 }}>
+          <strong>{statusMessage}</strong>
+        </p>
+
+        <div className="buttonRow">
+          <a className="btn" href="/account">
+            View Account
+          </a>
+          <a className="btn secondary" href="/tutor">
+            Start Learning
+          </a>
+        </div>
       </div>
     );
   }
@@ -219,23 +285,43 @@ export default function PayPalSubscriptionButton({
         <button
           type="button"
           className={`themeOption ${billingCycle === 'monthly' ? 'active' : ''}`}
-          onClick={() => setBillingCycle('monthly')}
+          onClick={() => {
+            setBillingCycle('monthly');
+            setStatusKind('idle');
+            setStatusMessage('');
+          }}
+          disabled={isSaving}
         >
           Monthly
         </button>
         <button
           type="button"
           className={`themeOption ${billingCycle === 'annual' ? 'active' : ''}`}
-          onClick={() => setBillingCycle('annual')}
+          onClick={() => {
+            setBillingCycle('annual');
+            setStatusKind('idle');
+            setStatusMessage('');
+          }}
+          disabled={isSaving}
         >
           Annual
         </button>
       </div>
 
+      <p className="small" style={{ margin: 0 }}>
+        Selected: <strong>{planName}</strong> · {getBillingLabel(billingCycle)}
+      </p>
+
       <div ref={containerRef} />
 
       {isSaving || statusMessage ? (
-        <p className="small" style={{ margin: 0 }}>
+        <p
+          className="small"
+          style={{
+            margin: 0,
+            color: statusKind === 'error' ? 'var(--accent-warm)' : 'var(--text-soft)'
+          }}
+        >
           {statusMessage}
         </p>
       ) : null}
