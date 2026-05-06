@@ -6,6 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'TutoVera',
     description:
       'Solve. Understand. Improve. A calm AI learning platform for Math, Physics, Chemistry, and Biology.',
+    id: '/',
     start_url: '/',
     scope: '/',
     display: 'standalone',
@@ -14,13 +15,13 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['education', 'productivity'],
     icons: [
       {
-        src: '/brand/exact/tutovera-app-icon.png',
+        src: '/brand/exact/tutovera-app-icon.png?v=5',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: '/brand/transparent/tutovera-app-icon-transparent.png',
+        src: '/brand/transparent/tutovera-app-icon-transparent.png?v=5',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'

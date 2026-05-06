@@ -3,13 +3,19 @@
 import { useState } from 'react';
 import Reveal from '@/components/Reveal';
 
+const supportEmail = 'support@tutovera.com';
+
 export default function ContactPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(false);
 
   async function submitContact() {
+    if (loading || !email.trim() || !message.trim()) return;
+
+    setLoading(true);
     setStatus('Sending...');
 
     try {
@@ -26,12 +32,14 @@ export default function ContactPage() {
         return;
       }
 
-      setStatus('Your message has been sent.');
+      setStatus('Your message has been sent. Thank you for helping improve TutoVera.');
       setName('');
       setEmail('');
       setMessage('');
     } catch {
       setStatus('Something went wrong while sending your message.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -42,11 +50,10 @@ export default function ContactPage() {
           <span className="badge">Contact</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
-            <h1 style={{ margin: 0 }}>Help shape TutoVera while it grows.</h1>
+            <h1 style={{ margin: 0 }}>Contact TutoVera.</h1>
             <p className="small" style={{ margin: 0, maxWidth: 820 }}>
-              Use this page to share bugs, confusing moments, feature requests, product ideas, or
-              anything that would make TutoVera more useful and trustworthy for students, parents,
-              and the broader TutoVera platform.
+              Share bugs, confusing moments, feature requests, product ideas, account questions, or
+              anything that would make TutoVera more useful and trustworthy for students and parents.
             </p>
           </div>
         </section>
@@ -70,10 +77,13 @@ export default function ContactPage() {
           </div>
 
           <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Feature requests</h3>
+            <h3 style={{ marginTop: 0 }}>Support</h3>
             <p className="small" style={{ marginBottom: 0 }}>
-              Suggest workflows, tools, UI changes, or study features that would make the product
-              more helpful over time.
+              For account, billing, or access questions, use the form below or email{' '}
+              <a href={`mailto:${supportEmail}`}>
+                <strong>{supportEmail}</strong>
+              </a>
+              .
             </p>
           </div>
         </section>
@@ -84,8 +94,8 @@ export default function ContactPage() {
           <div style={{ display: 'grid', gap: 8 }}>
             <h2 style={{ margin: 0 }}>Message form</h2>
             <p className="small" style={{ margin: 0 }}>
-              The more specific your message is, the easier it is to improve TutoVera in a meaningful
-              way.
+              The more specific your message is, the easier it is to review and improve TutoVera in a
+              meaningful way.
             </p>
           </div>
 
@@ -96,6 +106,7 @@ export default function ContactPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
+                disabled={loading}
               />
             </div>
 
@@ -106,6 +117,7 @@ export default function ContactPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                disabled={loading}
               />
             </div>
 
@@ -115,13 +127,18 @@ export default function ContactPage() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Tell us what you liked, what confused you, what broke, or what you want built next."
+                disabled={loading}
               />
             </div>
 
             <div className="buttonRow">
-              <button onClick={submitContact} disabled={!email.trim() || !message.trim()}>
-                Send message
+              <button onClick={submitContact} disabled={loading || !email.trim() || !message.trim()}>
+                {loading ? 'Sending...' : 'Send message'}
               </button>
+
+              <a className="btn secondary" href={`mailto:${supportEmail}`}>
+                Email Support
+              </a>
             </div>
 
             {status ? <p className="small">{status}</p> : null}
