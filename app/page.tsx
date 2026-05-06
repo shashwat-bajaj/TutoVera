@@ -26,8 +26,8 @@ export default function HomePage() {
               <Link className="btn" href="/subjects">
                 Explore Subjects →
               </Link>
-              <Link className="btn secondary" href="#beta">
-                Join Free Beta
+              <Link className="btn secondary" href="#early-access">
+                Join Early Access
               </Link>
             </div>
 
@@ -221,7 +221,7 @@ export default function HomePage() {
       </Reveal>
 
       <Reveal delay={0.12}>
-        <section id="beta">
+        <section id="early-access">
           <BetaSignup />
         </section>
       </Reveal>

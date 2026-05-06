@@ -25,16 +25,16 @@ export default function BetaSignup() {
       const data = await res.json();
 
       if (!res.ok) {
-        setStatus(data.error || 'Could not join beta.');
+        setStatus(data.error || 'Could not save your interest.');
         return;
       }
 
-      setStatus('You have been added to the TutoVera beta list.');
+      setStatus('You have been added to the TutoVera early access list.');
       setName('');
       setEmail('');
       setGoal('');
     } catch {
-      setStatus('Something went wrong while saving your beta signup.');
+      setStatus('Something went wrong while saving your interest.');
     } finally {
       setLoading(false);
     }
@@ -58,14 +58,14 @@ export default function BetaSignup() {
         }}
       >
         <div style={{ display: 'grid', gap: 12 }}>
-          <span className="badge">Join the TutoVera beta</span>
+          <span className="badge">Join early access</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
-            <h2 style={{ margin: 0 }}>Help shape TutoVera while it is still being refined.</h2>
+            <h2 style={{ margin: 0 }}>Help shape TutoVera as it grows.</h2>
             <p className="small" style={{ margin: 0, maxWidth: 520 }}>
-              Leave your details so we can track early interest, understand real study needs, and
-              improve Math, Physics, Chemistry, Biology, and future learning tools around actual
-              learners and families.
+              Leave your details so we can understand real study needs, improve the learning flow,
+              and shape Math, Physics, Chemistry, Biology, and future tools around actual learners
+              and families.
             </p>
           </div>
 
@@ -145,7 +145,7 @@ export default function BetaSignup() {
           >
             <div className="buttonRow">
               <button onClick={submitSignup} disabled={!email.trim() || loading}>
-                {loading ? 'Saving...' : 'Join beta'}
+                {loading ? 'Saving...' : 'Join early access'}
               </button>
             </div>
 
@@ -155,7 +155,7 @@ export default function BetaSignup() {
               </p>
             ) : (
               <p className="small" style={{ margin: 0 }}>
-                We only use this to manage beta interest and product feedback.
+                We only use this to manage early access interest and product feedback.
               </p>
             )}
           </div>

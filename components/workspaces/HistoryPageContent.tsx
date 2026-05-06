@@ -479,11 +479,11 @@ export default async function HistoryPageContent({
         <Reveal delay={0.04}>
           <section className="card" style={{ display: 'grid', gap: 14 }}>
             <div style={{ display: 'grid', gap: 8 }}>
-              <h2 style={{ margin: 0 }}>Load older beta history</h2>
+              <h2 style={{ margin: 0 }}>Load older email-based history</h2>
               <p className="small" style={{ margin: 0 }}>
-                Legacy email history is view-only. Use it for earlier beta conversations that were
-                not attached to an account yet. To continue saved sessions in the Student or Parent
-                workspace, please log in first.
+                Legacy email history is view-only. Use it for older email-based conversations that
+                were not attached to an account yet. To continue saved sessions in the Student or
+                Parent workspace, please log in first.
               </p>
             </div>
 
@@ -533,7 +533,7 @@ export default async function HistoryPageContent({
       {historyMode === 'none' ? (
         <section className="card">
           <p className="small" style={{ margin: 0 }}>
-            Sign in to view private history, or use the email lookup form for older beta
+            Sign in to view private history, or use the email lookup form for older email-based
             conversations.
           </p>
         </section>

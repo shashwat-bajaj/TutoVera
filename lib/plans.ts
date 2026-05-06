@@ -30,7 +30,7 @@ export const plans: Plan[] = [
     badge: 'Start here',
     monthlyPrice: '$0',
     annualPrice: '$0',
-    annualNote: 'Free beta access',
+    annualNote: 'Free access',
     description:
       'A simple way to try TutoVera across all subject branches with text-based tutoring and basic saved history.',
     audience: 'Best for light use, testing the platform, and occasional study support.',

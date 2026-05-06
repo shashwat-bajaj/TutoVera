@@ -8,14 +8,14 @@ export default function PrivacyPage() {
           <span className="badge">Privacy Policy</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
-            <h1 style={{ margin: 0 }}>How TutoVera handles information during the beta.</h1>
+            <h1 style={{ margin: 0 }}>How TutoVera handles information.</h1>
             <p className="small" style={{ margin: 0 }}>
               Last updated: April 2026
             </p>
             <p className="small" style={{ margin: 0, maxWidth: 840 }}>
-              TutoVera is currently offered as a free beta learning product. This Privacy Policy
-              explains what information may be collected, how it may be used, and how it is handled
-              while the platform continues to develop.
+              TutoVera is an evolving learning product. This Privacy Policy explains what
+              information may be collected, how it may be used, and how it is handled while the
+              platform continues to develop.
             </p>
           </div>
         </section>
@@ -32,7 +32,7 @@ export default function PrivacyPage() {
           </div>
 
           <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Beta improvement</h3>
+            <h3 style={{ marginTop: 0 }}>Product improvement</h3>
             <p className="small" style={{ marginBottom: 0 }}>
               Usage patterns, submitted questions, tutor flows, and feedback may be reviewed to make
               TutoVera clearer, more reliable, and more useful over time.
@@ -89,8 +89,8 @@ export default function PrivacyPage() {
           <h2 style={{ margin: 0 }}>How information may be used</h2>
           <p className="small" style={{ margin: 0 }}>
             Submitted information may be used to operate the tutor, save session history, support
-            account features, improve product quality, understand beta usage, reduce abuse, diagnose
-            technical issues, and help shape subject branches, tools, and workflows.
+            account features, improve product quality, understand product usage, reduce abuse,
+            diagnose technical issues, and help shape subject branches, tools, and workflows.
           </p>
         </section>
       </Reveal>
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
           <h2 style={{ margin: 0 }}>Third-party services and data sharing</h2>
           <p className="small" style={{ margin: 0 }}>
             TutoVera does not sell personal information. The product may rely on third-party service
-            providers such as hosting, database, authentication, analytics, email, and AI
+            providers such as hosting, database, authentication, analytics, email, payment, and AI
             infrastructure providers that process information on behalf of the service in order to
             make the product available.
           </p>
@@ -122,9 +122,10 @@ export default function PrivacyPage() {
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Data retention</h2>
           <p className="small" style={{ margin: 0 }}>
-            Beta submissions, saved history, signup information, contact messages, and related
-            product data may be retained for development, debugging, analytics, product improvement,
-            and service continuity unless deletion is requested and technically feasible.
+            Early access submissions, saved history, signup information, contact messages, and
+            related product data may be retained for development, debugging, analytics, product
+            improvement, and service continuity unless deletion is requested and technically
+            feasible.
           </p>
         </section>
       </Reveal>
@@ -145,7 +146,7 @@ export default function PrivacyPage() {
           <h2 style={{ margin: 0 }}>Privacy questions</h2>
           <p className="small" style={{ margin: 0 }}>
             For privacy-related questions, feedback, or deletion requests, please use the contact page
-            while the beta continues to expand.
+            as the product continues to expand.
           </p>
 
           <div className="buttonRow">

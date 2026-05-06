@@ -8,14 +8,13 @@ export default function TermsPage() {
           <span className="badge">Terms of Use</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
-            <h1 style={{ margin: 0 }}>Terms for using TutoVera during the beta stage.</h1>
+            <h1 style={{ margin: 0 }}>Terms for using TutoVera.</h1>
             <p className="small" style={{ margin: 0 }}>
               Last updated: April 2026
             </p>
             <p className="small" style={{ margin: 0, maxWidth: 840 }}>
-              These Terms of Use govern access to and use of TutoVera while the product remains in
-              its beta phase. By using the service, you agree to use it responsibly and accept these
-              terms.
+              These Terms of Use govern access to and use of TutoVera as the product continues to
+              evolve. By using the service, you agree to use it responsibly and accept these terms.
             </p>
           </div>
         </section>
@@ -32,7 +31,7 @@ export default function TermsPage() {
           </div>
 
           <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Beta environment</h3>
+            <h3 style={{ marginTop: 0 }}>Evolving service</h3>
             <p className="small" style={{ marginBottom: 0 }}>
               Features, workflows, availability, limits, and access rules may change as the product
               continues to evolve.
@@ -96,10 +95,10 @@ export default function TermsPage() {
 
       <Reveal delay={0.22}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
-          <h2 style={{ margin: 0 }}>Beta service status</h2>
+          <h2 style={{ margin: 0 }}>Service development</h2>
           <p className="small" style={{ margin: 0 }}>
-            TutoVera is currently a beta product. Features may be added, changed, limited,
-            interrupted, removed, or discontinued at any time as the service develops.
+            TutoVera is an evolving product. Features may be added, changed, limited, interrupted,
+            removed, or discontinued at any time as the service develops.
           </p>
         </section>
       </Reveal>
@@ -108,9 +107,9 @@ export default function TermsPage() {
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Usage limits</h2>
           <p className="small" style={{ margin: 0 }}>
-            Free beta access may be subject to request limits, technical restrictions, admin
-            controls, provider-side limitations, or temporary suspension in order to protect
-            reliability, prevent abuse, and manage platform capacity.
+            Free access may be subject to request limits, technical restrictions, admin controls,
+            provider-side limitations, or temporary suspension in order to protect reliability,
+            prevent abuse, and manage platform capacity.
           </p>
         </section>
       </Reveal>
@@ -122,7 +121,7 @@ export default function TermsPage() {
             Users may submit questions, learning materials, messages, and related content while using
             the product. TutoVera may process and store submitted content, tutor responses, and saved
             session history as needed to operate the service, support account features, improve the
-            beta, and maintain product reliability.
+            product, and maintain product reliability.
           </p>
         </section>
       </Reveal>
@@ -144,8 +143,8 @@ export default function TermsPage() {
           <h2 style={{ margin: 0 }}>Third-party services</h2>
           <p className="small" style={{ margin: 0 }}>
             TutoVera may rely on third-party providers for hosting, database, authentication,
-            analytics, email, AI infrastructure, and related product operations. These providers may
-            process information as needed to make the service available.
+            analytics, email, payment, AI infrastructure, and related product operations. These
+            providers may process information as needed to make the service available.
           </p>
         </section>
       </Reveal>
@@ -175,9 +174,9 @@ export default function TermsPage() {
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Changes to these terms</h2>
           <p className="small" style={{ margin: 0 }}>
-            These terms may be updated from time to time as the product evolves from beta into a more
-            mature public service. Continued use of the product after updates means you accept the
-            revised terms.
+            These terms may be updated from time to time as the product continues to evolve into a
+            more mature public service. Continued use of the product after updates means you accept
+            the revised terms.
           </p>
         </section>
       </Reveal>
