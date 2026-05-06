@@ -45,16 +45,37 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
+      console.error('CONTACT MESSAGE INSERT ERROR:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+
       return NextResponse.json(
-        { error: 'Could not send message right now. Please try again shortly.' },
+        {
+          error:
+            process.env.NODE_ENV === 'production'
+              ? 'Could not send message right now. Please try again shortly.'
+              : `Could not send message: ${error.message}`
+        },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error('CONTACT MESSAGE ROUTE ERROR:', error);
+
     return NextResponse.json(
-      { error: 'Could not send message right now. Please try again shortly.' },
+      {
+        error:
+          process.env.NODE_ENV === 'production'
+            ? 'Could not send message right now. Please try again shortly.'
+            : error instanceof Error
+              ? `Could not send message: ${error.message}`
+              : 'Could not send message right now. Please try again shortly.'
+      },
       { status: 500 }
     );
   }
