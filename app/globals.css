@@ -294,6 +294,7 @@ a {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   box-shadow: 0 12px 30px rgba(0, 8, 24, 0.11);
+  overflow: visible;
 }
 
 html[data-theme='light'] .topbar {
@@ -306,16 +307,20 @@ html[data-theme='light'] .topbar {
   margin: 0 auto;
   display: grid;
   gap: 12px;
+  overflow: visible;
 }
 
 .headerBrand {
   min-width: 0;
   flex-shrink: 0;
+  overflow: visible;
 }
 
 .headerNavWrap {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
+  padding-block: 6px;
+  margin-block: -6px;
 }
 
 .mainNav {
@@ -324,9 +329,11 @@ html[data-theme='light'] .topbar {
   flex-wrap: nowrap;
   align-items: center;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  padding-block: 6px;
+  margin-block: -6px;
 }
 
 .mainNav::-webkit-scrollbar {
@@ -341,7 +348,7 @@ html[data-theme='light'] .topbar {
   border-radius: 999px;
   color: var(--text-soft);
   white-space: nowrap;
-  flex-shrink: 0;
+  flex: 0 0 auto;
   transition:
     color 0.2s var(--ease-premium),
     background 0.2s var(--ease-premium),
@@ -1566,7 +1573,7 @@ html[data-theme='light'] .turnLabel {
   }
 
   .mainNav {
-    padding-bottom: 2px;
+    padding-block: 6px;
   }
 
   .siteBackdropOrbOne {

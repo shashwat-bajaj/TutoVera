@@ -42,6 +42,11 @@ function LoginPageInner() {
     return `${baseUrl}auth/confirm?next=${encodeURIComponent(nextPath)}`;
   }
 
+  function switchMode(nextMode: 'login' | 'signup') {
+    setMode(nextMode);
+    setStatus('');
+  }
+
   async function handleEmailAuth() {
     if (loading) return;
 
@@ -193,10 +198,7 @@ function LoginPageInner() {
           <div className="buttonRow loginModeRow">
             <button
               className={mode === 'login' ? '' : 'secondary'}
-              onClick={() => {
-                setMode('login');
-                setStatus('');
-              }}
+              onClick={() => switchMode('login')}
               type="button"
               disabled={loading}
             >
@@ -204,10 +206,7 @@ function LoginPageInner() {
             </button>
             <button
               className={mode === 'signup' ? '' : 'secondary'}
-              onClick={() => {
-                setMode('signup');
-                setStatus('');
-              }}
+              onClick={() => switchMode('signup')}
               type="button"
               disabled={loading}
             >
@@ -259,47 +258,6 @@ function LoginPageInner() {
                 {status}
               </p>
             ) : null}
-
-            <div style={{ display: 'grid', gap: 8 }}>
-              <p className="small" style={{ margin: 0 }}>
-                {mode === 'login' ? (
-                  <>
-                    New to TutoVera?{' '}
-                    <button
-                      type="button"
-                      className="linkButton"
-                      onClick={() => {
-                        setMode('signup');
-                        setStatus('');
-                      }}
-                    >
-                      Create an account
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{' '}
-                    <button
-                      type="button"
-                      className="linkButton"
-                      onClick={() => {
-                        setMode('login');
-                        setStatus('');
-                      }}
-                    >
-                      Sign in instead
-                    </button>
-                  </>
-                )}
-              </p>
-
-              {mode === 'signup' ? (
-                <p className="small" style={{ margin: 0 }}>
-                  Already used Google with this email? Use <strong>Continue with Google</strong>{' '}
-                  instead.
-                </p>
-              ) : null}
-            </div>
           </div>
         </section>
       </Reveal>
@@ -345,24 +303,6 @@ function LoginPageInner() {
 
           .loginStatus {
             color: var(--text-soft);
-          }
-
-          .linkButton {
-            padding: 0;
-            border: 0;
-            min-height: 0;
-            border-radius: 0;
-            background: transparent;
-            color: var(--accent);
-            box-shadow: none;
-            font: inherit;
-            text-decoration: underline;
-            text-underline-offset: 3px;
-          }
-
-          .linkButton:hover {
-            transform: none;
-            box-shadow: none;
           }
 
           @media (max-width: 760px) {
