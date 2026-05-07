@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { createClient as createAuthClient } from '@/lib/supabase/server';
 import { createAdminSupabase } from '@/lib/supabase-admin';
-import PayPalSubscriptionButton from '@/components/PayPalSubscriptionButton';
+import PayPalExpandedCheckout from '@/components/PayPalExpandedCheckout';
 import { plans, type PlanKey } from '@/lib/plans';
 import { formatPlanName, getPlanSummarySentence, getUserPlanAccess } from '@/lib/subscriptions';
 
@@ -122,25 +122,16 @@ function getPlanShortDescription(planKey: string) {
   return 'A deeper plan for heavier study periods, larger worksheet use, advanced review, and stronger continuity.';
 }
 
-function getPayPalPlanIds(planKey: PlanKey) {
-  if (planKey === 'plus') {
-    return {
-      monthly: process.env.NEXT_PUBLIC_PAYPAL_PLUS_MONTHLY_PLAN_ID || '',
-      annual: process.env.NEXT_PUBLIC_PAYPAL_PLUS_ANNUAL_PLAN_ID || ''
-    };
+function getPlanChangeMessage(currentPlan: PlanKey) {
+  if (currentPlan === 'plus') {
+    return 'You already have an active Plus plan. Pro upgrades will be handled through the account-change flow once recurring checkout renewals are fully finalized.';
   }
 
-  if (planKey === 'pro') {
-    return {
-      monthly: process.env.NEXT_PUBLIC_PAYPAL_PRO_MONTHLY_PLAN_ID || '',
-      annual: process.env.NEXT_PUBLIC_PAYPAL_PRO_ANNUAL_PLAN_ID || ''
-    };
+  if (currentPlan === 'pro') {
+    return 'You already have the highest TutoVera plan. Downgrades are handled through support for now so billing stays clean.';
   }
 
-  return {
-    monthly: '',
-    annual: ''
-  };
+  return 'Plan changes are handled through support for now.';
 }
 
 export default async function PricingPageContent() {
@@ -179,12 +170,12 @@ export default async function PricingPageContent() {
             <span>Your plan, settings, and history stay connected across subjects.</span>
           </div>
           <div>
-            <strong>Student and parent support</strong>
-            <span>Every plan includes both learning workspaces.</span>
+            <strong>Branded checkout</strong>
+            <span>PayPal Expanded Checkout supports PayPal and card checkout inside TutoVera.</span>
           </div>
           <div>
-            <strong>Upgrade when ready</strong>
-            <span>Plus and Pro are built for regular study and worksheet-heavy use.</span>
+            <strong>Recurring access</strong>
+            <span>Expanded recurring checkout is being wired to TutoVera’s own renewal system.</span>
           </div>
         </div>
 
@@ -196,7 +187,7 @@ export default async function PricingPageContent() {
             <p className="small" style={{ margin: 0 }}>
               {isSignedIn
                 ? currentPlanSummary
-                : 'Log in before subscribing so TutoVera can attach the plan to your account.'}
+                : 'Log in before checking out so TutoVera can attach the plan to your account.'}
             </p>
           </div>
 
@@ -217,8 +208,9 @@ export default async function PricingPageContent() {
       <section className="pricingCardsSection" aria-label="Pricing plans">
         <div className="pricingCards">
           {plans.map((plan) => {
-            const paypalPlanIds = getPayPalPlanIds(plan.key);
             const isCurrentPlan = plan.key === planAccess.plan;
+            const isPaidPlan = plan.key === 'plus' || plan.key === 'pro';
+            const blockPlanChange = planAccess.hasActivePaidAccess && isPaidPlan && !isCurrentPlan;
 
             return (
               <div
@@ -312,7 +304,7 @@ export default async function PricingPageContent() {
                   </ul>
                 </div>
 
-                <div className="buttonRow pricingButtonRow">
+                <div className="pricingButtonRow">
                   {isCurrentPlan ? (
                     <a className="btn secondary" href="/account">
                       View Current Plan
@@ -321,13 +313,19 @@ export default async function PricingPageContent() {
                     <a className="btn secondary" href={plan.ctaHref}>
                       {isSignedIn ? 'Open Free Tutor' : plan.ctaLabel}
                     </a>
+                  ) : blockPlanChange ? (
+                    <div className="card questionSurface" style={{ display: 'grid', gap: 10, padding: 16 }}>
+                      <p className="small" style={{ margin: 0 }}>
+                        {getPlanChangeMessage(planAccess.plan)}
+                      </p>
+                      <div className="buttonRow">
+                        <a className="btn secondary" href="/contact">
+                          Contact Support
+                        </a>
+                      </div>
+                    </div>
                   ) : (
-                    <PayPalSubscriptionButton
-                      plan={plan.key}
-                      monthlyPlanId={paypalPlanIds.monthly}
-                      annualPlanId={paypalPlanIds.annual}
-                      isSignedIn={isSignedIn}
-                    />
+                    <PayPalExpandedCheckout plan={plan.key} isSignedIn={isSignedIn} />
                   )}
                 </div>
               </div>
@@ -579,6 +577,8 @@ export default async function PricingPageContent() {
           .pricingButtonRow {
             margin-top: auto;
             align-self: end;
+            display: grid;
+            gap: 12px;
           }
 
           .pricingCompareDetails {

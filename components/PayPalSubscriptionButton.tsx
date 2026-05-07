@@ -31,13 +31,9 @@ type PayPalButtonInstance = {
   close?: () => void;
 };
 
-type PayPalNamespace = {
-  Buttons: (config: PayPalButtonsConfig) => PayPalButtonInstance;
-};
-
 declare global {
   interface Window {
-    paypal?: PayPalNamespace;
+    paypal?: any;
   }
 }
 
@@ -139,19 +135,19 @@ export default function PayPalSubscriptionButton({
 
         if (!isMounted || !containerRef.current || !window.paypal) return;
 
-        renderedButtons = window.paypal.Buttons({
+        const buttons = window.paypal.Buttons({
           style: {
             layout: 'vertical',
             shape: 'rect',
             color: 'black',
             label: 'subscribe'
           },
-          createSubscription: async (_data, actions) => {
+          createSubscription: async (_data: unknown, actions: PayPalActions) => {
             return actions.subscription.create({
               plan_id: selectedPlanId
             });
           },
-          onApprove: async (data) => {
+          onApprove: async (data: { subscriptionID?: string }) => {
             const subscriptionId = data.subscriptionID;
 
             if (!subscriptionId) {
@@ -201,14 +197,18 @@ export default function PayPalSubscriptionButton({
             setStatusKind('info');
             setStatusMessage('PayPal subscription approval was cancelled.');
           },
-          onError: (error) => {
+          onError: (error: unknown) => {
             console.error(error);
             setStatusKind('error');
             setStatusMessage('PayPal could not load the subscription approval flow.');
           }
-        });
+        }) as PayPalButtonInstance;
 
-        await renderedButtons.render(containerRef.current);
+        renderedButtons = buttons;
+
+        if (containerRef.current) {
+          await buttons.render(containerRef.current);
+        }
       } catch (error) {
         console.error(error);
         setStatusKind('error');
