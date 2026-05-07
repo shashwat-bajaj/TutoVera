@@ -117,9 +117,23 @@ create table if not exists contact_messages (
   created_at timestamptz not null default now()
 );
 
+create table if not exists paypal_webhook_events (
+  id uuid primary key default gen_random_uuid(),
+  paypal_event_id text unique not null,
+  event_type text not null,
+  paypal_resource_id text,
+  payload jsonb not null,
+  processing_status text not null default 'received',
+  error_message text,
+  created_at timestamptz not null default now(),
+  processed_at timestamptz
+);
+
 alter table beta_signups enable row level security;
 
 alter table contact_messages enable row level security;
+
+alter table paypal_webhook_events enable row level security;
 
 create index if not exists learner_conversations_subject_idx
 on learner_conversations(subject);
@@ -144,3 +158,12 @@ on contact_messages(created_at desc);
 
 create index if not exists contact_messages_email_idx
 on contact_messages(email);
+
+create index if not exists paypal_webhook_events_event_type_idx
+on paypal_webhook_events(event_type);
+
+create index if not exists paypal_webhook_events_resource_id_idx
+on paypal_webhook_events(paypal_resource_id);
+
+create index if not exists paypal_webhook_events_created_at_idx
+on paypal_webhook_events(created_at desc);
