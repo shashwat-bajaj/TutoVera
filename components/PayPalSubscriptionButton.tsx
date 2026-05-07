@@ -143,7 +143,7 @@ export default function PayPalSubscriptionButton({
           style: {
             layout: 'vertical',
             shape: 'rect',
-            color: 'orange accent',
+            color: 'black',
             label: 'subscribe'
           },
           createSubscription: async (_data, actions) => {
