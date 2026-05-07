@@ -101,6 +101,26 @@ create table if not exists mastery_scores (
   unique (email, topic)
 );
 
+create table if not exists beta_signups (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  email text unique not null,
+  goal text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists contact_messages (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  email text not null,
+  message text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table beta_signups enable row level security;
+
+alter table contact_messages enable row level security;
+
 create index if not exists learner_conversations_subject_idx
 on learner_conversations(subject);
 
@@ -112,3 +132,15 @@ on learner_conversations(user_id, subject, updated_at desc);
 
 create index if not exists learner_sessions_conversation_subject_idx
 on learner_sessions(conversation_id, subject);
+
+create index if not exists beta_signups_created_at_idx
+on beta_signups(created_at desc);
+
+create index if not exists beta_signups_email_idx
+on beta_signups(email);
+
+create index if not exists contact_messages_created_at_idx
+on contact_messages(created_at desc);
+
+create index if not exists contact_messages_email_idx
+on contact_messages(email);
