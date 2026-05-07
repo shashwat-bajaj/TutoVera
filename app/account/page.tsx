@@ -4,6 +4,7 @@ import { createAdminSupabase } from '@/lib/supabase-admin';
 import SignOutButton from '@/components/SignOutButton';
 import ActionCard from '@/components/ActionCard';
 import Reveal from '@/components/Reveal';
+import CancelSubscriptionButton from '@/components/CancelSubscriptionButton';
 import {
   formatBillingCycle,
   formatDate,
@@ -35,6 +36,8 @@ export default async function AccountPage() {
   const planName = formatPlanName(planAccess.plan);
   const planSummary = getPlanSummarySentence(planAccess);
   const rawPayPalStatus = planAccess.paypalStatus || planAccess.subscription?.paypal_status || '';
+  const canCancelSubscription =
+    planAccess.hasActivePaidAccess && Boolean(planAccess.subscription?.paypal_subscription_id);
 
   return (
     <div className="grid" style={{ gap: 22 }}>
@@ -73,7 +76,7 @@ export default async function AccountPage() {
 
             <div className="buttonRow" style={{ justifyContent: 'flex-end' }}>
               <a className="btn" href="/pricing">
-                {planAccess.hasActivePaidAccess ? 'Manage Plan' : 'View Plans'}
+                {planAccess.hasActivePaidAccess ? 'View Plans' : 'Upgrade'}
               </a>
             </div>
           </div>
@@ -160,6 +163,35 @@ export default async function AccountPage() {
               </p>
             </div>
           </div>
+
+          {canCancelSubscription ? (
+            <div
+              className="card questionSurface"
+              style={{
+                display: 'grid',
+                gap: 12,
+                padding: 16,
+                borderColor: 'var(--accent-warm-border)'
+              }}
+            >
+              <div style={{ display: 'grid', gap: 6 }}>
+                <p className="small" style={{ margin: 0 }}>
+                  <strong>Subscription management</strong>
+                </p>
+                <p className="small" style={{ margin: 0 }}>
+                  Plan changes are currently handled through support while upgrade and downgrade
+                  workflows are being finalized. You can cancel your PayPal subscription here.
+                </p>
+              </div>
+
+              <div className="buttonRow">
+                <CancelSubscriptionButton planName={planName} />
+                <a className="btn secondary" href="/contact">
+                  Contact Support
+                </a>
+              </div>
+            </div>
+          ) : null}
 
           <div className="buttonRow">
             <a className="btn secondary" href="/history">

@@ -119,14 +119,17 @@ export async function getPayPalAccessToken() {
 export async function getPayPalSubscription(subscriptionId: string) {
   const accessToken = await getPayPalAccessToken();
 
-  const response = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    cache: 'no-store'
-  });
+  const response = await fetch(
+    `${PAYPAL_API_BASE}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      cache: 'no-store'
+    }
+  );
 
   if (!response.ok) {
     const text = await response.text();
@@ -134,6 +137,44 @@ export async function getPayPalSubscription(subscriptionId: string) {
   }
 
   return (await response.json()) as PayPalSubscription;
+}
+
+export async function cancelPayPalSubscription({
+  subscriptionId,
+  reason = 'User requested cancellation from TutoVera account.'
+}: {
+  subscriptionId: string;
+  reason?: string;
+}) {
+  const accessToken = await getPayPalAccessToken();
+
+  const cleanReason = reason.trim().slice(0, 128) || 'User requested cancellation.';
+
+  const response = await fetch(
+    `${PAYPAL_API_BASE}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        reason: cleanReason
+      }),
+      cache: 'no-store'
+    }
+  );
+
+  if (response.status === 204) {
+    return true;
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`PayPal subscription cancellation failed: ${text}`);
+  }
+
+  return true;
 }
 
 export async function verifyPayPalWebhookSignature({

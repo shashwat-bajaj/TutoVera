@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminSupabase } from '@/lib/supabase-admin';
 import { createClient as createAuthClient } from '@/lib/supabase/server';
 import {
+  cancelPayPalSubscription,
   getConfiguredPayPalPlanIds,
   getPayPalSubscription,
   mapPayPalStatus,
@@ -16,11 +17,59 @@ type SubscriptionRequestBody = {
   paypalPlanId?: string;
 };
 
+type ExistingSubscriptionRecord = {
+  id: string;
+  user_id: string | null;
+  email: string;
+  plan: string;
+  status: string;
+  paypal_subscription_id: string | null;
+};
+
 function expectedPlanId(plan: PlanKey, billingCycle: BillingCycle) {
   if (plan !== 'plus' && plan !== 'pro') return '';
 
   const configuredPlanIds = getConfiguredPayPalPlanIds();
   return configuredPlanIds[plan][billingCycle];
+}
+
+function isBlockingExistingSubscription(subscription: ExistingSubscriptionRecord | null) {
+  if (!subscription) return false;
+  if (subscription.plan !== 'plus' && subscription.plan !== 'pro') return false;
+
+  return ['active', 'pending', 'past_due', 'suspended'].includes(subscription.status);
+}
+
+async function getExistingSubscription({
+  supabase,
+  userId,
+  email
+}: {
+  supabase: any;
+  userId: string;
+  email: string;
+}) {
+  const { data: byUser } = await supabase
+    .from('subscriptions')
+    .select('id, user_id, email, plan, status, paypal_subscription_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (byUser) {
+    return byUser as ExistingSubscriptionRecord;
+  }
+
+  const { data: byEmail } = await supabase
+    .from('subscriptions')
+    .select('id, user_id, email, plan, status, paypal_subscription_id')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (byEmail) {
+    return byEmail as ExistingSubscriptionRecord;
+  }
+
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -62,6 +111,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Please sign in before subscribing.' }, { status: 401 });
     }
 
+    const normalizedEmail = user.email.toLowerCase();
+    const supabase = createAdminSupabase();
+
     const paypalSubscription = await getPayPalSubscription(subscriptionId);
 
     if (paypalSubscription.plan_id !== paypalPlanId) {
@@ -71,14 +123,65 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createAdminSupabase();
+    const existingSubscription = await getExistingSubscription({
+      supabase,
+      userId: user.id,
+      email: normalizedEmail
+    });
+
+    const isDifferentSubscription =
+      existingSubscription?.paypal_subscription_id &&
+      existingSubscription.paypal_subscription_id !== paypalSubscription.id;
+
+    const hasBlockingSubscription = isBlockingExistingSubscription(existingSubscription);
+
+    if (hasBlockingSubscription && isDifferentSubscription) {
+      try {
+        await cancelPayPalSubscription({
+          subscriptionId: paypalSubscription.id,
+          reason:
+            'Duplicate subscription cancelled because this TutoVera account already has an active paid plan.'
+        });
+      } catch (cancelError) {
+        console.error('DUPLICATE PAYPAL SUBSCRIPTION CANCEL ERROR:', cancelError);
+      }
+
+      return NextResponse.json(
+        {
+          error:
+            'Your account already has an active TutoVera subscription. The duplicate PayPal subscription attempt was blocked. Please use your Account page or contact support to change plans.'
+        },
+        { status: 409 }
+      );
+    }
+
+    if (hasBlockingSubscription && !existingSubscription?.paypal_subscription_id) {
+      try {
+        await cancelPayPalSubscription({
+          subscriptionId: paypalSubscription.id,
+          reason:
+            'Duplicate subscription cancelled because this TutoVera account already has active paid access.'
+        });
+      } catch (cancelError) {
+        console.error('DUPLICATE PAYPAL SUBSCRIPTION CANCEL ERROR:', cancelError);
+      }
+
+      return NextResponse.json(
+        {
+          error:
+            'Your account already has active paid access. Please contact support before creating a new PayPal subscription.'
+        },
+        { status: 409 }
+      );
+    }
+
     const paypalStatus = paypalSubscription.status || 'UNKNOWN';
     const status = mapPayPalStatus(paypalStatus);
 
     const { error } = await supabase.from('subscriptions').upsert(
       {
         user_id: user.id,
-        email: user.email.toLowerCase(),
+        email: normalizedEmail,
         plan,
         billing_cycle: billingCycle,
         status,

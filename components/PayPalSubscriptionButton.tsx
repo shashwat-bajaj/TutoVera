@@ -143,7 +143,7 @@ export default function PayPalSubscriptionButton({
           style: {
             layout: 'vertical',
             shape: 'rect',
-            color: 'gold',
+            color: 'white',
             label: 'subscribe'
           },
           createSubscription: async (_data, actions) => {
@@ -280,7 +280,15 @@ export default function PayPalSubscriptionButton({
   }
 
   return (
-    <div style={{ display: 'grid', gap: 10, width: '100%' }}>
+    <div
+      className="card questionSurface"
+      style={{
+        display: 'grid',
+        gap: 12,
+        width: '100%',
+        padding: 16
+      }}
+    >
       <div className="themeSwitcher" style={{ width: 'fit-content' }}>
         <button
           type="button"
@@ -309,7 +317,7 @@ export default function PayPalSubscriptionButton({
       </div>
 
       <p className="small" style={{ margin: 0 }}>
-        Selected: <strong>{planName}</strong> · {getBillingLabel(billingCycle)}
+        Selected: <strong>TutoVera {planName}</strong> · {getBillingLabel(billingCycle)}
       </p>
 
       <div ref={containerRef} />
