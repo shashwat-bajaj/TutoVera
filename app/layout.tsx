@@ -45,31 +45,31 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/brand/exact/tutovera-app-icon.png?v=5',
+        url: '/brand/exact/tutovera-app-icon.png?v=6',
         type: 'image/png',
         sizes: '512x512',
         media: '(prefers-color-scheme: light)'
       },
       {
-        url: '/brand/dark-mode/tutovera-app-icon-dark-mode.png?v=5',
+        url: '/brand/dark-mode/tutovera-app-icon-dark-mode.png?v=6',
         type: 'image/png',
         sizes: '512x512',
         media: '(prefers-color-scheme: dark)'
       },
       {
-        url: '/brand/exact/tutovera-app-icon.svg?v=5',
+        url: '/brand/exact/tutovera-app-icon.svg?v=6',
         type: 'image/svg+xml',
         media: '(prefers-color-scheme: light)'
       },
       {
-        url: '/brand/dark-mode/tutovera-app-icon-dark-mode.svg?v=5',
+        url: '/brand/dark-mode/tutovera-app-icon-dark-mode.svg?v=6',
         type: 'image/svg+xml',
         media: '(prefers-color-scheme: dark)'
       }
     ],
     apple: [
       {
-        url: '/brand/exact/tutovera-app-icon.png?v=5',
+        url: '/brand/exact/tutovera-app-icon.png?v=6',
         type: 'image/png',
         sizes: '512x512'
       }
@@ -146,31 +146,31 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <link
           rel="icon"
-          href="/brand/exact/tutovera-app-icon.svg?v=5"
+          href="/brand/exact/tutovera-app-icon.svg?v=6"
           type="image/svg+xml"
           media="(prefers-color-scheme: light)"
         />
         <link
           rel="icon"
-          href="/brand/dark-mode/tutovera-app-icon-dark-mode.svg?v=5"
+          href="/brand/dark-mode/tutovera-app-icon-dark-mode.svg?v=6"
           type="image/svg+xml"
           media="(prefers-color-scheme: dark)"
         />
         <link
           rel="icon"
-          href="/brand/exact/tutovera-app-icon.png?v=5"
+          href="/brand/exact/tutovera-app-icon.png?v=6"
           type="image/png"
           sizes="512x512"
           media="(prefers-color-scheme: light)"
         />
         <link
           rel="icon"
-          href="/brand/dark-mode/tutovera-app-icon-dark-mode.png?v=5"
+          href="/brand/dark-mode/tutovera-app-icon-dark-mode.png?v=6"
           type="image/png"
           sizes="512x512"
           media="(prefers-color-scheme: dark)"
         />
-        <link rel="apple-touch-icon" href="/brand/exact/tutovera-app-icon.png?v=5" />
+        <link rel="apple-touch-icon" href="/brand/exact/tutovera-app-icon.png?v=6" />
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
 
