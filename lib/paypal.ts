@@ -1,6 +1,8 @@
 import type { PlanKey } from '@/lib/plans';
 
 export type BillingCycle = 'monthly' | 'annual';
+export type PaidPlanKey = Exclude<PlanKey, 'free'>;
+export type ExpandedPaymentSource = 'paypal' | 'card';
 
 type PayPalSubscription = {
   id: string;
@@ -22,6 +24,65 @@ type PayPalWebhookVerificationResponse = {
   verification_status?: string;
 };
 
+type PayPalOrderResponse = {
+  id?: string;
+  status?: string;
+  payer?: {
+    payer_id?: string;
+    email_address?: string;
+  };
+  payment_source?: {
+    paypal?: {
+      email_address?: string;
+      account_id?: string;
+      attributes?: {
+        vault?: {
+          id?: string;
+          status?: string;
+        };
+      };
+    };
+    card?: {
+      brand?: string;
+      last_digits?: string;
+      expiry?: string;
+      attributes?: {
+        vault?: {
+          id?: string;
+          status?: string;
+        };
+      };
+    };
+  };
+  purchase_units?: Array<{
+    payments?: {
+      captures?: Array<{
+        id?: string;
+        status?: string;
+        amount?: {
+          currency_code?: string;
+          value?: string;
+        };
+      }>;
+    };
+  }>;
+  links?: Array<{
+    href?: string;
+    rel?: string;
+    method?: string;
+  }>;
+};
+
+export type ExpandedCheckoutPlan = {
+  plan: PaidPlanKey;
+  billingCycle: BillingCycle;
+  amountCents: number;
+  currency: 'USD';
+  label: string;
+  description: string;
+  periodMonths: number;
+};
+
 const PAYPAL_API_BASE =
   process.env.PAYPAL_ENV === 'live'
     ? 'https://api-m.paypal.com'
@@ -37,7 +98,7 @@ export function getConfiguredPayPalPlanIds() {
       monthly: process.env.NEXT_PUBLIC_PAYPAL_PRO_MONTHLY_PLAN_ID || '',
       annual: process.env.NEXT_PUBLIC_PAYPAL_PRO_ANNUAL_PLAN_ID || ''
     }
-  } satisfies Record<Exclude<PlanKey, 'free'>, Record<BillingCycle, string>>;
+  } satisfies Record<PaidPlanKey, Record<BillingCycle, string>>;
 }
 
 export function getPlanFromPayPalPlanId(paypalPlanId: string): {
@@ -63,6 +124,86 @@ export function getPlanFromPayPalPlanId(paypalPlanId: string): {
   }
 
   return null;
+}
+
+export function getExpandedCheckoutPlan({
+  plan,
+  billingCycle
+}: {
+  plan: PlanKey;
+  billingCycle: BillingCycle;
+}): ExpandedCheckoutPlan {
+  if (plan === 'plus' && billingCycle === 'monthly') {
+    return {
+      plan,
+      billingCycle,
+      amountCents: 999,
+      currency: 'USD',
+      label: 'TutoVera Plus Monthly',
+      description: 'Monthly TutoVera Plus access for regular study support.',
+      periodMonths: 1
+    };
+  }
+
+  if (plan === 'plus' && billingCycle === 'annual') {
+    return {
+      plan,
+      billingCycle,
+      amountCents: 9999,
+      currency: 'USD',
+      label: 'TutoVera Plus Annual',
+      description: 'Annual TutoVera Plus access for regular study support.',
+      periodMonths: 12
+    };
+  }
+
+  if (plan === 'pro' && billingCycle === 'monthly') {
+    return {
+      plan,
+      billingCycle,
+      amountCents: 1999,
+      currency: 'USD',
+      label: 'TutoVera Pro Monthly',
+      description: 'Monthly TutoVera Pro access for deeper study and heavier usage.',
+      periodMonths: 1
+    };
+  }
+
+  if (plan === 'pro' && billingCycle === 'annual') {
+    return {
+      plan,
+      billingCycle,
+      amountCents: 19999,
+      currency: 'USD',
+      label: 'TutoVera Pro Annual',
+      description: 'Annual TutoVera Pro access for deeper study and heavier usage.',
+      periodMonths: 12
+    };
+  }
+
+  throw new Error('Invalid TutoVera plan or billing cycle.');
+}
+
+export function formatAmountFromCents(amountCents: number) {
+  return (amountCents / 100).toFixed(2);
+}
+
+export function getNextRenewalDate({
+  from = new Date(),
+  billingCycle
+}: {
+  from?: Date;
+  billingCycle: BillingCycle;
+}) {
+  const next = new Date(from);
+
+  if (billingCycle === 'annual') {
+    next.setFullYear(next.getFullYear() + 1);
+  } else {
+    next.setMonth(next.getMonth() + 1);
+  }
+
+  return next;
 }
 
 export function mapPayPalStatus(paypalStatus?: string) {
@@ -175,6 +316,198 @@ export async function cancelPayPalSubscription({
   }
 
   return true;
+}
+
+function buildPaymentSource({
+  source,
+  returnUrl,
+  cancelUrl
+}: {
+  source: ExpandedPaymentSource;
+  returnUrl: string;
+  cancelUrl: string;
+}) {
+  if (source === 'card') {
+    return {
+      card: {
+        attributes: {
+          verification: {
+            method: 'SCA_WHEN_REQUIRED'
+          },
+          vault: {
+            store_in_vault: 'ON_SUCCESS',
+            usage_type: 'MERCHANT',
+            usage_pattern: 'SUBSCRIPTION_PREPAID'
+          }
+        }
+      }
+    };
+  }
+
+  return {
+    paypal: {
+      experience_context: {
+        brand_name: 'TutoVera',
+        shipping_preference: 'NO_SHIPPING',
+        user_action: 'PAY_NOW',
+        return_url: returnUrl,
+        cancel_url: cancelUrl
+      },
+      attributes: {
+        vault: {
+          store_in_vault: 'ON_SUCCESS',
+          usage_type: 'MERCHANT',
+          usage_pattern: 'SUBSCRIPTION_PREPAID'
+        }
+      }
+    }
+  };
+}
+
+export async function createPayPalExpandedOrder({
+  plan,
+  billingCycle,
+  userId,
+  email,
+  source,
+  returnUrl,
+  cancelUrl
+}: {
+  plan: PaidPlanKey;
+  billingCycle: BillingCycle;
+  userId: string;
+  email: string;
+  source: ExpandedPaymentSource;
+  returnUrl: string;
+  cancelUrl: string;
+}) {
+  const accessToken = await getPayPalAccessToken();
+  const planConfig = getExpandedCheckoutPlan({ plan, billingCycle });
+  const amountValue = formatAmountFromCents(planConfig.amountCents);
+
+  const requestBody = {
+    intent: 'CAPTURE',
+    purchase_units: [
+      {
+        reference_id: `${plan}-${billingCycle}-${userId}`,
+        custom_id: userId,
+        description: planConfig.description,
+        amount: {
+          currency_code: planConfig.currency,
+          value: amountValue,
+          breakdown: {
+            item_total: {
+              currency_code: planConfig.currency,
+              value: amountValue
+            }
+          }
+        },
+        items: [
+          {
+            name: planConfig.label,
+            description: planConfig.description,
+            quantity: '1',
+            category: 'DIGITAL_GOODS',
+            unit_amount: {
+              currency_code: planConfig.currency,
+              value: amountValue
+            }
+          }
+        ]
+      }
+    ],
+    payment_source: buildPaymentSource({
+      source,
+      returnUrl,
+      cancelUrl
+    })
+  };
+
+  const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'PayPal-Request-Id': `tutovera-${userId}-${Date.now()}`
+    },
+    body: JSON.stringify(requestBody),
+    cache: 'no-store'
+  });
+
+  const data = (await response.json()) as PayPalOrderResponse & { message?: string };
+
+  if (!response.ok) {
+    throw new Error(
+      `PayPal expanded order creation failed: ${data.message || JSON.stringify(data)}`
+    );
+  }
+
+  if (!data.id) {
+    throw new Error('PayPal expanded order response did not include an order ID.');
+  }
+
+  return {
+    order: data,
+    planConfig,
+    requestBody
+  };
+}
+
+export async function capturePayPalExpandedOrder(orderId: string) {
+  const accessToken = await getPayPalAccessToken();
+
+  const response = await fetch(
+    `${PAYPAL_API_BASE}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': `tutovera-capture-${orderId}-${Date.now()}`
+      },
+      cache: 'no-store'
+    }
+  );
+
+  const data = (await response.json()) as PayPalOrderResponse & { message?: string };
+
+  if (!response.ok) {
+    throw new Error(`PayPal expanded order capture failed: ${data.message || JSON.stringify(data)}`);
+  }
+
+  return data;
+}
+
+export function extractPayPalCaptureId(order: PayPalOrderResponse) {
+  return order.purchase_units?.[0]?.payments?.captures?.[0]?.id || '';
+}
+
+export function extractPayPalCaptureStatus(order: PayPalOrderResponse) {
+  return order.purchase_units?.[0]?.payments?.captures?.[0]?.status || order.status || '';
+}
+
+export function extractPayPalVaultTokenId(order: PayPalOrderResponse) {
+  return (
+    order.payment_source?.card?.attributes?.vault?.id ||
+    order.payment_source?.paypal?.attributes?.vault?.id ||
+    ''
+  );
+}
+
+export function extractPayPalPayerId(order: PayPalOrderResponse) {
+  return order.payer?.payer_id || order.payment_source?.paypal?.account_id || '';
+}
+
+export function extractCardSummary(order: PayPalOrderResponse) {
+  const expiry = order.payment_source?.card?.expiry || '';
+  const [expiryYear = '', expiryMonth = ''] = expiry.includes('-') ? expiry.split('-') : ['', ''];
+
+  return {
+    brand: order.payment_source?.card?.brand || null,
+    lastDigits: order.payment_source?.card?.last_digits || null,
+    expiryMonth: expiryMonth || null,
+    expiryYear: expiryYear || null
+  };
 }
 
 export async function verifyPayPalWebhookSignature({
