@@ -48,6 +48,33 @@ add column if not exists cancel_at_period_end boolean not null default false;
 alter table subscriptions
 add column if not exists updated_at timestamptz not null default now();
 
+alter table subscriptions
+add column if not exists billing_provider text not null default 'paypal';
+
+alter table subscriptions
+add column if not exists billing_mode text not null default 'paypal_subscriptions';
+
+alter table subscriptions
+add column if not exists paypal_payment_token_id text;
+
+alter table subscriptions
+add column if not exists paypal_order_id text;
+
+alter table subscriptions
+add column if not exists paypal_capture_id text;
+
+alter table subscriptions
+add column if not exists next_renewal_at timestamptz;
+
+alter table subscriptions
+add column if not exists last_renewal_at timestamptz;
+
+alter table subscriptions
+add column if not exists renewal_attempt_count integer not null default 0;
+
+alter table subscriptions
+add column if not exists cancelled_at timestamptz;
+
 create unique index if not exists subscriptions_user_id_unique
 on subscriptions(user_id);
 
@@ -56,6 +83,15 @@ on subscriptions(paypal_subscription_id);
 
 create index if not exists subscriptions_plan_status_idx
 on subscriptions(plan, status);
+
+create index if not exists subscriptions_billing_mode_idx
+on subscriptions(billing_mode);
+
+create index if not exists subscriptions_next_renewal_idx
+on subscriptions(next_renewal_at);
+
+create index if not exists subscriptions_paypal_payment_token_idx
+on subscriptions(paypal_payment_token_id);
 
 create table if not exists learner_conversations (
   id uuid primary key default gen_random_uuid(),
@@ -129,11 +165,72 @@ create table if not exists paypal_webhook_events (
   processed_at timestamptz
 );
 
+create table if not exists paypal_expanded_orders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid,
+  email text not null,
+  paypal_order_id text unique not null,
+  paypal_capture_id text,
+  paypal_payment_token_id text,
+  plan text not null,
+  billing_cycle text not null,
+  amount_cents integer not null,
+  currency text not null default 'USD',
+  status text not null default 'created',
+  paypal_status text,
+  raw_create_payload jsonb,
+  raw_capture_payload jsonb,
+  created_at timestamptz not null default now(),
+  captured_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists paypal_payment_methods (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid,
+  email text not null,
+  paypal_payment_token_id text unique not null,
+  payment_source text not null default 'card',
+  payer_id text,
+  brand text,
+  last_digits text,
+  expiry_month text,
+  expiry_year text,
+  status text not null default 'active',
+  raw_payload jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists billing_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid,
+  email text not null,
+  event_type text not null,
+  plan text,
+  billing_cycle text,
+  amount_cents integer,
+  currency text not null default 'USD',
+  status text not null default 'recorded',
+  paypal_order_id text,
+  paypal_capture_id text,
+  paypal_payment_token_id text,
+  error_message text,
+  metadata jsonb,
+  created_at timestamptz not null default now()
+);
+
 alter table beta_signups enable row level security;
 
 alter table contact_messages enable row level security;
 
 alter table paypal_webhook_events enable row level security;
+
+alter table paypal_expanded_orders enable row level security;
+
+alter table paypal_payment_methods enable row level security;
+
+alter table billing_events enable row level security;
 
 create index if not exists learner_conversations_subject_idx
 on learner_conversations(subject);
@@ -167,3 +264,36 @@ on paypal_webhook_events(paypal_resource_id);
 
 create index if not exists paypal_webhook_events_created_at_idx
 on paypal_webhook_events(created_at desc);
+
+create index if not exists paypal_expanded_orders_email_idx
+on paypal_expanded_orders(email);
+
+create index if not exists paypal_expanded_orders_user_id_idx
+on paypal_expanded_orders(user_id);
+
+create index if not exists paypal_expanded_orders_status_idx
+on paypal_expanded_orders(status);
+
+create index if not exists paypal_expanded_orders_payment_token_idx
+on paypal_expanded_orders(paypal_payment_token_id);
+
+create index if not exists paypal_payment_methods_email_idx
+on paypal_payment_methods(email);
+
+create index if not exists paypal_payment_methods_user_id_idx
+on paypal_payment_methods(user_id);
+
+create index if not exists paypal_payment_methods_status_idx
+on paypal_payment_methods(status);
+
+create index if not exists billing_events_email_idx
+on billing_events(email);
+
+create index if not exists billing_events_user_id_idx
+on billing_events(user_id);
+
+create index if not exists billing_events_event_type_idx
+on billing_events(event_type);
+
+create index if not exists billing_events_created_at_idx
+on billing_events(created_at desc);
