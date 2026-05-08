@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient as createAuthClient } from '@/lib/supabase/server';
-import { createAdminSupabase } from '@/lib/supabase-admin';
-import { getURL } from '@/lib/site-url';
+
 import {
   createPayPalExpandedOrder,
   getExpandedCheckoutPlan,
@@ -10,6 +8,9 @@ import {
   type PaidPlanKey
 } from '@/lib/paypal';
 import { getUserPlanAccess } from '@/lib/subscriptions';
+import { getURL } from '@/lib/site-url';
+import { createAdminSupabase } from '@/lib/supabase-admin';
+import { createClient as createAuthClient } from '@/lib/supabase/server';
 
 type CreateExpandedOrderBody = {
   plan?: PaidPlanKey;
@@ -49,6 +50,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid payment source.' }, { status: 400 });
     }
 
+    if (source !== 'card') {
+      return NextResponse.json(
+        {
+          error: 'TutoVera currently supports secure card checkout only.'
+        },
+        { status: 400 }
+      );
+    }
+
     const authClient = await createAuthClient();
     const {
       data: { user }
@@ -86,7 +96,7 @@ export async function POST(request: Request) {
       billingCycle,
       userId: user.id,
       email: normalizedEmail,
-      source,
+      source: 'card',
       returnUrl,
       cancelUrl
     });
@@ -133,7 +143,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Unable to create PayPal checkout order.'
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to create secure card checkout order.'
       },
       { status: 500 }
     );

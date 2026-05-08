@@ -9,11 +9,6 @@ type PayPalExpandedCheckoutProps = {
   isSignedIn: boolean;
 };
 
-type PayPalButtonInstance = {
-  render: (selectorOrElement: string | HTMLElement) => Promise<void>;
-  close?: () => void;
-};
-
 type PayPalCardField = {
   render: (selectorOrElement: string | HTMLElement) => Promise<void>;
 };
@@ -51,7 +46,7 @@ function loadExpandedPayPalScript(clientId: string) {
     if (existingScript) {
       existingScript.addEventListener('load', () => resolve());
       existingScript.addEventListener('error', () =>
-        reject(new Error('PayPal Expanded Checkout SDK failed to load.'))
+        reject(new Error('PayPal secure card checkout failed to load.'))
       );
       return;
     }
@@ -61,7 +56,8 @@ function loadExpandedPayPalScript(clientId: string) {
       'client-id': clientId,
       currency: 'USD',
       intent: 'capture',
-      components: 'buttons,card-fields'
+      components: 'card-fields',
+      'disable-funding': 'paylater,venmo'
     });
 
     script.src = `https://www.paypal.com/sdk/js?${params.toString()}`;
@@ -69,7 +65,7 @@ function loadExpandedPayPalScript(clientId: string) {
     script.dataset.tutoveraPaypalExpanded = 'true';
     script.addEventListener('load', () => resolve());
     script.addEventListener('error', () =>
-      reject(new Error('PayPal Expanded Checkout SDK failed to load.'))
+      reject(new Error('PayPal secure card checkout failed to load.'))
     );
 
     document.body.appendChild(script);
@@ -104,7 +100,6 @@ function getPlanDescription(plan: PaidPlanKey) {
 export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpandedCheckoutProps) {
   const router = useRouter();
 
-  const buttonsRef = useRef<HTMLDivElement | null>(null);
   const cardNameRef = useRef<HTMLDivElement | null>(null);
   const cardNumberRef = useRef<HTMLDivElement | null>(null);
   const cardExpiryRef = useRef<HTMLDivElement | null>(null);
@@ -112,6 +107,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
   const cardFieldsRef = useRef<PayPalCardFieldsInstance | null>(null);
 
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [showCardCheckout, setShowCardCheckout] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [statusKind, setStatusKind] = useState<'idle' | 'info' | 'success' | 'error'>('idle');
   const [isWorking, setIsWorking] = useState(false);
@@ -138,7 +134,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
     const result = (await response.json()) as { id?: string; error?: string };
 
     if (!response.ok || !result.id) {
-      throw new Error(result.error || 'Unable to create PayPal checkout order.');
+      throw new Error(result.error || 'Unable to create secure card checkout order.');
     }
 
     return result.id;
@@ -170,7 +166,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
     if (!response.ok) {
       throw new Error(
         result.error ||
-          'PayPal approved the checkout, but TutoVera could not complete the account update.'
+          'The payment was approved, but TutoVera could not complete the account update.'
       );
     }
 
@@ -191,21 +187,19 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
   useEffect(() => {
     let isMounted = true;
-    let renderedButtons: PayPalButtonInstance | null = null;
 
-    async function renderExpandedCheckout() {
+    async function renderCardCheckout() {
       setCardFieldsEligible(false);
       setCardFieldsReady(false);
 
-      if (!isSignedIn || statusKind === 'success') return;
+      if (!isSignedIn || !showCardCheckout) return;
 
       if (!clientId) {
         setStatusKind('error');
-        setStatusMessage('PayPal client ID is not configured yet.');
+        setStatusMessage('Secure card checkout is not configured yet.');
         return;
       }
 
-      if (buttonsRef.current) buttonsRef.current.innerHTML = '';
       if (cardNameRef.current) cardNameRef.current.innerHTML = '';
       if (cardNumberRef.current) cardNumberRef.current.innerHTML = '';
       if (cardExpiryRef.current) cardExpiryRef.current.innerHTML = '';
@@ -216,50 +210,12 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
         if (!isMounted || !window.paypal) return;
 
-        const buttons = window.paypal.Buttons({
-          style: {
-            layout: 'vertical',
-            shape: 'rect',
-            color: 'black',
-            label: 'pay'
-          },
-          createOrder: async () => {
-            return createOrder('paypal');
-          },
-          onApprove: async (data: unknown) => {
-            const orderId =
-              typeof data === 'object' && data
-                ? ((data as { orderID?: string; orderId?: string }).orderID ||
-                    (data as { orderID?: string; orderId?: string }).orderId ||
-                    '')
-                : '';
-
-            if (!orderId) {
-              throw new Error('PayPal did not return an order ID.');
-            }
-
-            await captureOrder(orderId);
-          },
-          onCancel: () => {
-            setStatusKind('info');
-            setStatusMessage('PayPal checkout was cancelled.');
-          },
-          onError: (error: unknown) => {
-            console.error(error);
-            setStatusKind('error');
-            setStatusMessage('PayPal could not complete checkout.');
-            setIsWorking(false);
-          }
-        });
-
-        renderedButtons = buttons;
-
-        if (buttonsRef.current) {
-          await buttons.render(buttonsRef.current);
-        }
-
         if (!window.paypal.CardFields) {
           setCardFieldsEligible(false);
+          setStatusKind('error');
+          setStatusMessage(
+            'Secure card checkout is not available for this PayPal setup yet. Please contact support or try again later.'
+          );
           return;
         }
 
@@ -290,7 +246,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
                 : '';
 
             if (!orderId) {
-              throw new Error('PayPal card fields did not return an order ID.');
+              throw new Error('Secure card checkout did not return an order ID.');
             }
 
             await captureOrder(orderId);
@@ -298,7 +254,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
           onError: (error: unknown) => {
             console.error(error);
             setStatusKind('error');
-            setStatusMessage('The card checkout could not be completed.');
+            setStatusMessage('The secure card checkout could not be completed.');
             setIsWorking(false);
           },
           onCancel: () => {
@@ -311,10 +267,16 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
         if (!cardFields.isEligible()) {
           setCardFieldsEligible(false);
+          setStatusKind('error');
+          setStatusMessage(
+            'Secure card checkout is not available for this PayPal setup yet. This usually needs PayPal card-payment eligibility to be enabled on the PayPal business account.'
+          );
           return;
         }
 
         setCardFieldsEligible(true);
+        setStatusKind('info');
+        setStatusMessage('Enter your card details below.');
 
         if (
           cardNameRef.current &&
@@ -338,37 +300,57 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
           ]);
 
           setCardFieldsReady(true);
+          setStatusKind('idle');
+          setStatusMessage('');
         }
       } catch (error) {
         console.error(error);
         setStatusKind('error');
         setStatusMessage(
-          error instanceof Error ? error.message : 'PayPal Expanded Checkout failed to load.'
+          error instanceof Error ? error.message : 'Secure card checkout failed to load.'
         );
       }
     }
 
-    void renderExpandedCheckout();
+    void renderCardCheckout();
 
     return () => {
       isMounted = false;
 
-      if (renderedButtons?.close) {
-        renderedButtons.close();
-      }
-
       if (cardFieldsRef.current?.close) {
         cardFieldsRef.current.close();
       }
+
+      cardFieldsRef.current = null;
     };
-  }, [billingCycle, clientId, isSignedIn, plan, planName, router, statusKind]);
+  }, [billingCycle, clientId, isSignedIn, plan, planName, router, showCardCheckout]);
+
+  function resetCheckoutForBillingCycle(nextBillingCycle: BillingCycle) {
+    setBillingCycle(nextBillingCycle);
+    setStatusKind('idle');
+    setStatusMessage('');
+    setCardFieldsEligible(false);
+    setCardFieldsReady(false);
+
+    if (cardFieldsRef.current?.close) {
+      cardFieldsRef.current.close();
+    }
+
+    cardFieldsRef.current = null;
+  }
+
+  function openCardCheckout() {
+    setShowCardCheckout(true);
+    setStatusKind('info');
+    setStatusMessage('Loading secure card checkout...');
+  }
 
   async function submitCardFields() {
     if (!cardFieldsRef.current || isWorking || !cardFieldsReady) return;
 
     setIsWorking(true);
     setStatusKind('info');
-    setStatusMessage('Securely submitting card details through PayPal...');
+    setStatusMessage('Securely submitting card details...');
 
     try {
       await cardFieldsRef.current.submit();
@@ -448,11 +430,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         <button
           type="button"
           className={`themeOption ${billingCycle === 'monthly' ? 'active' : ''}`}
-          onClick={() => {
-            setBillingCycle('monthly');
-            setStatusKind('idle');
-            setStatusMessage('');
-          }}
+          onClick={() => resetCheckoutForBillingCycle('monthly')}
           disabled={isWorking}
         >
           Monthly
@@ -460,11 +438,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         <button
           type="button"
           className={`themeOption ${billingCycle === 'annual' ? 'active' : ''}`}
-          onClick={() => {
-            setBillingCycle('annual');
-            setStatusKind('idle');
-            setStatusMessage('');
-          }}
+          onClick={() => resetCheckoutForBillingCycle('annual')}
           disabled={isWorking}
         >
           Annual
@@ -489,68 +463,83 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         </p>
       </div>
 
-      <div style={{ display: 'grid', gap: 10 }}>
-        <p className="small" style={{ margin: 0 }}>
-          <strong>Pay with PayPal</strong>
-        </p>
-        <div ref={buttonsRef} />
-      </div>
-
-      <div
-        style={{
-          height: 1,
-          background: 'var(--border)',
-          margin: '2px 0'
-        }}
-      />
-
-      <div style={{ display: 'grid', gap: 10 }}>
-        <p className="small" style={{ margin: 0 }}>
-          <strong>Pay by card</strong>
-        </p>
-
-        {cardFieldsEligible ? (
-          <div className="expandedCardFieldsGrid">
-            <div className="expandedCardFieldFull">
-              <label>Name on card</label>
-              <div ref={cardNameRef} className="expandedCardField" />
-            </div>
-
-            <div className="expandedCardFieldFull">
-              <label>Card number</label>
-              <div ref={cardNumberRef} className="expandedCardField" />
-            </div>
-
-            <div>
-              <label>Expiration</label>
-              <div ref={cardExpiryRef} className="expandedCardField" />
-            </div>
-
-            <div>
-              <label>Security code</label>
-              <div ref={cardCvvRef} className="expandedCardField" />
-            </div>
-
-            <button
-              type="button"
-              onClick={submitCardFields}
-              disabled={!cardFieldsReady || isWorking}
-              className="expandedCardSubmit"
-            >
-              {isWorking ? 'Processing...' : `Pay ${selectedPrice}`}
-            </button>
-          </div>
-        ) : (
+      {!showCardCheckout ? (
+        <div
+          className="card innerFeatureCard"
+          style={{
+            display: 'grid',
+            gap: 10,
+            padding: 14
+          }}
+        >
           <p className="small" style={{ margin: 0 }}>
-            Card fields are not available for this checkout session. You can still use the PayPal
-            button above.
+            Pay securely with a credit or debit card.
           </p>
-        )}
-      </div>
+
+          <button type="button" onClick={openCardCheckout} disabled={isWorking}>
+            Continue to secure card checkout
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div style={{ display: 'grid', gap: 4 }}>
+            <p className="small" style={{ margin: 0 }}>
+              <strong>Card details</strong>
+            </p>
+          </div>
+
+          {cardFieldsEligible ? (
+            <div className="expandedCardFieldsGrid">
+              <div className="expandedCardFieldFull">
+                <label>Name on card</label>
+                <div ref={cardNameRef} className="expandedCardField" />
+              </div>
+
+              <div className="expandedCardFieldFull">
+                <label>Card number</label>
+                <div ref={cardNumberRef} className="expandedCardField" />
+              </div>
+
+              <div>
+                <label>Expiration</label>
+                <div ref={cardExpiryRef} className="expandedCardField" />
+              </div>
+
+              <div>
+                <label>Security code</label>
+                <div ref={cardCvvRef} className="expandedCardField" />
+              </div>
+
+              <button
+                type="button"
+                onClick={submitCardFields}
+                disabled={!cardFieldsReady || isWorking}
+                className="expandedCardSubmit"
+              >
+                {isWorking ? 'Processing...' : `Start ${planName} · ${selectedPrice}`}
+              </button>
+            </div>
+          ) : (
+            <div
+              className="card innerFeatureCard"
+              style={{
+                display: 'grid',
+                gap: 8,
+                padding: 14
+              }}
+            >
+              <p className="small" style={{ margin: 0 }}>
+                Secure card checkout is loading. If it does not appear, PayPal card checkout may
+                not be enabled for this account yet.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       <p className="small" style={{ margin: 0 }}>
-        PayPal securely processes card and PayPal details. TutoVera stores only the PayPal order,
-        capture, and saved-payment identifiers needed for recurring access.
+        Secure card processing by PayPal. TutoVera stores only the PayPal order, capture, and
+        saved-payment identifiers needed for recurring access.
       </p>
 
       {isWorking || statusMessage ? (
@@ -579,6 +568,14 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
           .expandedCardFieldFull {
             grid-column: 1 / -1;
+          }
+
+          .expandedCardFieldFull label,
+          .expandedCardFieldsGrid label {
+            display: block;
+            margin: 0 0 6px;
+            font-size: 0.88rem;
+            color: var(--text-soft);
           }
 
           .expandedCardField {
