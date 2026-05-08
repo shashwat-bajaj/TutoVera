@@ -100,6 +100,7 @@ function getPlanDescription(plan: PaidPlanKey) {
 export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpandedCheckoutProps) {
   const router = useRouter();
 
+  const checkoutPanelRef = useRef<HTMLDivElement | null>(null);
   const cardNameRef = useRef<HTMLDivElement | null>(null);
   const cardNumberRef = useRef<HTMLDivElement | null>(null);
   const cardExpiryRef = useRef<HTMLDivElement | null>(null);
@@ -117,6 +118,22 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
   const planName = getPlanName(plan);
   const selectedPrice = getPriceLabel(plan, billingCycle);
+
+  function clearRenderedCardFields() {
+    if (cardNameRef.current) cardNameRef.current.innerHTML = '';
+    if (cardNumberRef.current) cardNumberRef.current.innerHTML = '';
+    if (cardExpiryRef.current) cardExpiryRef.current.innerHTML = '';
+    if (cardCvvRef.current) cardCvvRef.current.innerHTML = '';
+  }
+
+  function closeCurrentCardFields() {
+    if (cardFieldsRef.current?.close) {
+      cardFieldsRef.current.close();
+    }
+
+    cardFieldsRef.current = null;
+    clearRenderedCardFields();
+  }
 
   async function createOrder(source: ExpandedPaymentSource) {
     const response = await fetch('/api/paypal/expanded/create-order', {
@@ -186,6 +203,21 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
   }
 
   useEffect(() => {
+    if (!showCardCheckout) return;
+
+    const scrollFrame = window.requestAnimationFrame(() => {
+      checkoutPanelRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(scrollFrame);
+    };
+  }, [showCardCheckout]);
+
+  useEffect(() => {
     let isMounted = true;
 
     async function renderCardCheckout() {
@@ -200,10 +232,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         return;
       }
 
-      if (cardNameRef.current) cardNameRef.current.innerHTML = '';
-      if (cardNumberRef.current) cardNumberRef.current.innerHTML = '';
-      if (cardExpiryRef.current) cardExpiryRef.current.innerHTML = '';
-      if (cardCvvRef.current) cardCvvRef.current.innerHTML = '';
+      clearRenderedCardFields();
 
       try {
         await loadExpandedPayPalScript(clientId);
@@ -314,12 +343,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
     return () => {
       isMounted = false;
-
-      if (cardFieldsRef.current?.close) {
-        cardFieldsRef.current.close();
-      }
-
-      cardFieldsRef.current = null;
+      closeCurrentCardFields();
     };
   }, [billingCycle, clientId, isSignedIn, plan, planName, router, showCardCheckout]);
 
@@ -329,18 +353,22 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
     setStatusMessage('');
     setCardFieldsEligible(false);
     setCardFieldsReady(false);
-
-    if (cardFieldsRef.current?.close) {
-      cardFieldsRef.current.close();
-    }
-
-    cardFieldsRef.current = null;
+    closeCurrentCardFields();
   }
 
   function openCardCheckout() {
     setShowCardCheckout(true);
     setStatusKind('idle');
     setStatusMessage('');
+  }
+
+  function closeCardCheckout() {
+    setShowCardCheckout(false);
+    setStatusKind('idle');
+    setStatusMessage('');
+    setCardFieldsEligible(false);
+    setCardFieldsReady(false);
+    closeCurrentCardFields();
   }
 
   async function submitCardFields() {
@@ -485,6 +513,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         </div>
       ) : (
         <div
+          ref={checkoutPanelRef}
           className="card innerFeatureCard"
           style={{
             display: 'grid',
@@ -492,13 +521,29 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
             padding: 14
           }}
         >
-          <div style={{ display: 'grid', gap: 4 }}>
-            <p className="small" style={{ margin: 0 }}>
-              <strong>Card details</strong>
-            </p>
-            <p className="small" style={{ margin: 0 }}>
-              Enter your card details below:
-            </p>
+          <div
+            style={{
+              display: 'grid',
+              gap: 8
+            }}
+          >
+            <div style={{ display: 'grid', gap: 4 }}>
+              <p className="small" style={{ margin: 0 }}>
+                <strong>Card details</strong>
+              </p>
+              <p className="small" style={{ margin: 0 }}>
+                Enter your card details below:
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="secondary expandedBackButton"
+              onClick={closeCardCheckout}
+              disabled={isWorking}
+            >
+              Back to checkout summary
+            </button>
           </div>
 
           {cardFieldsEligible ? (
@@ -613,9 +658,17 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
             width: 100%;
           }
 
+          .expandedBackButton {
+            width: fit-content;
+          }
+
           @media (max-width: 640px) {
             .expandedCardFieldsGrid {
               grid-template-columns: 1fr;
+            }
+
+            .expandedBackButton {
+              width: 100%;
             }
           }
         `}
