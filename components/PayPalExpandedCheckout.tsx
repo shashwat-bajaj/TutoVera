@@ -113,6 +113,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
   const [isWorking, setIsWorking] = useState(false);
   const [cardFieldsEligible, setCardFieldsEligible] = useState(false);
   const [cardFieldsReady, setCardFieldsReady] = useState(false);
+  const [cardFieldsPreparing, setCardFieldsPreparing] = useState(false);
 
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
   const planName = getPlanName(plan);
@@ -207,6 +208,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
     async function renderCardCheckout() {
       setCardFieldsEligible(false);
       setCardFieldsReady(false);
+      setCardFieldsPreparing(false);
 
       if (!isSignedIn || !showCardCheckout) return;
 
@@ -216,7 +218,19 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         return;
       }
 
-      clearRenderedCardFields();
+      if (
+        !cardNameRef.current ||
+        !cardNumberRef.current ||
+        !cardExpiryRef.current ||
+        !cardCvvRef.current
+      ) {
+        setStatusKind('error');
+        setStatusMessage('Secure card checkout could not find the card field containers.');
+        return;
+      }
+
+      setCardFieldsPreparing(true);
+      closeCurrentCardFields();
 
       try {
         await loadExpandedPayPalScript(clientId);
@@ -225,6 +239,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
         if (!window.paypal.CardFields) {
           setCardFieldsEligible(false);
+          setCardFieldsPreparing(false);
           setStatusKind('error');
           setStatusMessage(
             'Secure card checkout is not available for this PayPal setup yet. Please contact support or try again later.'
@@ -269,10 +284,12 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
             setStatusKind('error');
             setStatusMessage('The secure card checkout could not be completed.');
             setIsWorking(false);
+            setCardFieldsPreparing(false);
           },
           onCancel: () => {
             setStatusKind('info');
             setStatusMessage('Card checkout was cancelled.');
+            setCardFieldsPreparing(false);
           }
         });
 
@@ -280,6 +297,8 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
         if (!cardFields.isEligible()) {
           setCardFieldsEligible(false);
+          setCardFieldsReady(false);
+          setCardFieldsPreparing(false);
           setStatusKind('error');
           setStatusMessage(
             'Secure card checkout is not available for this PayPal setup yet. This usually needs PayPal card-payment eligibility to be enabled on the PayPal business account.'
@@ -289,33 +308,32 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
         setCardFieldsEligible(true);
 
-        if (
-          cardNameRef.current &&
-          cardNumberRef.current &&
-          cardExpiryRef.current &&
-          cardCvvRef.current
-        ) {
-          await Promise.all([
-            cardFields.NameField({
-              placeholder: 'Name on card'
-            }).render(cardNameRef.current),
-            cardFields.NumberField({
-              placeholder: 'Card number'
-            }).render(cardNumberRef.current),
-            cardFields.ExpiryField({
-              placeholder: 'MM/YY'
-            }).render(cardExpiryRef.current),
-            cardFields.CVVField({
-              placeholder: 'CVV'
-            }).render(cardCvvRef.current)
-          ]);
+        await Promise.all([
+          cardFields.NameField({
+            placeholder: 'Name on card'
+          }).render(cardNameRef.current),
+          cardFields.NumberField({
+            placeholder: 'Card number'
+          }).render(cardNumberRef.current),
+          cardFields.ExpiryField({
+            placeholder: 'MM/YY'
+          }).render(cardExpiryRef.current),
+          cardFields.CVVField({
+            placeholder: 'CVV'
+          }).render(cardCvvRef.current)
+        ]);
 
-          setCardFieldsReady(true);
-          setStatusKind('idle');
-          setStatusMessage('');
-        }
+        if (!isMounted) return;
+
+        setCardFieldsReady(true);
+        setCardFieldsPreparing(false);
+        setStatusKind('idle');
+        setStatusMessage('');
       } catch (error) {
         console.error(error);
+        setCardFieldsEligible(false);
+        setCardFieldsReady(false);
+        setCardFieldsPreparing(false);
         setStatusKind('error');
         setStatusMessage(
           error instanceof Error ? error.message : 'Secure card checkout failed to load.'
@@ -328,6 +346,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
     return () => {
       isMounted = false;
       closeCurrentCardFields();
+      setCardFieldsPreparing(false);
     };
   }, [billingCycle, clientId, isSignedIn, plan, planName, router, showCardCheckout]);
 
@@ -337,6 +356,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
     setStatusMessage('');
     setCardFieldsEligible(false);
     setCardFieldsReady(false);
+    setCardFieldsPreparing(false);
     closeCurrentCardFields();
   }
 
@@ -352,6 +372,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
     setStatusMessage('');
     setCardFieldsEligible(false);
     setCardFieldsReady(false);
+    setCardFieldsPreparing(false);
     closeCurrentCardFields();
   }
 
@@ -529,52 +550,49 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
             </button>
           </div>
 
-          {cardFieldsEligible ? (
-            <div className="expandedCardFieldsGrid">
-              <div className="expandedCardFieldFull">
-                <label>Name on card</label>
-                <div ref={cardNameRef} className="expandedCardField" />
-              </div>
-
-              <div className="expandedCardFieldFull">
-                <label>Card number</label>
-                <div ref={cardNumberRef} className="expandedCardField" />
-              </div>
-
-              <div>
-                <label>Expiration</label>
-                <div ref={cardExpiryRef} className="expandedCardField" />
-              </div>
-
-              <div>
-                <label>Security code</label>
-                <div ref={cardCvvRef} className="expandedCardField" />
-              </div>
-
-              <button
-                type="button"
-                onClick={submitCardFields}
-                disabled={!cardFieldsReady || isWorking}
-                className="expandedCardSubmit"
-              >
-                {isWorking ? 'Processing...' : `Start ${planName} · ${selectedPrice}`}
-              </button>
+          <div className="expandedCardFieldsGrid">
+            <div className="expandedCardFieldFull">
+              <label>Name on card</label>
+              <div ref={cardNameRef} className="expandedCardField" />
             </div>
-          ) : (
-            <div
-              className="card innerFeatureCard"
-              style={{
-                display: 'grid',
-                gap: 8,
-                padding: 14
-              }}
+
+            <div className="expandedCardFieldFull">
+              <label>Card number</label>
+              <div ref={cardNumberRef} className="expandedCardField" />
+            </div>
+
+            <div>
+              <label>Expiration</label>
+              <div ref={cardExpiryRef} className="expandedCardField" />
+            </div>
+
+            <div>
+              <label>Security code</label>
+              <div ref={cardCvvRef} className="expandedCardField" />
+            </div>
+
+            <button
+              type="button"
+              onClick={submitCardFields}
+              disabled={!cardFieldsReady || isWorking}
+              className="expandedCardSubmit"
             >
-              <p className="small" style={{ margin: 0 }}>
-                Secure card checkout is loading. If it does not appear, PayPal card checkout may
-                not be enabled for this account yet.
-              </p>
-            </div>
-          )}
+              {isWorking ? 'Processing...' : `Start ${planName} · ${selectedPrice}`}
+            </button>
+          </div>
+
+          {!cardFieldsReady && cardFieldsPreparing ? (
+            <p className="small" style={{ margin: 0 }}>
+              Preparing secure card fields...
+            </p>
+          ) : null}
+
+          {!cardFieldsReady && !cardFieldsPreparing && !cardFieldsEligible && statusKind !== 'error' ? (
+            <p className="small" style={{ margin: 0 }}>
+              Secure card checkout is preparing. If it does not appear, PayPal card checkout may
+              not be enabled for this account yet.
+            </p>
+          ) : null}
 
           <p className="small" style={{ margin: 0 }}>
             Secure card processing by PayPal. TutoVera stores only the PayPal order, capture,
@@ -624,11 +642,15 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
             border-radius: 16px;
             border: 1px solid var(--border);
             background: var(--input-bg);
-            padding: 13px 14px;
+            padding: 0;
             overflow: hidden;
             transition:
               border-color 0.2s var(--ease-premium),
               box-shadow 0.2s var(--ease-premium);
+          }
+
+          .expandedCardField > iframe {
+            min-height: 50px !important;
           }
 
           .expandedCardField:focus-within {
