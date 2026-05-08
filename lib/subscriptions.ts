@@ -15,11 +15,23 @@ export type SubscriptionRecord = {
   plan: PlanKey | string;
   billing_cycle: string | null;
   status: SubscriptionStatus;
+
+  billing_provider: string | null;
+  billing_mode: string | null;
+
   paypal_subscription_id: string | null;
   paypal_plan_id: string | null;
   paypal_status: string | null;
+
+  paypal_payment_token_id: string | null;
+  paypal_order_id: string | null;
+  paypal_capture_id: string | null;
+
   current_period_end: string | null;
+  next_renewal_at: string | null;
+
   cancel_at_period_end: boolean | null;
+  cancelled_at: string | null;
   updated_at: string | null;
 };
 
@@ -27,11 +39,24 @@ export type PlanAccessSummary = {
   plan: PlanKey;
   status: SubscriptionStatus;
   billingCycle: string | null;
+
+  billingProvider: string | null;
+  billingMode: string | null;
+
   paypalStatus: string | null;
   currentPeriodEnd: string | null;
+  nextRenewalAt: string | null;
+
   cancelAtPeriodEnd: boolean;
+  cancelledAt: string | null;
+
   isPaidPlan: boolean;
   hasActivePaidAccess: boolean;
+
+  isExpandedPayPalBilling: boolean;
+  isLegacyPayPalSubscription: boolean;
+  canCancelSubscription: boolean;
+
   dailyTutorLimit: number;
   imageUploadsPerMonth: number;
   savedHistoryLabel: string;
@@ -56,6 +81,28 @@ export const SAVED_HISTORY_LABELS: Record<PlanKey, string> = {
   pro: 'Highest history allowance'
 };
 
+const SUBSCRIPTION_SELECT = [
+  'id',
+  'user_id',
+  'email',
+  'plan',
+  'billing_cycle',
+  'status',
+  'billing_provider',
+  'billing_mode',
+  'paypal_subscription_id',
+  'paypal_plan_id',
+  'paypal_status',
+  'paypal_payment_token_id',
+  'paypal_order_id',
+  'paypal_capture_id',
+  'current_period_end',
+  'next_renewal_at',
+  'cancel_at_period_end',
+  'cancelled_at',
+  'updated_at'
+].join(', ');
+
 export function normalizePlan(value: string | null | undefined): PlanKey {
   if (value === 'plus' || value === 'pro') return value;
   return 'free';
@@ -63,6 +110,25 @@ export function normalizePlan(value: string | null | undefined): PlanKey {
 
 export function statusAllowsPaidAccess(status: string | null | undefined) {
   return status === 'active' || status === 'pending' || status === 'past_due';
+}
+
+export function isExpandedPayPalBillingMode(
+  subscription: SubscriptionRecord | null | undefined
+) {
+  const billingMode = subscription?.billing_mode || '';
+
+  return (
+    billingMode.startsWith('paypal_expanded') ||
+    Boolean(subscription?.paypal_payment_token_id) ||
+    Boolean(subscription?.paypal_order_id) ||
+    Boolean(subscription?.paypal_capture_id)
+  );
+}
+
+export function isLegacyPayPalSubscriptionMode(
+  subscription: SubscriptionRecord | null | undefined
+) {
+  return Boolean(subscription?.paypal_subscription_id);
 }
 
 export function getPlanAccessFromSubscription(
@@ -73,16 +139,37 @@ export function getPlanAccessFromSubscription(
     rawPlan !== 'free' && statusAllowsPaidAccess(subscription?.status);
 
   const plan: PlanKey = hasActivePaidAccess ? rawPlan : 'free';
+  const isExpandedPayPalBilling = isExpandedPayPalBillingMode(subscription);
+  const isLegacyPayPalSubscription = isLegacyPayPalSubscriptionMode(subscription);
+  const cancelAtPeriodEnd = Boolean(subscription?.cancel_at_period_end);
+
+  const canCancelSubscription =
+    hasActivePaidAccess &&
+    !cancelAtPeriodEnd &&
+    (isExpandedPayPalBilling || isLegacyPayPalSubscription);
 
   return {
     plan,
     status: subscription?.status || 'inactive',
     billingCycle: subscription?.billing_cycle || null,
+
+    billingProvider: subscription?.billing_provider || null,
+    billingMode: subscription?.billing_mode || null,
+
     paypalStatus: subscription?.paypal_status || null,
     currentPeriodEnd: subscription?.current_period_end || null,
-    cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
+    nextRenewalAt: subscription?.next_renewal_at || null,
+
+    cancelAtPeriodEnd,
+    cancelledAt: subscription?.cancelled_at || null,
+
     isPaidPlan: plan === 'plus' || plan === 'pro',
     hasActivePaidAccess,
+
+    isExpandedPayPalBilling,
+    isLegacyPayPalSubscription,
+    canCancelSubscription,
+
     dailyTutorLimit: DAILY_TUTOR_LIMITS[plan],
     imageUploadsPerMonth: IMAGE_UPLOAD_LIMITS[plan],
     savedHistoryLabel: SAVED_HISTORY_LABELS[plan],
@@ -108,9 +195,7 @@ export async function getUserPlanAccess({
   if (userId) {
     const { data, error } = await supabase
       .from('subscriptions')
-      .select(
-        'id, user_id, email, plan, billing_cycle, status, paypal_subscription_id, paypal_plan_id, paypal_status, current_period_end, cancel_at_period_end, updated_at'
-      )
+      .select(SUBSCRIPTION_SELECT)
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -122,9 +207,7 @@ export async function getUserPlanAccess({
   if (normalizedEmail) {
     const { data, error } = await supabase
       .from('subscriptions')
-      .select(
-        'id, user_id, email, plan, billing_cycle, status, paypal_subscription_id, paypal_plan_id, paypal_status, current_period_end, cancel_at_period_end, updated_at'
-      )
+      .select(SUBSCRIPTION_SELECT)
       .eq('email', normalizedEmail)
       .maybeSingle();
 
@@ -174,10 +257,18 @@ export function formatDate(value: string | null | undefined) {
 
 export function getPlanSummarySentence(planAccess: PlanAccessSummary) {
   if (planAccess.hasActivePaidAccess) {
-    if (planAccess.cancelAtPeriodEnd && planAccess.currentPeriodEnd) {
-      return `Your ${formatPlanName(planAccess.plan)} access is active and scheduled to end on ${formatDate(
-        planAccess.currentPeriodEnd
-      )}.`;
+    if (planAccess.cancelAtPeriodEnd) {
+      if (planAccess.currentPeriodEnd) {
+        return `Your ${formatPlanName(
+          planAccess.plan
+        )} access is active and scheduled to end on ${formatDate(
+          planAccess.currentPeriodEnd
+        )}.`;
+      }
+
+      return `Your ${formatPlanName(
+        planAccess.plan
+      )} access is active and scheduled to end at the end of the current billing period.`;
     }
 
     return `Your ${formatPlanName(planAccess.plan)} access is active.`;

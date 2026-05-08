@@ -7,7 +7,18 @@ type CancelSubscriptionButtonProps = {
   planName: string;
 };
 
-export default function CancelSubscriptionButton({ planName }: CancelSubscriptionButtonProps) {
+type CancelSubscriptionResponse = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  cancellationMode?: 'period_end' | 'immediate';
+  currentPeriodEnd?: string | null;
+  alreadyScheduled?: boolean;
+};
+
+export default function CancelSubscriptionButton({
+  planName
+}: CancelSubscriptionButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
@@ -16,27 +27,40 @@ export default function CancelSubscriptionButton({ planName }: CancelSubscriptio
     if (loading) return;
 
     const confirmed = window.confirm(
-      `Cancel your TutoVera ${planName} subscription? This will cancel the PayPal subscription and return your account to the Free plan.`
+      `Cancel future renewals for your TutoVera ${planName} subscription? If your current plan period is already paid, your access will remain active until the end of that period.`
     );
 
     if (!confirmed) return;
 
     setLoading(true);
-    setStatus('Cancelling subscription...');
+    setStatus('Cancelling future renewals...');
 
     try {
       const response = await fetch('/api/paypal/cancel-subscription', {
         method: 'POST'
       });
 
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as CancelSubscriptionResponse;
 
       if (!response.ok) {
         setStatus(result.error || 'Unable to cancel subscription.');
         return;
       }
 
-      setStatus('Subscription cancelled. Your account has been moved to the Free plan.');
+      if (result.alreadyScheduled) {
+        setStatus(
+          result.message ||
+            'Your subscription is already scheduled to end at the end of the current billing period.'
+        );
+      } else if (result.cancellationMode === 'period_end') {
+        setStatus(
+          result.message ||
+            'Your renewal has been cancelled. Your paid access remains active until the end of the current billing period.'
+        );
+      } else {
+        setStatus(result.message || 'Subscription cancelled.');
+      }
+
       router.refresh();
     } catch {
       setStatus('Unable to cancel subscription right now. Please contact support.');
@@ -48,7 +72,7 @@ export default function CancelSubscriptionButton({ planName }: CancelSubscriptio
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       <button className="secondary" onClick={cancelSubscription} disabled={loading}>
-        {loading ? 'Cancelling...' : 'Cancel Subscription'}
+        {loading ? 'Cancelling...' : 'Cancel Renewal'}
       </button>
 
       {status ? (

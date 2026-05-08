@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import { createAdminSupabase } from '@/lib/supabase-admin';
-import SignOutButton from '@/components/SignOutButton';
+
 import ActionCard from '@/components/ActionCard';
-import Reveal from '@/components/Reveal';
 import CancelSubscriptionButton from '@/components/CancelSubscriptionButton';
+import Reveal from '@/components/Reveal';
+import SignOutButton from '@/components/SignOutButton';
+import { createAdminSupabase } from '@/lib/supabase-admin';
+import { createClient } from '@/lib/supabase/server';
 import {
   formatBillingCycle,
   formatDate,
@@ -36,8 +37,8 @@ export default async function AccountPage() {
   const planName = formatPlanName(planAccess.plan);
   const planSummary = getPlanSummarySentence(planAccess);
   const rawPayPalStatus = planAccess.paypalStatus || planAccess.subscription?.paypal_status || '';
-  const canCancelSubscription =
-    planAccess.hasActivePaidAccess && Boolean(planAccess.subscription?.paypal_subscription_id);
+  const canCancelSubscription = planAccess.canCancelSubscription;
+  const billingDateLabel = planAccess.cancelAtPeriodEnd ? 'Access ends' : 'Next billing date';
 
   return (
     <div className="grid" style={{ gap: 22 }}>
@@ -145,7 +146,7 @@ export default async function AccountPage() {
 
             <div className="card questionSurface" style={{ padding: 16 }}>
               <p className="small" style={{ margin: '0 0 4px' }}>
-                <strong>Next billing date</strong>
+                <strong>{billingDateLabel}</strong>
               </p>
               <p className="small" style={{ margin: 0 }}>
                 {planAccess.hasActivePaidAccess
@@ -180,7 +181,9 @@ export default async function AccountPage() {
                 </p>
                 <p className="small" style={{ margin: 0 }}>
                   Plan changes are currently handled through support while upgrade and downgrade
-                  workflows are being finalized. You can cancel your PayPal subscription here.
+                  workflows are being finalized. You can cancel future renewals here. If your
+                  current paid period is already active, access remains available until the end
+                  of that period.
                 </p>
               </div>
 
@@ -190,6 +193,27 @@ export default async function AccountPage() {
                   Contact Support
                 </a>
               </div>
+            </div>
+          ) : null}
+
+          {planAccess.cancelAtPeriodEnd && planAccess.hasActivePaidAccess ? (
+            <div
+              className="card questionSurface"
+              style={{
+                display: 'grid',
+                gap: 6,
+                padding: 16,
+                borderColor: 'var(--accent-warm-border)'
+              }}
+            >
+              <p className="small" style={{ margin: 0 }}>
+                <strong>Renewal cancelled</strong>
+              </p>
+              <p className="small" style={{ margin: 0 }}>
+                Your paid access remains active until{' '}
+                {formatDate(planAccess.currentPeriodEnd)}. You will not be charged again for this
+                subscription.
+              </p>
             </div>
           ) : null}
 

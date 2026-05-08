@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createAdminSupabase } from '@/lib/supabase-admin';
-import { createClient as createAuthClient } from '@/lib/supabase/server';
+
 import { cancelPayPalSubscription } from '@/lib/paypal';
 import { getUserPlanAccess } from '@/lib/subscriptions';
+import { createAdminSupabase } from '@/lib/supabase-admin';
+import { createClient as createAuthClient } from '@/lib/supabase/server';
 
 export async function POST() {
   try {
@@ -12,7 +13,10 @@ export async function POST() {
     } = await authClient.auth.getUser();
 
     if (!user?.id || !user.email) {
-      return NextResponse.json({ error: 'Please sign in before cancelling.' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Please sign in before cancelling.' },
+        { status: 401 }
+      );
     }
 
     const supabase = createAdminSupabase();
@@ -25,9 +29,9 @@ export async function POST() {
 
     const subscription = planAccess.subscription;
 
-    if (!subscription?.id || !subscription.paypal_subscription_id) {
+    if (!subscription?.id) {
       return NextResponse.json(
-        { error: 'No active PayPal subscription was found for this account.' },
+        { error: 'No active subscription was found for this account.' },
         { status: 404 }
       );
     }
@@ -36,6 +40,62 @@ export async function POST() {
       return NextResponse.json(
         { error: 'This account does not currently have active paid access.' },
         { status: 400 }
+      );
+    }
+
+    if (subscription.cancel_at_period_end) {
+      return NextResponse.json({
+        ok: true,
+        alreadyScheduled: true,
+        message: 'This subscription is already scheduled to end at the end of the current billing period.'
+      });
+    }
+
+    const now = new Date().toISOString();
+
+    if (planAccess.isExpandedPayPalBilling) {
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({
+          cancel_at_period_end: true,
+          cancelled_at: now,
+          paypal_status: 'CANCELLED_AT_PERIOD_END',
+          updated_at: now
+        })
+        .eq('id', subscription.id);
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      await supabase.from('billing_events').insert({
+        user_id: user.id,
+        subscription_id: subscription.id,
+        event_type: 'paypal_expanded_cancellation_scheduled',
+        provider: 'paypal',
+        amount_cents: null,
+        currency: 'USD',
+        status: 'scheduled',
+        metadata: {
+          billing_mode: subscription.billing_mode,
+          current_period_end: subscription.current_period_end,
+          cancelled_at: now
+        }
+      });
+
+      return NextResponse.json({
+        ok: true,
+        cancellationMode: 'period_end',
+        currentPeriodEnd: subscription.current_period_end,
+        message:
+          'Your subscription renewal has been cancelled. Your paid access remains active until the end of the current billing period.'
+      });
+    }
+
+    if (!subscription.paypal_subscription_id) {
+      return NextResponse.json(
+        { error: 'No cancellable PayPal subscription was found for this account.' },
+        { status: 404 }
       );
     }
 
@@ -51,7 +111,8 @@ export async function POST() {
         status: 'inactive',
         paypal_status: 'CANCELLED',
         cancel_at_period_end: true,
-        updated_at: new Date().toISOString()
+        cancelled_at: now,
+        updated_at: now
       })
       .eq('id', subscription.id);
 
@@ -59,13 +120,32 @@ export async function POST() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    await supabase.from('billing_events').insert({
+      user_id: user.id,
+      subscription_id: subscription.id,
+      event_type: 'paypal_legacy_subscription_cancelled',
+      provider: 'paypal',
+      amount_cents: null,
+      currency: 'USD',
+      status: 'cancelled',
+      metadata: {
+        paypal_subscription_id: subscription.paypal_subscription_id,
+        cancelled_at: now
+      }
+    });
+
     return NextResponse.json({
-      ok: true
+      ok: true,
+      cancellationMode: 'immediate',
+      message: 'Your PayPal subscription has been cancelled.'
     });
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Unable to cancel PayPal subscription.'
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to cancel PayPal subscription.'
       },
       { status: 500 }
     );
