@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import {
   createPayPalRenewalOrder,
-  type PayPalRenewalPaymentSourceType,
+  type PayPalRenewalPaymentSourceType
 } from '@/lib/paypal';
 
 export const runtime = 'nodejs';
@@ -26,6 +26,22 @@ type DueSubscription = {
   renewal_attempt_count: number | null;
 };
 
+type ExpiringSubscription = {
+  id: string;
+  user_id: string | null;
+  email: string | null;
+  plan: string | null;
+  status: string | null;
+  billing_provider: string | null;
+  billing_mode: string | null;
+  paypal_status: string | null;
+  paypal_payment_token_id: string | null;
+  current_period_end: string | null;
+  next_renewal_at: string | null;
+  cancel_at_period_end: boolean | null;
+  cancelled_at: string | null;
+};
+
 type RenewalResult = {
   subscriptionId: string;
   userId: string;
@@ -35,7 +51,15 @@ type RenewalResult = {
   paypalCaptureId?: string | null;
 };
 
+type ExpirationResult = {
+  subscriptionId: string;
+  userId: string | null;
+  result: 'expired' | 'failed' | 'skipped';
+  message?: string;
+};
+
 const MAX_RENEWALS_PER_RUN = 10;
+const MAX_EXPIRATIONS_PER_RUN = 50;
 const RETRY_DELAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RENEWAL_ATTEMPTS = 3;
 
@@ -48,7 +72,23 @@ const DUE_SUBSCRIPTION_SELECT = [
   'current_period_end',
   'next_renewal_at',
   'paypal_payment_token_id',
-  'renewal_attempt_count',
+  'renewal_attempt_count'
+].join(',');
+
+const EXPIRING_SUBSCRIPTION_SELECT = [
+  'id',
+  'user_id',
+  'email',
+  'plan',
+  'status',
+  'billing_provider',
+  'billing_mode',
+  'paypal_status',
+  'paypal_payment_token_id',
+  'current_period_end',
+  'next_renewal_at',
+  'cancel_at_period_end',
+  'cancelled_at'
 ].join(',');
 
 function createSupabaseAdmin(): any {
@@ -57,20 +97,24 @@ function createSupabaseAdmin(): any {
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.',
+      'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.'
     );
   }
 
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       persistSession: false,
-      autoRefreshToken: false,
-    },
+      autoRefreshToken: false
+    }
   }) as any;
 }
 
 function normalizeDueSubscription(row: unknown): DueSubscription {
   return row as unknown as DueSubscription;
+}
+
+function normalizeExpiringSubscription(row: unknown): ExpiringSubscription {
+  return row as unknown as ExpiringSubscription;
 }
 
 function normalizePlan(planValue: string | null): PaidPlan {
@@ -80,6 +124,21 @@ function normalizePlan(planValue: string | null): PaidPlan {
   if (value.includes('plus')) return 'plus';
 
   throw new Error(`Unsupported paid plan: ${planValue || 'missing'}`);
+}
+
+function isPaidPlanValue(planValue: string | null | undefined) {
+  const value = String(planValue || '').toLowerCase();
+
+  return value === 'plus' || value === 'pro';
+}
+
+function isExpandedPayPalRecord(subscription: ExpiringSubscription) {
+  const billingMode = subscription.billing_mode || '';
+
+  return (
+    billingMode.startsWith('paypal_expanded') ||
+    Boolean(subscription.paypal_payment_token_id)
+  );
 }
 
 function inferBillingInterval(subscription: DueSubscription): BillingInterval {
@@ -93,10 +152,7 @@ function inferBillingInterval(subscription: DueSubscription): BillingInterval {
     return 'annual';
   }
 
-  if (
-    planValue.includes('monthly') ||
-    planValue.includes('month')
-  ) {
+  if (planValue.includes('monthly') || planValue.includes('month')) {
     return 'monthly';
   }
 
@@ -106,7 +162,7 @@ function inferBillingInterval(subscription: DueSubscription): BillingInterval {
 
   if (!startDateValue || !endDateValue) {
     throw new Error(
-      'Unable to determine billing interval safely because subscription period dates are missing.',
+      'Unable to determine billing interval safely because subscription period dates are missing.'
     );
   }
 
@@ -115,7 +171,7 @@ function inferBillingInterval(subscription: DueSubscription): BillingInterval {
 
   if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
     throw new Error(
-      'Unable to determine billing interval safely because subscription period dates are invalid.',
+      'Unable to determine billing interval safely because subscription period dates are invalid.'
     );
   }
 
@@ -127,14 +183,14 @@ function inferBillingInterval(subscription: DueSubscription): BillingInterval {
 
   throw new Error(
     `Unable to determine billing interval safely from subscription period length: ${days.toFixed(
-      2,
-    )} days.`,
+      2
+    )} days.`
   );
 }
 
 function getRenewalAmountCents(
   plan: PaidPlan,
-  billingInterval: BillingInterval,
+  billingInterval: BillingInterval
 ): number {
   if (plan === 'plus' && billingInterval === 'monthly') return 999;
   if (plan === 'plus' && billingInterval === 'annual') return 9999;
@@ -159,16 +215,16 @@ function addBillingInterval(date: Date, billingInterval: BillingInterval): Date 
       date.getUTCHours(),
       date.getUTCMinutes(),
       date.getUTCSeconds(),
-      date.getUTCMilliseconds(),
-    ),
+      date.getUTCMilliseconds()
+    )
   );
 
   const lastDayOfTargetMonth = new Date(
     Date.UTC(
       firstOfTargetMonth.getUTCFullYear(),
       firstOfTargetMonth.getUTCMonth() + 1,
-      0,
-    ),
+      0
+    )
   ).getUTCDate();
 
   firstOfTargetMonth.setUTCDate(Math.min(day, lastDayOfTargetMonth));
@@ -182,7 +238,7 @@ function createRenewalRequestId(subscription: DueSubscription): string {
     subscription.id,
     subscription.next_renewal_at ||
       subscription.current_period_end ||
-      new Date().toISOString().slice(0, 10),
+      new Date().toISOString().slice(0, 10)
   ].join(':');
 
   const hash = crypto.createHash('sha256').update(stableKey).digest('hex');
@@ -231,7 +287,7 @@ function extractPayPalCaptureStatus(order: any): string | null {
 }
 
 function inferPaymentSourceTypeFromRow(
-  row: Record<string, any> | null,
+  row: Record<string, any> | null
 ): PayPalRenewalPaymentSourceType {
   if (!row) return 'card';
 
@@ -241,7 +297,7 @@ function inferPaymentSourceTypeFromRow(
     row.payment_method_type,
     row.method_type,
     row.type,
-    row.provider_source_type,
+    row.provider_source_type
   ]
     .filter(Boolean)
     .join(' ')
@@ -267,14 +323,14 @@ function inferPaymentSourceTypeFromRow(
       row.card_last_four ||
       row.card_last_digits ||
       row.expiry ||
-      row.card_expiry,
+      row.card_expiry
   );
 
   const hasPayPalSignals = Boolean(
     row.paypal_payer_id ||
       row.payer_id ||
       row.paypal_email ||
-      row.email_address,
+      row.email_address
   );
 
   if (hasPayPalSignals && !hasCardSignals) return 'paypal';
@@ -284,7 +340,7 @@ function inferPaymentSourceTypeFromRow(
 
 async function loadPaymentSourceType(
   supabase: any,
-  subscription: DueSubscription,
+  subscription: DueSubscription
 ): Promise<PayPalRenewalPaymentSourceType> {
   const { data, error } = await supabase
     .from('paypal_payment_methods')
@@ -320,14 +376,14 @@ async function loadPaymentSourceType(
 async function insertBillingEvent(
   supabase: any,
   input: {
-    userId: string;
+    userId: string | null;
     subscriptionId: string;
     eventType: string;
     amountCents?: number | null;
     currency?: string;
     status: string;
     metadata?: Record<string, any>;
-  },
+  }
 ) {
   const { error } = await supabase.from('billing_events').insert({
     user_id: input.userId,
@@ -337,7 +393,7 @@ async function insertBillingEvent(
     amount_cents: input.amountCents ?? null,
     currency: input.currency || 'USD',
     status: input.status,
-    metadata: input.metadata || {},
+    metadata: input.metadata || {}
   });
 
   if (error) {
@@ -345,10 +401,181 @@ async function insertBillingEvent(
   }
 }
 
+async function processExpiredCancelledSubscription(
+  supabase: any,
+  subscription: ExpiringSubscription
+): Promise<ExpirationResult> {
+  if (!subscription.cancel_at_period_end) {
+    return {
+      subscriptionId: subscription.id,
+      userId: subscription.user_id,
+      result: 'skipped',
+      message: 'Subscription is not scheduled for cancellation.'
+    };
+  }
+
+  if (!isPaidPlanValue(subscription.plan)) {
+    return {
+      subscriptionId: subscription.id,
+      userId: subscription.user_id,
+      result: 'skipped',
+      message: 'Subscription is already on a free plan.'
+    };
+  }
+
+  if (!isExpandedPayPalRecord(subscription)) {
+    return {
+      subscriptionId: subscription.id,
+      userId: subscription.user_id,
+      result: 'skipped',
+      message: 'Subscription is not an Expanded Checkout subscription.'
+    };
+  }
+
+  if (!subscription.current_period_end) {
+    return {
+      subscriptionId: subscription.id,
+      userId: subscription.user_id,
+      result: 'failed',
+      message: 'Subscription is missing current_period_end.'
+    };
+  }
+
+  const now = new Date();
+  const currentPeriodEnd = new Date(subscription.current_period_end);
+
+  if (
+    Number.isNaN(currentPeriodEnd.getTime()) ||
+    currentPeriodEnd.getTime() > now.getTime()
+  ) {
+    return {
+      subscriptionId: subscription.id,
+      userId: subscription.user_id,
+      result: 'skipped',
+      message: 'Subscription has not reached its period end yet.'
+    };
+  }
+
+  const nowIso = now.toISOString();
+
+  const { data: lockedSubscription, error: lockError } = await supabase
+    .from('subscriptions')
+    .update({
+      billing_mode: 'paypal_expanded_expiring',
+      updated_at: nowIso
+    })
+    .eq('id', subscription.id)
+    .eq('cancel_at_period_end', true)
+    .in('status', ['active', 'pending', 'past_due'])
+    .lte('current_period_end', nowIso)
+    .select(EXPIRING_SUBSCRIPTION_SELECT)
+    .maybeSingle();
+
+  if (lockError) {
+    return {
+      subscriptionId: subscription.id,
+      userId: subscription.user_id,
+      result: 'failed',
+      message: lockError.message
+    };
+  }
+
+  if (!lockedSubscription) {
+    return {
+      subscriptionId: subscription.id,
+      userId: subscription.user_id,
+      result: 'skipped',
+      message: 'Subscription was already expired or no longer eligible.'
+    };
+  }
+
+  const locked = normalizeExpiringSubscription(lockedSubscription);
+
+  const { error: updateError } = await supabase
+    .from('subscriptions')
+    .update({
+      plan: 'free',
+      status: 'inactive',
+      billing_mode: 'paypal_expanded_expired',
+      paypal_status: 'CANCELLED',
+      next_renewal_at: null,
+      updated_at: nowIso
+    })
+    .eq('id', locked.id);
+
+  if (updateError) {
+    return {
+      subscriptionId: locked.id,
+      userId: locked.user_id,
+      result: 'failed',
+      message: updateError.message
+    };
+  }
+
+  await insertBillingEvent(supabase, {
+    userId: locked.user_id,
+    subscriptionId: locked.id,
+    eventType: 'paypal_expanded_subscription_expired',
+    status: 'expired',
+    metadata: {
+      previous_plan: locked.plan,
+      previous_status: locked.status,
+      previous_billing_mode: locked.billing_mode,
+      current_period_end: locked.current_period_end,
+      cancelled_at: locked.cancelled_at,
+      expired_at: nowIso
+    }
+  });
+
+  return {
+    subscriptionId: locked.id,
+    userId: locked.user_id,
+    result: 'expired'
+  };
+}
+
+async function expireCancelledSubscriptions(
+  supabase: any,
+  nowIso: string
+): Promise<ExpirationResult[]> {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select(EXPIRING_SUBSCRIPTION_SELECT)
+    .eq('cancel_at_period_end', true)
+    .in('status', ['active', 'pending', 'past_due'])
+    .lte('current_period_end', nowIso)
+    .order('current_period_end', { ascending: true })
+    .limit(MAX_EXPIRATIONS_PER_RUN);
+
+  if (error) {
+    return [
+      {
+        subscriptionId: 'unknown',
+        userId: null,
+        result: 'failed',
+        message: error.message
+      }
+    ];
+  }
+
+  const subscriptions: ExpiringSubscription[] = Array.isArray(data)
+    ? data.map((subscription) => normalizeExpiringSubscription(subscription))
+    : [];
+
+  const results: ExpirationResult[] = [];
+
+  for (const subscription of subscriptions) {
+    const result = await processExpiredCancelledSubscription(supabase, subscription);
+    results.push(result);
+  }
+
+  return results;
+}
+
 async function markRenewalFailure(
   supabase: any,
   subscription: DueSubscription,
-  error: unknown,
+  error: unknown
 ): Promise<RenewalResult> {
   const previousAttempts = subscription.renewal_attempt_count || 0;
   const nextAttempts = previousAttempts + 1;
@@ -367,7 +594,7 @@ async function markRenewalFailure(
       billing_mode: 'paypal_expanded_recurring',
       next_renewal_at: shouldSuspend ? subscription.next_renewal_at : nextRetryAt,
       renewal_attempt_count: nextAttempts,
-      updated_at: now.toISOString(),
+      updated_at: now.toISOString()
     })
     .eq('id', subscription.id);
 
@@ -379,27 +606,27 @@ async function markRenewalFailure(
     metadata: {
       error: errorMessage,
       attempt: nextAttempts,
-      next_retry_at: shouldSuspend ? null : nextRetryAt,
-    },
+      next_retry_at: shouldSuspend ? null : nextRetryAt
+    }
   });
 
   return {
     subscriptionId: subscription.id,
     userId: subscription.user_id,
     result: 'failed',
-    message: errorMessage,
+    message: errorMessage
   };
 }
 
 async function processDueSubscription(
   supabase: any,
-  subscription: DueSubscription,
+  subscription: DueSubscription
 ): Promise<RenewalResult> {
   if (!subscription.paypal_payment_token_id) {
     return markRenewalFailure(
       supabase,
       subscription,
-      new Error('Missing PayPal payment token ID.'),
+      new Error('Missing PayPal payment token ID.')
     );
   }
 
@@ -407,7 +634,7 @@ async function processDueSubscription(
     .from('subscriptions')
     .update({
       billing_mode: 'paypal_expanded_renewing',
-      updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     })
     .eq('id', subscription.id)
     .eq('billing_mode', 'paypal_expanded_recurring')
@@ -419,7 +646,7 @@ async function processDueSubscription(
       subscriptionId: subscription.id,
       userId: subscription.user_id,
       result: 'failed',
-      message: lockError.message,
+      message: lockError.message
     };
   }
 
@@ -428,7 +655,7 @@ async function processDueSubscription(
       subscriptionId: subscription.id,
       userId: subscription.user_id,
       result: 'skipped',
-      message: 'Subscription was already locked or no longer due.',
+      message: 'Subscription was already locked or no longer due.'
     };
   }
 
@@ -449,14 +676,14 @@ async function processDueSubscription(
       amountCents,
       currency: 'USD',
       paymentSourceType,
-      requestId: createRenewalRequestId(locked),
+      requestId: createRenewalRequestId(locked)
     });
 
     if (renewalOrder?.status !== 'COMPLETED') {
       throw new Error(
         `PayPal renewal order did not complete. Status: ${
           renewalOrder?.status || 'unknown'
-        }`,
+        }`
       );
     }
 
@@ -480,13 +707,13 @@ async function processDueSubscription(
         renewal_attempt_count: 0,
         paypal_order_id: renewalOrder.id || null,
         paypal_capture_id: captureId,
-        updated_at: currentPeriodStart,
+        updated_at: currentPeriodStart
       })
       .eq('id', locked.id);
 
     if (updateError) {
       throw new Error(
-        `PayPal renewal succeeded, but subscription update failed: ${updateError.message}`,
+        `PayPal renewal succeeded, but subscription update failed: ${updateError.message}`
       );
     }
 
@@ -504,8 +731,8 @@ async function processDueSubscription(
         payment_source_type: paymentSourceType,
         billing_interval: billingInterval,
         current_period_start: currentPeriodStart,
-        current_period_end: currentPeriodEnd,
-      },
+        current_period_end: currentPeriodEnd
+      }
     });
 
     return {
@@ -513,11 +740,52 @@ async function processDueSubscription(
       userId: locked.user_id,
       result: 'renewed',
       paypalOrderId: renewalOrder.id || null,
-      paypalCaptureId: captureId,
+      paypalCaptureId: captureId
     };
   } catch (error) {
     return markRenewalFailure(supabase, locked, error);
   }
+}
+
+async function renewDueSubscriptions(
+  supabase: any,
+  nowIso: string
+): Promise<RenewalResult[]> {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select(DUE_SUBSCRIPTION_SELECT)
+    .eq('billing_provider', 'paypal')
+    .eq('billing_mode', 'paypal_expanded_recurring')
+    .in('status', ['active', 'past_due'])
+    .or('cancel_at_period_end.is.false,cancel_at_period_end.is.null')
+    .not('paypal_payment_token_id', 'is', null)
+    .lte('next_renewal_at', nowIso)
+    .order('next_renewal_at', { ascending: true })
+    .limit(MAX_RENEWALS_PER_RUN);
+
+  if (error) {
+    return [
+      {
+        subscriptionId: 'unknown',
+        userId: 'unknown',
+        result: 'failed',
+        message: error.message
+      }
+    ];
+  }
+
+  const subscriptions: DueSubscription[] = Array.isArray(data)
+    ? data.map((subscription) => normalizeDueSubscription(subscription))
+    : [];
+
+  const results: RenewalResult[] = [];
+
+  for (const subscription of subscriptions) {
+    const result = await processDueSubscription(supabase, subscription);
+    results.push(result);
+  }
+
+  return results;
 }
 
 export async function GET(request: NextRequest) {
@@ -527,9 +795,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'CRON_SECRET is not configured.',
+        error: 'CRON_SECRET is not configured.'
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
@@ -537,9 +805,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Unauthorized',
+        error: 'Unauthorized'
       },
-      { status: 401 },
+      { status: 401 }
     );
   }
 
@@ -547,53 +815,23 @@ export async function GET(request: NextRequest) {
     const supabase = createSupabaseAdmin();
     const nowIso = new Date().toISOString();
 
-    const { data: dueSubscriptions, error } = await supabase
-      .from('subscriptions')
-      .select(DUE_SUBSCRIPTION_SELECT)
-      .eq('billing_provider', 'paypal')
-      .eq('billing_mode', 'paypal_expanded_recurring')
-      .in('status', ['active', 'past_due'])
-      .or('cancel_at_period_end.is.false,cancel_at_period_end.is.null')
-      .not('paypal_payment_token_id', 'is', null)
-      .lte('next_renewal_at', nowIso)
-      .order('next_renewal_at', { ascending: true })
-      .limit(MAX_RENEWALS_PER_RUN);
-
-    if (error) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: error.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const subscriptions: DueSubscription[] = Array.isArray(dueSubscriptions)
-      ? dueSubscriptions.map((subscription) =>
-          normalizeDueSubscription(subscription),
-        )
-      : [];
-
-    const results: RenewalResult[] = [];
-
-    for (const subscription of subscriptions) {
-      const result = await processDueSubscription(supabase, subscription);
-      results.push(result);
-    }
+    const expirationResults = await expireCancelledSubscriptions(supabase, nowIso);
+    const renewalResults = await renewDueSubscriptions(supabase, nowIso);
 
     return NextResponse.json({
       success: true,
-      checked: subscriptions.length,
-      results,
+      expiredChecked: expirationResults.length,
+      renewalChecked: renewalResults.length,
+      expirations: expirationResults,
+      renewals: renewalResults
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown cron error',
+        error: error instanceof Error ? error.message : 'Unknown cron error'
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
