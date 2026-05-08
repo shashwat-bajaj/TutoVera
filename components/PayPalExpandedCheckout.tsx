@@ -339,8 +339,8 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
   function openCardCheckout() {
     setShowCardCheckout(true);
-    setStatusKind('info');
-    setStatusMessage('Loading secure card checkout...');
+    setStatusKind('idle');
+    setStatusMessage('');
   }
 
   async function submitCardFields() {
