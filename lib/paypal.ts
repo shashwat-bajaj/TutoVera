@@ -560,3 +560,144 @@ export async function verifyPayPalWebhookSignature({
 
   return data.verification_status === 'SUCCESS';
 }
+
+export type PayPalRenewalPaymentSourceType = 'card' | 'paypal';
+
+export type CreatePayPalRenewalOrderInput = {
+  subscriptionId: string;
+  userId: string;
+  plan: 'plus' | 'pro';
+  billingInterval: 'monthly' | 'annual';
+  paypalPaymentTokenId: string;
+  amountCents: number;
+  currency?: string;
+  paymentSourceType?: PayPalRenewalPaymentSourceType;
+  requestId?: string;
+};
+
+function getPayPalRenewalApiBaseUrl(): string {
+  const mode = (
+    process.env.PAYPAL_ENVIRONMENT ||
+    process.env.PAYPAL_MODE ||
+    process.env.PAYPAL_ENV ||
+    ''
+  )
+    .trim()
+    .toLowerCase();
+
+  if (mode === 'live' || mode === 'production') {
+    return 'https://api-m.paypal.com';
+  }
+
+  if (mode === 'sandbox' || mode === 'test' || mode === 'development') {
+    return 'https://api-m.sandbox.paypal.com';
+  }
+
+  throw new Error(
+    'Missing PayPal environment. Set PAYPAL_ENVIRONMENT to either "live" or "sandbox".',
+  );
+}
+
+function formatPayPalRenewalAmount(amountCents: number): string {
+  return (amountCents / 100).toFixed(2);
+}
+
+async function getPayPalRenewalAccessToken(): Promise<string> {
+  const clientId = process.env.PAYPAL_CLIENT_ID;
+  const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Missing PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET.');
+  }
+
+  const response = await fetch(`${getPayPalRenewalApiBaseUrl()}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString(
+        'base64',
+      )}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+    cache: 'no-store',
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data?.access_token) {
+    throw new Error(
+      `Failed to get PayPal access token: ${
+        typeof data?.message === 'string'
+          ? data.message
+          : JSON.stringify(data)
+      }`,
+    );
+  }
+
+  return data.access_token as string;
+}
+
+export async function createPayPalRenewalOrder(
+  input: CreatePayPalRenewalOrderInput,
+): Promise<any> {
+  const accessToken = await getPayPalRenewalAccessToken();
+
+  const currency = input.currency || 'USD';
+  const paymentSourceType = input.paymentSourceType || 'card';
+
+  const paymentSource =
+    paymentSourceType === 'paypal'
+      ? {
+          paypal: {
+            vault_id: input.paypalPaymentTokenId,
+          },
+        }
+      : {
+          card: {
+            vault_id: input.paypalPaymentTokenId,
+          },
+        };
+
+  const requestId =
+    input.requestId ||
+    `tutovera-renewal-${input.subscriptionId}-${Date.now()}`;
+
+  const response = await fetch(`${getPayPalRenewalApiBaseUrl()}/v2/checkout/orders`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'PayPal-Request-Id': requestId,
+    },
+    body: JSON.stringify({
+      intent: 'CAPTURE',
+      purchase_units: [
+        {
+          reference_id: input.subscriptionId,
+          custom_id: `subscription:${input.subscriptionId}`,
+          description: `TutoVera ${input.plan.toUpperCase()} ${input.billingInterval} renewal`,
+          amount: {
+            currency_code: currency,
+            value: formatPayPalRenewalAmount(input.amountCents),
+          },
+        },
+      ],
+      payment_source: paymentSource,
+    }),
+    cache: 'no-store',
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to create PayPal renewal order: ${
+        typeof data?.message === 'string'
+          ? data.message
+          : JSON.stringify(data)
+      }`,
+    );
+  }
+
+  return data;
+}
