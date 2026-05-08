@@ -275,8 +275,6 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         }
 
         setCardFieldsEligible(true);
-        setStatusKind('info');
-        setStatusMessage('Enter your card details below.');
 
         if (
           cardNameRef.current &&
@@ -479,12 +477,27 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
           <button type="button" onClick={openCardCheckout} disabled={isWorking}>
             Continue to secure card checkout
           </button>
+
+          <p className="small" style={{ margin: 0 }}>
+            Secure card processing by PayPal. TutoVera stores only the PayPal order, capture,
+            and saved-payment identifiers needed for recurring access.
+          </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
+        <div
+          className="card innerFeatureCard"
+          style={{
+            display: 'grid',
+            gap: 10,
+            padding: 14
+          }}
+        >
           <div style={{ display: 'grid', gap: 4 }}>
             <p className="small" style={{ margin: 0 }}>
               <strong>Card details</strong>
+            </p>
+            <p className="small" style={{ margin: 0 }}>
+              Enter your card details below:
             </p>
           </div>
 
@@ -534,13 +547,13 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
               </p>
             </div>
           )}
+
+          <p className="small" style={{ margin: 0 }}>
+            Secure card processing by PayPal. TutoVera stores only the PayPal order, capture,
+            and saved-payment identifiers needed for recurring access.
+          </p>
         </div>
       )}
-
-      <p className="small" style={{ margin: 0 }}>
-        Secure card processing by PayPal. TutoVera stores only the PayPal order, capture, and
-        saved-payment identifiers needed for recurring access.
-      </p>
 
       {isWorking || statusMessage ? (
         <p
