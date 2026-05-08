@@ -170,12 +170,12 @@ export default async function PricingPageContent() {
             <span>Your plan, settings, and history stay connected across subjects.</span>
           </div>
           <div>
-            <strong>Branded checkout</strong>
-            <span>PayPal Expanded Checkout supports PayPal and card checkout inside TutoVera.</span>
+            <strong>Card-first checkout</strong>
+            <span>Secure card checkout is processed by PayPal directly inside TutoVera.</span>
           </div>
           <div>
             <strong>Recurring access</strong>
-            <span>Expanded recurring checkout is being wired to TutoVera’s own renewal system.</span>
+            <span>Expanded recurring checkout is wired to TutoVera’s own renewal system.</span>
           </div>
         </div>
 
@@ -314,7 +314,10 @@ export default async function PricingPageContent() {
                       {isSignedIn ? 'Open Free Tutor' : plan.ctaLabel}
                     </a>
                   ) : blockPlanChange ? (
-                    <div className="card questionSurface" style={{ display: 'grid', gap: 10, padding: 16 }}>
+                    <div
+                      className="card questionSurface"
+                      style={{ display: 'grid', gap: 10, padding: 16 }}
+                    >
                       <p className="small" style={{ margin: 0 }}>
                         {getPlanChangeMessage(planAccess.plan)}
                       </p>
@@ -515,6 +518,9 @@ export default async function PricingPageContent() {
             min-width: 0;
             height: 100%;
             float: none;
+            align-content: start;
+            align-items: stretch;
+            overflow: visible;
           }
 
           .pricingCardTop {
@@ -575,10 +581,11 @@ export default async function PricingPageContent() {
           }
 
           .pricingButtonRow {
-            margin-top: auto;
-            align-self: end;
             display: grid;
             gap: 12px;
+            align-self: start;
+            align-content: start;
+            min-width: 0;
           }
 
           .pricingCompareDetails {
@@ -672,6 +679,7 @@ export default async function PricingPageContent() {
 
             .pricingPlanCard {
               grid-template-rows: none;
+              height: auto;
             }
 
             .pricingPlanTitleBlock,
