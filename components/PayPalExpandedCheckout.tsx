@@ -100,7 +100,6 @@ function getPlanDescription(plan: PaidPlanKey) {
 export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpandedCheckoutProps) {
   const router = useRouter();
 
-  const checkoutPanelRef = useRef<HTMLDivElement | null>(null);
   const cardNameRef = useRef<HTMLDivElement | null>(null);
   const cardNumberRef = useRef<HTMLDivElement | null>(null);
   const cardExpiryRef = useRef<HTMLDivElement | null>(null);
@@ -201,21 +200,6 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
     router.refresh();
   }
-
-  useEffect(() => {
-    if (!showCardCheckout) return;
-
-    const scrollFrame = window.requestAnimationFrame(() => {
-      checkoutPanelRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(scrollFrame);
-    };
-  }, [showCardCheckout]);
 
   useEffect(() => {
     let isMounted = true;
@@ -513,7 +497,6 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         </div>
       ) : (
         <div
-          ref={checkoutPanelRef}
           className="card innerFeatureCard"
           style={{
             display: 'grid',

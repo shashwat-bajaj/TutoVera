@@ -509,10 +509,10 @@ export default async function PricingPageContent() {
           .pricingPlanCard {
             display: grid;
             grid-template-rows:
-              minmax(286px, auto)
-              minmax(238px, auto)
-              minmax(178px, auto)
-              minmax(158px, auto)
+              minmax(318px, max-content)
+              minmax(252px, max-content)
+              minmax(190px, max-content)
+              minmax(172px, max-content)
               auto;
             gap: 16px;
             min-width: 0;
@@ -525,6 +525,7 @@ export default async function PricingPageContent() {
 
           .pricingCardTop {
             display: grid;
+            grid-template-rows: auto 82px 116px 72px;
             gap: 12px;
             align-content: start;
             min-width: 0;
@@ -554,10 +555,12 @@ export default async function PricingPageContent() {
 
           .pricingDescription {
             margin: 0;
+            min-height: 48px;
           }
 
           .pricingMiniStats {
             display: grid;
+            grid-template-rows: repeat(3, minmax(70px, auto));
             gap: 10px;
             padding-top: 12px;
             border-top: 1px solid var(--border);
@@ -566,6 +569,7 @@ export default async function PricingPageContent() {
 
           .pricingMiniStat {
             padding: 14px;
+            min-height: 70px;
           }
 
           .pricingFeatureBlock {
@@ -682,9 +686,19 @@ export default async function PricingPageContent() {
               height: auto;
             }
 
+            .pricingCardTop {
+              grid-template-rows: none;
+            }
+
             .pricingPlanTitleBlock,
-            .pricingPriceBlock {
+            .pricingPriceBlock,
+            .pricingDescription,
+            .pricingMiniStat {
               min-height: 0;
+            }
+
+            .pricingMiniStats {
+              grid-template-rows: none;
             }
           }
 
