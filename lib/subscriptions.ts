@@ -241,6 +241,24 @@ export function formatSubscriptionStatus(value: string | null | undefined) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Inactive';
 }
 
+export function formatPaymentStatus(value: string | null | undefined) {
+  const normalized = (value || '').toUpperCase();
+
+  if (!normalized) return 'Not connected';
+  if (normalized === 'COMPLETED') return 'Active';
+  if (normalized === 'VAULTED') return 'Payment method saved';
+  if (normalized === 'CANCELLED_AT_PERIOD_END') return 'Renewal cancelled';
+  if (normalized === 'CANCELLED') return 'Cancelled';
+  if (normalized === 'SUSPENDED') return 'Suspended';
+  if (normalized === 'VAULT_TOKEN_MISSING') return 'Payment method not saved';
+  if (normalized === 'ACTIVE') return 'Active';
+  if (normalized === 'APPROVED') return 'Approved';
+  if (normalized === 'DECLINED') return 'Declined';
+  if (normalized === 'FAILED') return 'Failed';
+
+  return value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : 'Not connected';
+}
+
 export function formatDate(value: string | null | undefined) {
   if (!value) return 'Not available';
 
@@ -274,12 +292,16 @@ export function getPlanSummarySentence(planAccess: PlanAccessSummary) {
     return `Your ${formatPlanName(planAccess.plan)} access is active.`;
   }
 
+  if (planAccess.subscription?.paypal_status === 'VAULT_TOKEN_MISSING') {
+    return 'Your previous paid period ended because recurring billing could not be set up. You are currently on the Free plan.';
+  }
+
   if (planAccess.subscription?.paypal_status === 'CANCELLED') {
-    return 'Your previous PayPal subscription has been cancelled. You are currently on the Free plan.';
+    return 'Your previous paid plan has ended. You are currently on the Free plan.';
   }
 
   if (planAccess.subscription?.paypal_status === 'SUSPENDED') {
-    return 'Your previous PayPal subscription is suspended. You are currently on the Free plan.';
+    return 'Your previous paid plan is suspended. You are currently on the Free plan.';
   }
 
   return 'You are currently on the Free plan.';

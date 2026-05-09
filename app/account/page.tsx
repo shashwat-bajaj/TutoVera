@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server';
 import {
   formatBillingCycle,
   formatDate,
+  formatPaymentStatus,
   formatPlanName,
   formatSubscriptionStatus,
   getPlanSummarySentence,
@@ -36,7 +37,7 @@ export default async function AccountPage() {
 
   const planName = formatPlanName(planAccess.plan);
   const planSummary = getPlanSummarySentence(planAccess);
-  const rawPayPalStatus = planAccess.paypalStatus || planAccess.subscription?.paypal_status || '';
+  const paymentStatus = formatPaymentStatus(planAccess.paypalStatus);
   const canCancelSubscription = planAccess.canCancelSubscription;
   const billingDateLabel = planAccess.cancelAtPeriodEnd ? 'Access ends' : 'Next billing date';
 
@@ -157,10 +158,10 @@ export default async function AccountPage() {
 
             <div className="card questionSurface" style={{ padding: 16 }}>
               <p className="small" style={{ margin: '0 0 4px' }}>
-                <strong>PayPal status</strong>
+                <strong>Payment status</strong>
               </p>
               <p className="small" style={{ margin: 0 }}>
-                {rawPayPalStatus || 'Not connected'}
+                {paymentStatus}
               </p>
             </div>
           </div>
@@ -180,10 +181,9 @@ export default async function AccountPage() {
                   <strong>Subscription management</strong>
                 </p>
                 <p className="small" style={{ margin: 0 }}>
-                  Plan changes are currently handled through support while upgrade and downgrade
-                  workflows are being finalized. You can cancel future renewals here. If your
-                  current paid period is already active, access remains available until the end
-                  of that period.
+                  You can cancel future renewals here. If your current paid period is already
+                  active, your access remains available until the end of that paid period. Plan
+                  upgrades and downgrades are handled through support for now so billing stays clean.
                 </p>
               </div>
 

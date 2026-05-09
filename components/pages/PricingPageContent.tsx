@@ -124,11 +124,11 @@ function getPlanShortDescription(planKey: string) {
 
 function getPlanChangeMessage(currentPlan: PlanKey) {
   if (currentPlan === 'plus') {
-    return 'You already have an active Plus plan. Pro upgrades will be handled through the account-change flow once recurring checkout renewals are fully finalized.';
+    return 'You already have an active Plus plan. Pro upgrades are handled through support for now so your billing stays clean.';
   }
 
   if (currentPlan === 'pro') {
-    return 'You already have the highest TutoVera plan. Downgrades are handled through support for now so billing stays clean.';
+    return 'You already have the highest TutoVera plan. Downgrades are handled through support for now so your billing stays clean.';
   }
 
   return 'Plan changes are handled through support for now.';
@@ -175,7 +175,7 @@ export default async function PricingPageContent() {
           </div>
           <div>
             <strong>Recurring access</strong>
-            <span>Expanded recurring checkout is wired to TutoVera’s own renewal system.</span>
+            <span>Paid plans renew automatically unless you cancel future renewals.</span>
           </div>
         </div>
 

@@ -27,7 +27,7 @@ export default function CancelSubscriptionButton({
     if (loading) return;
 
     const confirmed = window.confirm(
-      `Cancel future renewals for your TutoVera ${planName} subscription? If your current plan period is already paid, your access will remain active until the end of that period.`
+      `Cancel future renewals for your TutoVera ${planName} plan? If your current paid period is already active, your access will remain available until the end of that period.`
     );
 
     if (!confirmed) return;
@@ -43,27 +43,27 @@ export default function CancelSubscriptionButton({
       const result = (await response.json()) as CancelSubscriptionResponse;
 
       if (!response.ok) {
-        setStatus(result.error || 'Unable to cancel subscription.');
+        setStatus(result.error || 'Unable to cancel future renewals.');
         return;
       }
 
       if (result.alreadyScheduled) {
         setStatus(
           result.message ||
-            'Your subscription is already scheduled to end at the end of the current billing period.'
+            'Future renewals are already cancelled. Your paid access remains active until the end of the current billing period.'
         );
       } else if (result.cancellationMode === 'period_end') {
         setStatus(
           result.message ||
-            'Your renewal has been cancelled. Your paid access remains active until the end of the current billing period.'
+            'Future renewals have been cancelled. Your paid access remains active until the end of the current billing period.'
         );
       } else {
-        setStatus(result.message || 'Subscription cancelled.');
+        setStatus(result.message || 'Your plan has been cancelled.');
       }
 
       router.refresh();
     } catch {
-      setStatus('Unable to cancel subscription right now. Please contact support.');
+      setStatus('Unable to cancel future renewals right now. Please contact support.');
     } finally {
       setLoading(false);
     }
