@@ -52,7 +52,10 @@ alter table subscriptions
 add column if not exists billing_provider text not null default 'paypal';
 
 alter table subscriptions
-add column if not exists billing_mode text not null default 'paypal_subscriptions';
+add column if not exists billing_mode text not null default 'manual';
+
+alter table subscriptions
+alter column billing_mode set default 'manual';
 
 alter table subscriptions
 add column if not exists paypal_payment_token_id text;
