@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminSupabase } from '@/lib/supabase-admin';
+
+import type { PlanKey } from '@/lib/plans';
 import {
   getPayPalSubscription,
   getPlanFromPayPalPlanId,
@@ -7,7 +8,7 @@ import {
   verifyPayPalWebhookSignature,
   type BillingCycle
 } from '@/lib/paypal';
-import type { PlanKey } from '@/lib/plans';
+import { createAdminSupabase } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,16 +17,26 @@ type PayPalWebhookResource = {
   status?: string;
   plan_id?: string;
   billing_agreement_id?: string;
+  metadata?: {
+    order_id?: string;
+    orderId?: string;
+    [key: string]: unknown;
+  };
   customer?: {
     id?: string;
     email_address?: string;
   };
+  owner?: {
+    merchant_id?: string;
+  };
+  owner_id?: string;
   subscriber?: {
     payer_id?: string;
     email_address?: string;
   };
   payment_source?: {
     card?: {
+      name?: string;
       brand?: string;
       last_digits?: string;
       expiry?: string;
@@ -119,7 +130,15 @@ function normalizeBillingCycle(value: string | null | undefined): BillingCycle |
   return null;
 }
 
-function extractOrderIdFromVaultLinks(resource: PayPalWebhookResource) {
+function extractOrderIdFromVaultResource(resource: PayPalWebhookResource) {
+  const metadataOrderId =
+    resource.metadata?.order_id ||
+    (typeof resource.metadata?.orderId === 'string' ? resource.metadata.orderId : '');
+
+  if (metadataOrderId) {
+    return metadataOrderId;
+  }
+
   const links = resource.links || [];
 
   for (const link of links) {
@@ -330,7 +349,9 @@ async function findExpandedOrderForVaultEvent({
   if (orderId) {
     const { data } = await supabase
       .from('paypal_expanded_orders')
-      .select('id, user_id, email, paypal_order_id, plan, billing_cycle, amount_cents, currency, status')
+      .select(
+        'id, user_id, email, paypal_order_id, plan, billing_cycle, amount_cents, currency, status'
+      )
       .eq('paypal_order_id', orderId)
       .maybeSingle();
 
@@ -342,7 +363,9 @@ async function findExpandedOrderForVaultEvent({
   if (email) {
     const { data } = await supabase
       .from('paypal_expanded_orders')
-      .select('id, user_id, email, paypal_order_id, plan, billing_cycle, amount_cents, currency, status')
+      .select(
+        'id, user_id, email, paypal_order_id, plan, billing_cycle, amount_cents, currency, status'
+      )
       .eq('email', email)
       .in('status', ['captured_waiting_for_vault', 'capture_pending', 'captured'])
       .order('updated_at', { ascending: false })
@@ -407,7 +430,7 @@ async function handleVaultPaymentTokenCreated({
   const tokenId = extractVaultTokenId(resource);
   const customerId = extractVaultCustomerId(resource);
   const eventEmail = extractVaultEmail(resource);
-  const orderIdFromLinks = extractOrderIdFromVaultLinks(resource);
+  const orderIdFromVaultResource = extractOrderIdFromVaultResource(resource);
   const paymentSource = extractVaultPaymentSource(resource);
   const cardSummary = extractVaultCardSummary(resource);
 
@@ -420,7 +443,7 @@ async function handleVaultPaymentTokenCreated({
 
   const expandedOrder = await findExpandedOrderForVaultEvent({
     supabase,
-    orderId: orderIdFromLinks,
+    orderId: orderIdFromVaultResource,
     email: eventEmail
   });
 
@@ -428,7 +451,7 @@ async function handleVaultPaymentTokenCreated({
   const waitingSubscription = await findWaitingExpandedSubscription({
     supabase,
     email: resolvedEmail,
-    orderId: expandedOrder?.paypal_order_id || orderIdFromLinks
+    orderId: expandedOrder?.paypal_order_id || orderIdFromVaultResource
   });
 
   if (!resolvedEmail && !waitingSubscription) {
@@ -482,20 +505,18 @@ async function handleVaultPaymentTokenCreated({
       .eq('id', expandedOrder.id);
   }
 
-  const subscriptionFilterOrderId = expandedOrder?.paypal_order_id || orderIdFromLinks;
+  const subscriptionFilterOrderId = expandedOrder?.paypal_order_id || orderIdFromVaultResource;
 
-  let subscriptionUpdateQuery = supabase
-    .from('subscriptions')
-    .update({
-      plan,
-      billing_cycle: billingCycle,
-      status: 'active',
-      billing_provider: 'paypal',
-      billing_mode: 'paypal_expanded_recurring',
-      paypal_payment_token_id: tokenId,
-      paypal_status: 'VAULTED',
-      updated_at: new Date().toISOString()
-    });
+  let subscriptionUpdateQuery = supabase.from('subscriptions').update({
+    plan,
+    billing_cycle: billingCycle,
+    status: 'active',
+    billing_provider: 'paypal',
+    billing_mode: 'paypal_expanded_recurring',
+    paypal_payment_token_id: tokenId,
+    paypal_status: 'VAULTED',
+    updated_at: new Date().toISOString()
+  });
 
   if (subscriptionFilterOrderId) {
     subscriptionUpdateQuery = subscriptionUpdateQuery.eq('paypal_order_id', subscriptionFilterOrderId);
