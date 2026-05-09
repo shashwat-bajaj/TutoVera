@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import Reveal from '@/components/Reveal';
@@ -17,9 +17,6 @@ function ResetPasswordInner() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  const hasExchangedCode = useRef(false);
-
-  const code = searchParams.get('code');
   const errorDescription =
     searchParams.get('error_description') || searchParams.get('error') || '';
 
@@ -35,49 +32,31 @@ function ResetPasswordInner() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    async function prepareResetSession() {
+    async function checkResetSession() {
       if (errorDescription) {
         setReady(false);
         return;
       }
 
-      if (hasExchangedCode.current) return;
-      hasExchangedCode.current = true;
-
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-        if (error) {
-          setStatusKind('error');
-          setStatus(error.message);
-          setReady(false);
-          return;
-        }
-
-        setStatusKind('idle');
-        setStatus('Enter your new password below.');
-        setReady(true);
-        return;
-      }
-
       const {
-        data: { user }
+        data: { user },
+        error
       } = await supabase.auth.getUser();
 
-      if (user) {
-        setStatusKind('idle');
-        setStatus('Enter your new password below.');
-        setReady(true);
+      if (error || !user) {
+        setStatusKind('error');
+        setStatus('This reset link is missing or expired. Please request a new password reset link.');
+        setReady(false);
         return;
       }
 
-      setStatusKind('error');
-      setStatus('This reset link is missing or expired. Please request a new password reset link.');
-      setReady(false);
+      setStatusKind('idle');
+      setStatus('Enter your new password below.');
+      setReady(true);
     }
 
-    void prepareResetSession();
-  }, [code, errorDescription, supabase.auth]);
+    void checkResetSession();
+  }, [errorDescription, supabase.auth]);
 
   async function updatePassword() {
     if (loading || !ready) return;

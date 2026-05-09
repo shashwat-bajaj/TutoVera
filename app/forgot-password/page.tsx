@@ -19,6 +19,10 @@ function ForgotPasswordInner() {
 
   const baseUrl = useMemo(() => getURL(), []);
 
+  function getRecoveryRedirectUrl() {
+    return `${baseUrl}auth/confirm?next=${encodeURIComponent('/reset-password')}`;
+  }
+
   async function sendResetLink() {
     if (loading) return;
 
@@ -35,7 +39,7 @@ function ForgotPasswordInner() {
     setStatus('Sending reset link...');
 
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: `${baseUrl}reset-password`
+      redirectTo: getRecoveryRedirectUrl()
     });
 
     if (error) {
