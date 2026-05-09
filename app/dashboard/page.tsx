@@ -131,28 +131,28 @@ export default async function DashboardPage({
   ] = await Promise.all([getTutorSessions(), getUpdateListSignups(), getContactMessages()]);
 
   return (
-    <div className="grid" style={{ gap: 24 }}>
+    <div className="grid dashboardPage" style={{ gap: 24 }}>
       <section className="card spotlightCard dashboardOverviewCard">
-        <div className="dashboardHeaderTop">
-          <span className="badge">Admin dashboard</span>
+        <span className="badge">Admin dashboard</span>
 
+        <div className="dashboardHeaderCopy">
+          <h1 style={{ margin: 0 }}>TutoVera internal overview.</h1>
+          <p className="small" style={{ margin: 0 }}>
+            Review recent platform activity across update-list signups, contact messages, and tutor
+            sessions for Math, Physics, Chemistry, Biology, and future branches.
+          </p>
+        </div>
+
+        <div className="dashboardLockRow">
           <form method="POST" action="/api/dashboard-logout">
             <button type="submit" className="secondary">
               Lock dashboard
             </button>
           </form>
         </div>
-
-        <div className="dashboardHeaderCopy">
-          <h1 style={{ margin: 0 }}>TutoVera internal overview.</h1>
-          <p className="small" style={{ margin: 0, maxWidth: 820 }}>
-            Review recent platform activity across update-list signups, contact messages, and tutor
-            sessions for Math, Physics, Chemistry, Biology, and future branches.
-          </p>
-        </div>
       </section>
 
-      <section className="grid cols-3 dashboardSummaryCards">
+      <section className="dashboardSummaryGrid">
         <div className="card innerFeatureCard">
           <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
           <p className="small" style={{ marginBottom: 0 }}>
@@ -301,42 +301,58 @@ export default async function DashboardPage({
 
       <style>
         {`
+          .dashboardPage {
+            width: 100%;
+            max-width: 100%;
+          }
+
           .dashboardOverviewCard {
             display: grid;
-            gap: 14px;
-          }
-
-          .dashboardHeaderTop {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 12px;
-            align-items: center;
+            gap: 16px;
             width: 100%;
-          }
-
-          .dashboardHeaderTop form {
-            justify-self: end;
+            max-width: 100%;
           }
 
           .dashboardHeaderCopy {
             display: grid;
             gap: 10px;
             width: 100%;
+            max-width: 100%;
             min-width: 0;
           }
 
-          .dashboardSummaryCards {
+          .dashboardHeaderCopy p {
+            max-width: none !important;
             width: 100%;
-            justify-items: stretch;
           }
 
-          @media (max-width: 640px) {
-            .dashboardHeaderTop {
-              grid-template-columns: 1fr;
-            }
+          .dashboardLockRow {
+            display: flex;
+            justify-content: flex-start;
+            width: 100%;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+          }
 
-            .dashboardHeaderTop form {
-              justify-self: start;
+          .dashboardSummaryGrid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+            width: 100%;
+            max-width: 100%;
+            align-items: stretch;
+            justify-items: stretch;
+            clear: both;
+          }
+
+          .dashboardSummaryGrid > .card {
+            width: 100%;
+            min-width: 0;
+          }
+
+          @media (max-width: 920px) {
+            .dashboardSummaryGrid {
+              grid-template-columns: 1fr;
             }
           }
         `}
