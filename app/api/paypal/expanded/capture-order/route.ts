@@ -160,7 +160,7 @@ export async function POST(request: Request) {
         {
           error:
             normalizedCaptureStatus === 'DECLINED'
-              ? 'PayPal declined this card payment. Please try another sandbox test card.'
+              ? 'PayPal declined this card payment. Please try another card.'
               : 'PayPal did not mark this card payment as completed yet. Please try again or contact support.'
         },
         { status: 400 }

@@ -4,7 +4,6 @@ import {
   createPayPalExpandedOrder,
   getExpandedCheckoutPlan,
   type BillingCycle,
-  type ExpandedPaymentSource,
   type PaidPlanKey
 } from '@/lib/paypal';
 import { getUserPlanAccess } from '@/lib/subscriptions';
@@ -15,7 +14,7 @@ import { createClient as createAuthClient } from '@/lib/supabase/server';
 type CreateExpandedOrderBody = {
   plan?: PaidPlanKey;
   billingCycle?: BillingCycle;
-  source?: ExpandedPaymentSource;
+  source?: string;
 };
 
 function isPaidPlan(value: unknown): value is PaidPlanKey {
@@ -24,10 +23,6 @@ function isPaidPlan(value: unknown): value is PaidPlanKey {
 
 function isBillingCycle(value: unknown): value is BillingCycle {
   return value === 'monthly' || value === 'annual';
-}
-
-function isPaymentSource(value: unknown): value is ExpandedPaymentSource {
-  return value === 'paypal' || value === 'card';
 }
 
 export async function POST(request: Request) {
@@ -46,15 +41,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid billing cycle.' }, { status: 400 });
     }
 
-    if (!isPaymentSource(source)) {
-      return NextResponse.json({ error: 'Invalid payment source.' }, { status: 400 });
-    }
-
     if (source !== 'card') {
       return NextResponse.json(
-        {
-          error: 'TutoVera currently supports secure card checkout only.'
-        },
+        { error: 'TutoVera currently supports secure card checkout only.' },
         { status: 400 }
       );
     }
@@ -143,10 +132,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to create secure card checkout order.'
+        error: error instanceof Error ? error.message : 'Unable to create secure card checkout order.'
       },
       { status: 500 }
     );
