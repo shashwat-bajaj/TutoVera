@@ -34,8 +34,8 @@ export default function AboutPage() {
               steady, and trustworthy guidance for students and parents.
             </p>
             <p className="small" style={{ margin: 0, maxWidth: 900 }}>
-              Since 2026, TutoVera has been shaped around a simple idea: learning support should feel
-              clear, steady, and useful enough to continue from one question to the next.
+              TutoVera is shaped around a simple idea: learning support should feel clear, steady,
+              and useful enough to continue from one question to the next.
             </p>
           </div>
 
@@ -121,8 +121,8 @@ export default function AboutPage() {
                   {subject.status === 'active'
                     ? 'Active'
                     : subject.status === 'beta'
-                      ? 'Early preview'
-                      : 'Preview'}
+                      ? 'In progress'
+                      : 'Planned'}
                 </span>
 
                 <h3 style={{ marginBottom: 8 }}>{subject.name}</h3>
@@ -139,11 +139,11 @@ export default function AboutPage() {
       <Reveal delay={0.26}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 16 }}>
           <div style={{ display: 'grid', gap: 8 }}>
-            <h2 style={{ margin: 0 }}>Current focus</h2>
+            <h2 style={{ margin: 0 }}>What TutoVera is focused on</h2>
             <p className="small" style={{ margin: 0, maxWidth: 860 }}>
-              The current focus is building TutoVera into a polished multi-subject learning platform:
-              clearer tutor flow, saved continuity, parent support, pricing structure, branding, and
-              launch-ready product quality.
+              TutoVera focuses on clearer tutor flow, saved continuity, parent support,
+              subject-specific learning, accessible design, and a calmer experience for students and
+              families.
             </p>
           </div>
 

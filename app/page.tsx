@@ -18,16 +18,16 @@ export default function HomePage() {
 
             <p className="homeLeadSubtext">
               TutoVera is a calm AI learning platform for Math, Physics, Chemistry, and Biology.
-              It helps students solve the immediate question, understand the reasoning, and improve
-              through saved sessions, follow-ups, practice, and future revision workflows.
+              It helps students work through real questions, understand the reasoning, and continue
+              learning through saved sessions, follow-ups, and practice.
             </p>
 
             <div className="buttonRow">
               <Link className="btn" href="/subjects">
                 Explore Subjects →
               </Link>
-              <Link className="btn secondary" href="#early-access">
-                Join Early Access
+              <Link className="btn secondary" href="#updates">
+                Join Updates
               </Link>
             </div>
 
@@ -76,7 +76,7 @@ export default function HomePage() {
                 <div className="homePreviewMain" style={{ padding: 20, gap: 12 }}>
                   <div className="homePreviewHeader">
                     <div>
-                      <h2>TutoVera preview</h2>
+                      <h2>TutoVera workspace</h2>
                       <p>Choose a subject, ask clearly, and keep learning from there.</p>
                     </div>
 
@@ -202,11 +202,11 @@ export default function HomePage() {
       <Reveal delay={0.08}>
         <section className="card" style={{ display: 'grid', gap: 16 }}>
           <div style={{ display: 'grid', gap: 8 }}>
-            <span className="badge">Current focus</span>
-            <h2 style={{ margin: 0 }}>A consistent learning experience across active branches.</h2>
+            <span className="badge">Learning foundation</span>
+            <h2 style={{ margin: 0 }}>A consistent experience across every active branch.</h2>
             <p className="small" style={{ margin: 0, maxWidth: 920 }}>
-              The current focus is making all active branches feel stable, useful, and consistent
-              while preparing launch-ready branding, paid access, and future study tools.
+              TutoVera is built around clear explanations, saved continuity, parent support, and
+              subject-specific workspaces that stay connected through one account.
             </p>
           </div>
 
@@ -221,7 +221,7 @@ export default function HomePage() {
       </Reveal>
 
       <Reveal delay={0.12}>
-        <section id="early-access">
+        <section id="updates">
           <BetaSignup />
         </section>
       </Reveal>

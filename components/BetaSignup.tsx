@@ -29,7 +29,7 @@ export default function BetaSignup() {
         return;
       }
 
-      setStatus('You have been added to the TutoVera early access list.');
+      setStatus('You have been added to the TutoVera updates list.');
       setName('');
       setEmail('');
       setGoal('');
@@ -58,14 +58,13 @@ export default function BetaSignup() {
         }}
       >
         <div style={{ display: 'grid', gap: 12 }}>
-          <span className="badge">Join early access</span>
+          <span className="badge">Join updates</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
             <h2 style={{ margin: 0 }}>Help shape TutoVera as it grows.</h2>
             <p className="small" style={{ margin: 0, maxWidth: 520 }}>
-              Leave your details so we can understand real study needs, improve the learning flow,
-              and shape Math, Physics, Chemistry, Biology, and future tools around actual learners
-              and families.
+              Leave your details if you would like updates and want to share what kind of learning
+              support would be most useful for you, your family, or your students.
             </p>
           </div>
 
@@ -86,7 +85,7 @@ export default function BetaSignup() {
             </div>
 
             <div style={{ display: 'grid', gap: 5 }}>
-              <strong style={{ fontSize: '0.98rem' }}>Early access focus</strong>
+              <strong style={{ fontSize: '0.98rem' }}>Product focus</strong>
               <p className="small" style={{ margin: 0 }}>
                 Tutor quality, saved sessions, parent support, subject tools, accessibility, and
                 cleaner interaction design.
@@ -126,7 +125,7 @@ export default function BetaSignup() {
             </div>
 
             <div>
-              <label>What do you want help with? (optional)</label>
+              <label>What would you like help with? (optional)</label>
               <textarea
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
@@ -145,7 +144,7 @@ export default function BetaSignup() {
           >
             <div className="buttonRow">
               <button onClick={submitSignup} disabled={!email.trim() || loading}>
-                {loading ? 'Saving...' : 'Join early access'}
+                {loading ? 'Saving...' : 'Join Updates'}
               </button>
             </div>
 
@@ -155,7 +154,7 @@ export default function BetaSignup() {
               </p>
             ) : (
               <p className="small" style={{ margin: 0 }}>
-                We only use this to manage early access interest and product feedback.
+                We only use this to manage product updates and feedback.
               </p>
             )}
           </div>
