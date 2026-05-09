@@ -1,5 +1,12 @@
-import { createAdminSupabase } from '@/lib/supabase-admin';
+import { cookies } from 'next/headers';
+
 import RenderedContent from '@/components/RenderedContent';
+import {
+  DASHBOARD_COOKIE_NAME,
+  isDashboardConfigured,
+  isValidDashboardToken
+} from '@/lib/dashboard-auth';
+import { createAdminSupabase } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +16,18 @@ function formatDate(value: string) {
   } catch {
     return value;
   }
+}
+
+function getDashboardErrorMessage(error: string | undefined) {
+  if (error === 'invalid') {
+    return 'That dashboard password was not correct.';
+  }
+
+  if (error === 'not_configured') {
+    return 'The dashboard password is not configured yet.';
+  }
+
+  return '';
 }
 
 async function getTutorSessions() {
@@ -21,7 +40,7 @@ async function getTutorSessions() {
     .limit(10);
 }
 
-async function getEarlyAccessSignups() {
+async function getUpdateListSignups() {
   const supabase = createAdminSupabase();
 
   return supabase
@@ -44,13 +63,16 @@ async function getContactMessages() {
 export default async function DashboardPage({
   searchParams
 }: {
-  searchParams: Promise<{ password?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const params = await searchParams;
-  const password = params.password || '';
-  const expected = process.env.ADMIN_DASHBOARD_PASSWORD || '';
+  const errorMessage = getDashboardErrorMessage(params.error);
 
-  if (!expected || password !== expected) {
+  const cookieStore = await cookies();
+  const dashboardToken = cookieStore.get(DASHBOARD_COOKIE_NAME)?.value || '';
+  const hasDashboardAccess = isValidDashboardToken(dashboardToken);
+
+  if (!hasDashboardAccess) {
     return (
       <div className="grid" style={{ gap: 24 }}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
@@ -59,20 +81,43 @@ export default async function DashboardPage({
           <div style={{ display: 'grid', gap: 10 }}>
             <h1 style={{ margin: 0 }}>TutoVera internal dashboard.</h1>
             <p className="small" style={{ margin: 0, maxWidth: 760 }}>
-              This page is restricted and is used to review recent early access signups, contact
+              This page is restricted and is used to review recent update-list signups, contact
               messages, and tutor activity across active subject branches.
             </p>
           </div>
 
-          <form method="GET" className="grid" style={{ gap: 12, maxWidth: 520 }}>
+          <form
+            method="POST"
+            action="/api/dashboard-login"
+            className="grid"
+            style={{ gap: 12, maxWidth: 520 }}
+          >
             <div>
               <label>Admin password</label>
               <input name="password" type="password" placeholder="Enter admin password" />
             </div>
 
             <div className="buttonRow">
-              <button type="submit">Open dashboard</button>
+              <button type="submit" disabled={!isDashboardConfigured()}>
+                Open dashboard
+              </button>
             </div>
+
+            {errorMessage ? (
+              <p className="small" style={{ margin: 0, color: 'var(--accent-warm)' }}>
+                {errorMessage}
+              </p>
+            ) : null}
+
+            {!isDashboardConfigured() ? (
+              <p className="small" style={{ margin: 0, color: 'var(--accent-warm)' }}>
+                ADMIN_DASHBOARD_PASSWORD is missing from the environment.
+              </p>
+            ) : (
+              <p className="small" style={{ margin: 0 }}>
+                Dashboard access is stored in a secure browser cookie for this session.
+              </p>
+            )}
           </form>
         </section>
       </div>
@@ -83,17 +128,25 @@ export default async function DashboardPage({
     { data: sessions, error: sessionsError },
     { data: signups, error: signupsError },
     { data: messages, error: messagesError }
-  ] = await Promise.all([getTutorSessions(), getEarlyAccessSignups(), getContactMessages()]);
+  ] = await Promise.all([getTutorSessions(), getUpdateListSignups(), getContactMessages()]);
 
   return (
     <div className="grid" style={{ gap: 24 }}>
       <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
-        <span className="badge">Admin dashboard</span>
+        <div className="buttonRow" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="badge">Admin dashboard</span>
+
+          <form method="POST" action="/api/dashboard-logout">
+            <button type="submit" className="secondary">
+              Lock dashboard
+            </button>
+          </form>
+        </div>
 
         <div style={{ display: 'grid', gap: 10 }}>
           <h1 style={{ margin: 0 }}>TutoVera internal overview.</h1>
           <p className="small" style={{ margin: 0, maxWidth: 820 }}>
-            Review recent platform activity across early access signups, contact messages, and tutor
+            Review recent platform activity across update-list signups, contact messages, and tutor
             sessions for Math, Physics, Chemistry, Biology, and future branches.
           </p>
         </div>
@@ -101,7 +154,7 @@ export default async function DashboardPage({
 
       <section className="grid cols-3">
         <div className="card innerFeatureCard">
-          <h3 style={{ marginTop: 0 }}>Early access signups</h3>
+          <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
           <p className="small" style={{ marginBottom: 0 }}>
             {signupsError
               ? 'Unable to load signups.'
@@ -130,16 +183,16 @@ export default async function DashboardPage({
 
       <section className="card" style={{ display: 'grid', gap: 16 }}>
         <div style={{ display: 'grid', gap: 8 }}>
-          <h2 style={{ margin: 0 }}>Recent early access signups</h2>
+          <h2 style={{ margin: 0 }}>Recent update-list signups</h2>
           <p className="small" style={{ margin: 0 }}>
-            People who joined the TutoVera early access list from the homepage interest form.
+            People who joined the TutoVera updates list from the homepage form.
           </p>
         </div>
 
         {signupsError ? (
-          <p className="small">Error loading early access signups: {signupsError.message}</p>
+          <p className="small">Error loading update-list signups: {signupsError.message}</p>
         ) : !signups || signups.length === 0 ? (
-          <p className="small">No early access signups yet.</p>
+          <p className="small">No update-list signups yet.</p>
         ) : (
           <div className="grid" style={{ gap: 16 }}>
             {signups.map((signup) => (
