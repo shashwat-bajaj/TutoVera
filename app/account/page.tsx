@@ -4,6 +4,7 @@ import ActionCard from '@/components/ActionCard';
 import CancelSubscriptionButton from '@/components/CancelSubscriptionButton';
 import Reveal from '@/components/Reveal';
 import SignOutButton from '@/components/SignOutButton';
+import { getProfileDisplayName, getProfileForUser } from '@/lib/profiles';
 import { createAdminSupabase } from '@/lib/supabase-admin';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -29,12 +30,21 @@ export default async function AccountPage() {
   }
 
   const supabase = createAdminSupabase();
-  const planAccess = await getUserPlanAccess({
-    supabase,
-    userId: user.id,
-    email: user.email || null
-  });
 
+  const [planAccess, profile] = await Promise.all([
+    getUserPlanAccess({
+      supabase,
+      userId: user.id,
+      email: user.email || null
+    }),
+    getProfileForUser({
+      supabase,
+      userId: user.id,
+      email: user.email || null
+    })
+  ]);
+
+  const displayName = getProfileDisplayName({ profile, user });
   const planName = formatPlanName(planAccess.plan);
   const planSummary = getPlanSummarySentence(planAccess);
   const paymentStatus = formatPaymentStatus(planAccess.paypalStatus);
@@ -46,7 +56,9 @@ export default async function AccountPage() {
       <Reveal delay={0.02}>
         <section style={{ display: 'grid', gap: 10, maxWidth: 880 }}>
           <span className="badge">Account</span>
-          <h1 style={{ margin: 0 }}>Your TutoVera account.</h1>
+          <h1 style={{ margin: 0 }}>
+            {displayName ? `Welcome back, ${displayName}.` : 'Your TutoVera account.'}
+          </h1>
           <p className="small" style={{ margin: 0, maxWidth: 820 }}>
             Signed in as <strong>{user.email}</strong>. Your account keeps session history,
             preferences, plan access, and tutor defaults connected across visits.
@@ -245,7 +257,7 @@ export default async function AccountPage() {
 
           <ActionCard
             title="Settings"
-            description="Choose your defaults for theme, translation, learner level, and tutor behavior."
+            description="Choose your profile, theme, translation, learner level, and tutor defaults."
             action={
               <a className="btn secondary" href="/settings">
                 Open Settings

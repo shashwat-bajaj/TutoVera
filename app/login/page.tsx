@@ -2,9 +2,11 @@
 
 import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Reveal from '@/components/Reveal';
 import { createClient } from '@/lib/supabase/client';
 import { getURL } from '@/lib/site-url';
-import Reveal from '@/components/Reveal';
+
+type AccountRole = 'student' | 'parent' | 'student-parent';
 
 function getFriendlyError(value: string | null) {
   if (value === 'auth_callback_failed') {
@@ -18,6 +20,15 @@ function getFriendlyError(value: string | null) {
   return '';
 }
 
+function cleanUsername(value: string) {
+  return value.trim().replace(/\s+/g, '').toLowerCase();
+}
+
+function isValidUsername(value: string) {
+  if (!value) return true;
+  return /^[a-z0-9._-]{3,32}$/.test(value);
+}
+
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,8 +38,12 @@ function LoginPageInner() {
   const errorMessage = getFriendlyError(searchParams.get('error'));
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [accountRole, setAccountRole] = useState<AccountRole>('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState(errorMessage);
   const [loading, setLoading] = useState(false);
 
@@ -51,16 +66,34 @@ function LoginPageInner() {
     if (loading) return;
 
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedPassword = password.trim();
+    const trimmedFullName = fullName.trim();
+    const normalizedUsername = cleanUsername(username);
 
-    if (!normalizedEmail || !normalizedPassword) {
+    if (!normalizedEmail || !password) {
       setStatus('Please enter your email and password.');
       return;
     }
 
-    if (normalizedPassword.length < 6) {
+    if (password.length < 6) {
       setStatus('Please use a password with at least 6 characters.');
       return;
+    }
+
+    if (mode === 'signup') {
+      if (!trimmedFullName) {
+        setStatus('Please enter your full name.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setStatus('Please make sure both password fields match.');
+        return;
+      }
+
+      if (!isValidUsername(normalizedUsername)) {
+        setStatus('Usernames can use 3–32 letters, numbers, dots, underscores, or hyphens.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -83,11 +116,20 @@ function LoginPageInner() {
       return;
     }
 
+    const displayName = normalizedUsername || trimmedFullName;
+
     const { error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: getConfirmUrl()
+        emailRedirectTo: getConfirmUrl(),
+        data: {
+          full_name: trimmedFullName,
+          name: trimmedFullName,
+          username: normalizedUsername || null,
+          display_name: displayName,
+          tutovera_role: accountRole
+        }
       }
     });
 
@@ -156,10 +198,10 @@ function LoginPageInner() {
 
             <div className="card innerFeatureCard">
               <p className="small" style={{ margin: '0 0 4px' }}>
-                <strong>Preferences</strong>
+                <strong>Personalized defaults</strong>
               </p>
               <p className="small" style={{ margin: 0 }}>
-                Save your theme, level, and tutor defaults.
+                Save your name, theme, level, and tutor preferences.
               </p>
             </div>
           </div>
@@ -215,6 +257,47 @@ function LoginPageInner() {
           </div>
 
           <div className="grid" style={{ gap: 12 }}>
+            {mode === 'signup' ? (
+              <>
+                <div>
+                  <label>Full name</label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Your full name"
+                    autoComplete="name"
+                  />
+                </div>
+
+                <div>
+                  <label>Display username, optional</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(cleanUsername(e.target.value))}
+                    placeholder="shashwat"
+                    autoComplete="username"
+                  />
+                  <p className="small" style={{ margin: '6px 0 0' }}>
+                    Use 3–32 letters, numbers, dots, underscores, or hyphens.
+                  </p>
+                </div>
+
+                <div>
+                  <label>I am using TutoVera as</label>
+                  <select
+                    value={accountRole}
+                    onChange={(e) => setAccountRole(e.target.value as AccountRole)}
+                  >
+                    <option value="student">Student / learner</option>
+                    <option value="parent">Parent / guardian</option>
+                    <option value="student-parent">Both student and parent</option>
+                  </select>
+                </div>
+              </>
+            ) : null}
+
             <div>
               <label>Email</label>
               <input
@@ -235,13 +318,40 @@ function LoginPageInner() {
                 placeholder={mode === 'login' ? 'Enter your password' : 'Choose a secure password'}
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
+                  if (event.key === 'Enter' && mode === 'login') {
                     event.preventDefault();
                     void handleEmailAuth();
                   }
                 }}
               />
             </div>
+
+            {mode === 'signup' ? (
+              <div>
+                <label>Confirm password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm your password"
+                  autoComplete="new-password"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      void handleEmailAuth();
+                    }
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {mode === 'login' ? (
+              <div className="buttonRow" style={{ justifyContent: 'space-between' }}>
+                <a className="small" href="/forgot-password">
+                  Forgot password?
+                </a>
+              </div>
+            ) : null}
 
             <button onClick={handleEmailAuth} type="button" disabled={loading}>
               {loading

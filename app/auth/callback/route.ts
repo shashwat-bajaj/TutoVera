@@ -1,4 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
+
+import { upsertProfileForUser } from '@/lib/profiles';
+import { createAdminSupabase } from '@/lib/supabase-admin';
 import { createClient } from '@/lib/supabase/server';
 
 function getSafeNext(value: string | null) {
@@ -17,9 +20,24 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      try {
+        const userFromSession = data.user;
+
+        if (userFromSession) {
+          const adminSupabase = createAdminSupabase();
+
+          await upsertProfileForUser({
+            supabase: adminSupabase,
+            user: userFromSession
+          });
+        }
+      } catch (profileError) {
+        console.warn('PROFILE SYNC AFTER AUTH CALLBACK FAILED:', profileError);
+      }
+
       return NextResponse.redirect(new URL(next, origin));
     }
   }

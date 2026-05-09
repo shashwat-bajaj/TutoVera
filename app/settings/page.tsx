@@ -1,11 +1,21 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import { createAdminSupabase } from '@/lib/supabase-admin';
-import SettingsForm from '@/components/SettingsForm';
+
 import Reveal from '@/components/Reveal';
+import SettingsForm from '@/components/SettingsForm';
+import {
+  getFallbackNameFromEmail,
+  getProfileDisplayName,
+  getProfileForUser
+} from '@/lib/profiles';
+import { createAdminSupabase } from '@/lib/supabase-admin';
+import { createClient } from '@/lib/supabase/server';
 import { formatPlanName, getUserPlanAccess } from '@/lib/subscriptions';
 
 export const dynamic = 'force-dynamic';
+
+function getMetadataString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
 
 export default async function SettingsPage() {
   const supabaseAuth = await createClient();
@@ -18,13 +28,38 @@ export default async function SettingsPage() {
   }
 
   const supabase = createAdminSupabase();
-  const planAccess = await getUserPlanAccess({
-    supabase,
-    userId: user.id,
-    email: user.email || null
-  });
+
+  const [planAccess, profile] = await Promise.all([
+    getUserPlanAccess({
+      supabase,
+      userId: user.id,
+      email: user.email || null
+    }),
+    getProfileForUser({
+      supabase,
+      userId: user.id,
+      email: user.email || null
+    })
+  ]);
 
   const preferences = user.user_metadata?.preferences || {};
+  const displayName = getProfileDisplayName({ profile, user });
+
+  const initialFullName =
+    profile?.full_name ||
+    getMetadataString(user.user_metadata?.full_name) ||
+    getMetadataString(user.user_metadata?.name) ||
+    getFallbackNameFromEmail(user.email);
+
+  const initialUsername =
+    profile?.username ||
+    getMetadataString(user.user_metadata?.username) ||
+    getMetadataString(user.user_metadata?.display_name);
+
+  const initialRole =
+    profile?.role ||
+    getMetadataString(user.user_metadata?.tutovera_role) ||
+    'student';
 
   return (
     <div className="grid" style={{ gap: 24, maxWidth: 920 }}>
@@ -33,10 +68,14 @@ export default async function SettingsPage() {
           <span className="badge">Settings</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
-            <h1 style={{ margin: 0 }}>Adjust TutoVera to fit how you learn and study.</h1>
+            <h1 style={{ margin: 0 }}>
+              {displayName
+                ? `Adjust TutoVera for ${displayName}.`
+                : 'Adjust TutoVera to fit how you learn and study.'}
+            </h1>
             <p className="small" style={{ margin: 0, maxWidth: 820 }}>
-              Manage your display preferences, translation defaults, learner levels, tutor behavior,
-              and account plan awareness from one place.
+              Manage your profile, display preferences, translation defaults, learner levels, tutor
+              behavior, and account plan awareness from one place.
             </p>
           </div>
         </section>
@@ -69,10 +108,9 @@ export default async function SettingsPage() {
       <Reveal delay={0.1}>
         <section className="grid cols-3">
           <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Display preferences</h3>
+            <h3 style={{ marginTop: 0 }}>Profile details</h3>
             <p className="small" style={{ marginBottom: 0 }}>
-              Control theme behavior and language defaults so TutoVera feels more comfortable to use
-              over time.
+              Save your name and display details so TutoVera feels more personal when you return.
             </p>
           </div>
 
@@ -105,6 +143,9 @@ export default async function SettingsPage() {
           </div>
 
           <SettingsForm
+            initialFullName={initialFullName}
+            initialUsername={initialUsername}
+            initialRole={initialRole}
             initialThemePreference={preferences.themePreference || 'system'}
             initialTranslationLanguage={preferences.translationLanguage || 'English'}
             initialStudentGradeLevel={preferences.studentDefaults?.gradeLevel || 'high-school'}

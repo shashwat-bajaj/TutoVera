@@ -96,6 +96,44 @@ on subscriptions(next_renewal_at);
 create index if not exists subscriptions_paypal_payment_token_idx
 on subscriptions(paypal_payment_token_id);
 
+create table if not exists profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid unique not null references auth.users(id) on delete cascade,
+  email text unique not null,
+  full_name text,
+  username text,
+  role text not null default 'student',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table profiles
+add column if not exists user_id uuid;
+
+alter table profiles
+add column if not exists email text;
+
+alter table profiles
+add column if not exists full_name text;
+
+alter table profiles
+add column if not exists username text;
+
+alter table profiles
+add column if not exists role text not null default 'student';
+
+alter table profiles
+add column if not exists updated_at timestamptz not null default now();
+
+create unique index if not exists profiles_user_id_unique
+on profiles(user_id);
+
+create unique index if not exists profiles_email_unique
+on profiles(email);
+
+create index if not exists profiles_username_idx
+on profiles(username);
+
 create table if not exists learner_conversations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid,
@@ -268,6 +306,8 @@ alter table beta_signups enable row level security;
 
 alter table contact_messages enable row level security;
 
+alter table profiles enable row level security;
+
 alter table paypal_webhook_events enable row level security;
 
 alter table paypal_expanded_orders enable row level security;
@@ -275,6 +315,28 @@ alter table paypal_expanded_orders enable row level security;
 alter table paypal_payment_methods enable row level security;
 
 alter table billing_events enable row level security;
+
+drop policy if exists profiles_select_own on profiles;
+
+create policy profiles_select_own
+on profiles
+for select
+using (auth.uid() = user_id);
+
+drop policy if exists profiles_insert_own on profiles;
+
+create policy profiles_insert_own
+on profiles
+for insert
+with check (auth.uid() = user_id);
+
+drop policy if exists profiles_update_own on profiles;
+
+create policy profiles_update_own
+on profiles
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
 create index if not exists learner_conversations_subject_idx
 on learner_conversations(subject);
