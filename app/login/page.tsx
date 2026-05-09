@@ -91,7 +91,7 @@ function LoginPageInner() {
       }
 
       if (!isValidUsername(normalizedUsername)) {
-        setStatus('Usernames can use 3–32 letters, numbers, dots, underscores, or hyphens.');
+        setStatus('Display names can use 3–32 letters, numbers, dots, underscores, or hyphens.');
         return;
       }
     }
@@ -271,7 +271,7 @@ function LoginPageInner() {
                 </div>
 
                 <div>
-                  <label>Display username, optional</label>
+                  <label>Display name, optional</label>
                   <input
                     type="text"
                     value={username}
