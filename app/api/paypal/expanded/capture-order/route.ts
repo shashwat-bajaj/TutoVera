@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient as createAuthClient } from '@/lib/supabase/server';
-import { createAdminSupabase } from '@/lib/supabase-admin';
+
 import {
   capturePayPalExpandedOrder,
   extractCardSummary,
@@ -12,6 +11,8 @@ import {
   type BillingCycle,
   type PaidPlanKey
 } from '@/lib/paypal';
+import { createAdminSupabase } from '@/lib/supabase-admin';
+import { createClient as createAuthClient } from '@/lib/supabase/server';
 
 type CaptureExpandedOrderBody = {
   orderId?: string;
@@ -54,7 +55,10 @@ export async function POST(request: Request) {
     } = await authClient.auth.getUser();
 
     if (!user?.id || !user.email) {
-      return NextResponse.json({ error: 'Please sign in before completing checkout.' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Please sign in before completing checkout.' },
+        { status: 401 }
+      );
     }
 
     const normalizedEmail = user.email.toLowerCase();
@@ -103,48 +107,70 @@ export async function POST(request: Request) {
     const payerId = extractPayPalPayerId(capture);
     const cardSummary = extractCardSummary(capture);
 
+    const normalizedCaptureStatus = captureStatus.toUpperCase();
     const now = new Date();
-    const nextRenewalAt = getNextRenewalDate({
-      from: now,
-      billingCycle
-    });
 
-    const wasCaptured = captureStatus.toUpperCase() === 'COMPLETED' || capture.status === 'COMPLETED';
+    const wasCaptured = Boolean(captureId) && normalizedCaptureStatus === 'COMPLETED';
 
     if (!wasCaptured) {
       await supabase
         .from('paypal_expanded_orders')
         .update({
-          status: 'capture_pending',
-          paypal_status: capture.status || captureStatus || null,
+          paypal_capture_id: captureId || null,
+          paypal_payment_token_id: paymentTokenId || null,
+          status:
+            normalizedCaptureStatus === 'DECLINED' ||
+            normalizedCaptureStatus === 'FAILED' ||
+            normalizedCaptureStatus === 'DENIED'
+              ? 'capture_failed'
+              : 'capture_pending',
+          paypal_status: captureStatus || capture.status || null,
           raw_capture_payload: capture,
-          updated_at: new Date().toISOString()
+          updated_at: now.toISOString()
         })
         .eq('id', existingOrder.id);
 
       await supabase.from('billing_events').insert({
         user_id: user.id,
         email: normalizedEmail,
-        event_type: 'expanded_checkout_capture_pending',
+        event_type:
+          normalizedCaptureStatus === 'DECLINED' ||
+          normalizedCaptureStatus === 'FAILED' ||
+          normalizedCaptureStatus === 'DENIED'
+            ? 'expanded_checkout_capture_failed'
+            : 'expanded_checkout_capture_pending',
         plan,
         billing_cycle: billingCycle,
         amount_cents: existingOrder.amount_cents,
         currency: existingOrder.currency || 'USD',
-        status: 'pending',
+        status:
+          normalizedCaptureStatus === 'DECLINED' ||
+          normalizedCaptureStatus === 'FAILED' ||
+          normalizedCaptureStatus === 'DENIED'
+            ? 'failed'
+            : 'pending',
         paypal_order_id: orderId,
         paypal_capture_id: captureId || null,
         paypal_payment_token_id: paymentTokenId || null,
+        error_message: `PayPal capture status was ${captureStatus || capture.status || 'unknown'}.`,
         metadata: capture
       });
 
       return NextResponse.json(
         {
           error:
-            'PayPal did not mark this payment as completed yet. Please check your PayPal account or contact support.'
+            normalizedCaptureStatus === 'DECLINED'
+              ? 'PayPal declined this card payment. Please try another sandbox test card.'
+              : 'PayPal did not mark this card payment as completed yet. Please try again or contact support.'
         },
         { status: 400 }
       );
     }
+
+    const nextRenewalAt = getNextRenewalDate({
+      from: now,
+      billingCycle
+    });
 
     await supabase
       .from('paypal_expanded_orders')
@@ -152,7 +178,7 @@ export async function POST(request: Request) {
         paypal_capture_id: captureId || null,
         paypal_payment_token_id: paymentTokenId || null,
         status: paymentTokenId ? 'captured' : 'captured_waiting_for_vault',
-        paypal_status: capture.status || captureStatus || null,
+        paypal_status: captureStatus || capture.status || null,
         raw_capture_payload: capture,
         captured_at: now.toISOString(),
         updated_at: now.toISOString()
@@ -192,7 +218,7 @@ export async function POST(request: Request) {
           : 'paypal_expanded_waiting_for_vault',
         paypal_subscription_id: null,
         paypal_plan_id: null,
-        paypal_status: capture.status || captureStatus || 'COMPLETED',
+        paypal_status: captureStatus || capture.status || 'COMPLETED',
         paypal_payer_id: payerId || null,
         paypal_order_id: orderId,
         paypal_capture_id: captureId || null,
@@ -245,7 +271,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Unable to capture PayPal checkout order.'
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to capture PayPal checkout order.'
       },
       { status: 500 }
     );
