@@ -206,6 +206,8 @@ create table if not exists billing_events (
   id uuid primary key default gen_random_uuid(),
   user_id uuid,
   email text not null,
+  subscription_id uuid references subscriptions(id) on delete set null,
+  provider text,
   event_type text not null,
   plan text,
   billing_cycle text,
@@ -216,9 +218,48 @@ create table if not exists billing_events (
   paypal_capture_id text,
   paypal_payment_token_id text,
   error_message text,
-  metadata jsonb,
+  metadata jsonb default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
+
+alter table billing_events
+add column if not exists user_id uuid;
+
+alter table billing_events
+add column if not exists email text;
+
+alter table billing_events
+add column if not exists subscription_id uuid references subscriptions(id) on delete set null;
+
+alter table billing_events
+add column if not exists provider text;
+
+alter table billing_events
+add column if not exists plan text;
+
+alter table billing_events
+add column if not exists billing_cycle text;
+
+alter table billing_events
+add column if not exists amount_cents integer;
+
+alter table billing_events
+add column if not exists currency text default 'USD';
+
+alter table billing_events
+add column if not exists paypal_order_id text;
+
+alter table billing_events
+add column if not exists paypal_capture_id text;
+
+alter table billing_events
+add column if not exists paypal_payment_token_id text;
+
+alter table billing_events
+add column if not exists error_message text;
+
+alter table billing_events
+add column if not exists metadata jsonb default '{}'::jsonb;
 
 alter table beta_signups enable row level security;
 
@@ -291,6 +332,12 @@ on billing_events(email);
 
 create index if not exists billing_events_user_id_idx
 on billing_events(user_id);
+
+create index if not exists billing_events_subscription_id_idx
+on billing_events(subscription_id);
+
+create index if not exists billing_events_provider_idx
+on billing_events(provider);
 
 create index if not exists billing_events_event_type_idx
 on billing_events(event_type);

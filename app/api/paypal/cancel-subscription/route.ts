@@ -47,7 +47,8 @@ export async function POST() {
       return NextResponse.json({
         ok: true,
         alreadyScheduled: true,
-        message: 'This subscription is already scheduled to end at the end of the current billing period.'
+        message:
+          'This subscription is already scheduled to end at the end of the current billing period.'
       });
     }
 
@@ -68,20 +69,31 @@ export async function POST() {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
 
-      await supabase.from('billing_events').insert({
+      const { error: eventError } = await supabase.from('billing_events').insert({
         user_id: user.id,
+        email: user.email.toLowerCase(),
         subscription_id: subscription.id,
-        event_type: 'paypal_expanded_cancellation_scheduled',
         provider: 'paypal',
+        event_type: 'paypal_expanded_cancellation_scheduled',
+        plan: subscription.plan,
+        billing_cycle: subscription.billing_cycle,
         amount_cents: null,
         currency: 'USD',
         status: 'scheduled',
+        paypal_order_id: subscription.paypal_order_id || null,
+        paypal_capture_id: subscription.paypal_capture_id || null,
+        paypal_payment_token_id: subscription.paypal_payment_token_id || null,
         metadata: {
           billing_mode: subscription.billing_mode,
           current_period_end: subscription.current_period_end,
+          next_renewal_at: subscription.next_renewal_at,
           cancelled_at: now
         }
       });
+
+      if (eventError) {
+        console.warn('Failed to record expanded cancellation event:', eventError.message);
+      }
 
       return NextResponse.json({
         ok: true,
@@ -120,19 +132,29 @@ export async function POST() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    await supabase.from('billing_events').insert({
+    const { error: eventError } = await supabase.from('billing_events').insert({
       user_id: user.id,
+      email: user.email.toLowerCase(),
       subscription_id: subscription.id,
-      event_type: 'paypal_legacy_subscription_cancelled',
       provider: 'paypal',
+      event_type: 'paypal_legacy_subscription_cancelled',
+      plan: subscription.plan,
+      billing_cycle: subscription.billing_cycle,
       amount_cents: null,
       currency: 'USD',
       status: 'cancelled',
+      paypal_order_id: null,
+      paypal_capture_id: null,
+      paypal_payment_token_id: null,
       metadata: {
         paypal_subscription_id: subscription.paypal_subscription_id,
         cancelled_at: now
       }
     });
+
+    if (eventError) {
+      console.warn('Failed to record legacy cancellation event:', eventError.message);
+    }
 
     return NextResponse.json({
       ok: true,
