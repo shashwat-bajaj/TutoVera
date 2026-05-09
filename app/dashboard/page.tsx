@@ -132,8 +132,8 @@ export default async function DashboardPage({
 
   return (
     <div className="grid" style={{ gap: 24 }}>
-      <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
-        <div className="buttonRow" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+      <section className="card spotlightCard dashboardOverviewCard">
+        <div className="dashboardHeaderTop">
           <span className="badge">Admin dashboard</span>
 
           <form method="POST" action="/api/dashboard-logout">
@@ -143,7 +143,7 @@ export default async function DashboardPage({
           </form>
         </div>
 
-        <div style={{ display: 'grid', gap: 10 }}>
+        <div className="dashboardHeaderCopy">
           <h1 style={{ margin: 0 }}>TutoVera internal overview.</h1>
           <p className="small" style={{ margin: 0, maxWidth: 820 }}>
             Review recent platform activity across update-list signups, contact messages, and tutor
@@ -152,7 +152,7 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      <section className="grid cols-3">
+      <section className="grid cols-3 dashboardSummaryCards">
         <div className="card innerFeatureCard">
           <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
           <p className="small" style={{ marginBottom: 0 }}>
@@ -298,6 +298,49 @@ export default async function DashboardPage({
           </div>
         )}
       </section>
+
+      <style>
+        {`
+          .dashboardOverviewCard {
+            display: grid;
+            gap: 14px;
+          }
+
+          .dashboardHeaderTop {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            width: 100%;
+          }
+
+          .dashboardHeaderTop form {
+            justify-self: end;
+          }
+
+          .dashboardHeaderCopy {
+            display: grid;
+            gap: 10px;
+            width: 100%;
+            min-width: 0;
+          }
+
+          .dashboardSummaryCards {
+            width: 100%;
+            justify-items: stretch;
+          }
+
+          @media (max-width: 640px) {
+            .dashboardHeaderTop {
+              grid-template-columns: 1fr;
+            }
+
+            .dashboardHeaderTop form {
+              justify-self: start;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }
