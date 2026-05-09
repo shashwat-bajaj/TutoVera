@@ -219,7 +219,7 @@ export default function SettingsForm({
               type="text"
               value={username}
               onChange={(e) => setUsername(cleanUsername(e.target.value))}
-              placeholder="shashwat"
+              placeholder="learner123"
               autoComplete="username"
             />
             <p className="small" style={{ margin: '6px 0 0' }}>
