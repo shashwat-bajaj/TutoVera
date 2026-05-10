@@ -83,10 +83,28 @@ export type ExpandedCheckoutPlan = {
   periodMonths: number;
 };
 
-const PAYPAL_API_BASE =
-  process.env.PAYPAL_ENV === 'live'
-    ? 'https://api-m.paypal.com'
-    : 'https://api-m.sandbox.paypal.com';
+function getPayPalApiBaseUrl(): string {
+  const mode = (
+    process.env.PAYPAL_ENVIRONMENT ||
+    process.env.PAYPAL_MODE ||
+    process.env.PAYPAL_ENV ||
+    ''
+  )
+    .trim()
+    .toLowerCase();
+
+  if (mode === 'live' || mode === 'production') {
+    return 'https://api-m.paypal.com';
+  }
+
+  if (mode === 'sandbox' || mode === 'test' || mode === 'development') {
+    return 'https://api-m.sandbox.paypal.com';
+  }
+
+  throw new Error(
+    'Missing PayPal environment. Set PAYPAL_ENVIRONMENT to either "live" or "sandbox".'
+  );
+}
 
 export function getConfiguredPayPalPlanIds() {
   return {
@@ -231,9 +249,9 @@ export async function getPayPalAccessToken() {
     throw new Error('Missing PayPal API credentials.');
   }
 
-  const credentials = btoa(`${clientId}:${clientSecret}`);
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-  const response = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
+  const response = await fetch(`${getPayPalApiBaseUrl()}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${credentials}`,
@@ -261,7 +279,7 @@ export async function getPayPalSubscription(subscriptionId: string) {
   const accessToken = await getPayPalAccessToken();
 
   const response = await fetch(
-    `${PAYPAL_API_BASE}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    `${getPayPalApiBaseUrl()}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`,
     {
       method: 'GET',
       headers: {
@@ -292,7 +310,7 @@ export async function cancelPayPalSubscription({
   const cleanReason = reason.trim().slice(0, 128) || 'User requested cancellation.';
 
   const response = await fetch(
-    `${PAYPAL_API_BASE}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+    `${getPayPalApiBaseUrl()}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
     {
       method: 'POST',
       headers: {
@@ -423,7 +441,7 @@ export async function createPayPalExpandedOrder({
     })
   };
 
-  const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
+  const response = await fetch(`${getPayPalApiBaseUrl()}/v2/checkout/orders`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -457,7 +475,7 @@ export async function capturePayPalExpandedOrder(orderId: string) {
   const accessToken = await getPayPalAccessToken();
 
   const response = await fetch(
-    `${PAYPAL_API_BASE}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`,
+    `${getPayPalApiBaseUrl()}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`,
     {
       method: 'POST',
       headers: {
@@ -533,23 +551,26 @@ export async function verifyPayPalWebhookSignature({
 
   const accessToken = await getPayPalAccessToken();
 
-  const response = await fetch(`${PAYPAL_API_BASE}/v1/notifications/verify-webhook-signature`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      auth_algo: authAlgo,
-      cert_url: certUrl,
-      transmission_id: transmissionId,
-      transmission_sig: transmissionSig,
-      transmission_time: transmissionTime,
-      webhook_id: webhookId,
-      webhook_event: webhookEvent
-    }),
-    cache: 'no-store'
-  });
+  const response = await fetch(
+    `${getPayPalApiBaseUrl()}/v1/notifications/verify-webhook-signature`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        auth_algo: authAlgo,
+        cert_url: certUrl,
+        transmission_id: transmissionId,
+        transmission_sig: transmissionSig,
+        transmission_time: transmissionTime,
+        webhook_id: webhookId,
+        webhook_event: webhookEvent
+      }),
+      cache: 'no-store'
+    }
+  );
 
   if (!response.ok) {
     const text = await response.text();
@@ -576,26 +597,7 @@ export type CreatePayPalRenewalOrderInput = {
 };
 
 function getPayPalRenewalApiBaseUrl(): string {
-  const mode = (
-    process.env.PAYPAL_ENVIRONMENT ||
-    process.env.PAYPAL_MODE ||
-    process.env.PAYPAL_ENV ||
-    ''
-  )
-    .trim()
-    .toLowerCase();
-
-  if (mode === 'live' || mode === 'production') {
-    return 'https://api-m.paypal.com';
-  }
-
-  if (mode === 'sandbox' || mode === 'test' || mode === 'development') {
-    return 'https://api-m.sandbox.paypal.com';
-  }
-
-  throw new Error(
-    'Missing PayPal environment. Set PAYPAL_ENVIRONMENT to either "live" or "sandbox".',
-  );
+  return getPayPalApiBaseUrl();
 }
 
 function formatPayPalRenewalAmount(amountCents: number): string {
@@ -613,13 +615,11 @@ async function getPayPalRenewalAccessToken(): Promise<string> {
   const response = await fetch(`${getPayPalRenewalApiBaseUrl()}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
-      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString(
-        'base64',
-      )}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
     },
     body: 'grant_type=client_credentials',
-    cache: 'no-store',
+    cache: 'no-store'
   });
 
   const data = await response.json().catch(() => null);
@@ -627,19 +627,15 @@ async function getPayPalRenewalAccessToken(): Promise<string> {
   if (!response.ok || !data?.access_token) {
     throw new Error(
       `Failed to get PayPal access token: ${
-        typeof data?.message === 'string'
-          ? data.message
-          : JSON.stringify(data)
-      }`,
+        typeof data?.message === 'string' ? data.message : JSON.stringify(data)
+      }`
     );
   }
 
   return data.access_token as string;
 }
 
-export async function createPayPalRenewalOrder(
-  input: CreatePayPalRenewalOrderInput,
-): Promise<any> {
+export async function createPayPalRenewalOrder(input: CreatePayPalRenewalOrderInput): Promise<any> {
   const accessToken = await getPayPalRenewalAccessToken();
 
   const currency = input.currency || 'USD';
@@ -649,25 +645,23 @@ export async function createPayPalRenewalOrder(
     paymentSourceType === 'paypal'
       ? {
           paypal: {
-            vault_id: input.paypalPaymentTokenId,
-          },
+            vault_id: input.paypalPaymentTokenId
+          }
         }
       : {
           card: {
-            vault_id: input.paypalPaymentTokenId,
-          },
+            vault_id: input.paypalPaymentTokenId
+          }
         };
 
-  const requestId =
-    input.requestId ||
-    `tutovera-renewal-${input.subscriptionId}-${Date.now()}`;
+  const requestId = input.requestId || `tutovera-renewal-${input.subscriptionId}-${Date.now()}`;
 
   const response = await fetch(`${getPayPalRenewalApiBaseUrl()}/v2/checkout/orders`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
-      'PayPal-Request-Id': requestId,
+      'PayPal-Request-Id': requestId
     },
     body: JSON.stringify({
       intent: 'CAPTURE',
@@ -678,13 +672,13 @@ export async function createPayPalRenewalOrder(
           description: `TutoVera ${input.plan.toUpperCase()} ${input.billingInterval} renewal`,
           amount: {
             currency_code: currency,
-            value: formatPayPalRenewalAmount(input.amountCents),
-          },
-        },
+            value: formatPayPalRenewalAmount(input.amountCents)
+          }
+        }
       ],
-      payment_source: paymentSource,
+      payment_source: paymentSource
     }),
-    cache: 'no-store',
+    cache: 'no-store'
   });
 
   const data = await response.json().catch(() => null);
@@ -692,10 +686,8 @@ export async function createPayPalRenewalOrder(
   if (!response.ok) {
     throw new Error(
       `Failed to create PayPal renewal order: ${
-        typeof data?.message === 'string'
-          ? data.message
-          : JSON.stringify(data)
-      }`,
+        typeof data?.message === 'string' ? data.message : JSON.stringify(data)
+      }`
     );
   }
 
