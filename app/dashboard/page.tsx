@@ -131,7 +131,7 @@ export default async function DashboardPage({
   ] = await Promise.all([getTutorSessions(), getUpdateListSignups(), getContactMessages()]);
 
   return (
-    <div className="dashboardPage">
+    <div className="grid dashboardPage" style={{ gap: 24 }}>
       <section className="card spotlightCard dashboardOverviewCard">
         <div className="dashboardHeaderTop">
           <span className="badge">Admin dashboard</span>
@@ -152,7 +152,7 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      <section className="dashboardSummaryBlock" aria-label="Dashboard summary">
+      <section className="dashboardSummarySection" aria-label="Dashboard summary">
         <div className="dashboardSummaryCards">
           <div className="card innerFeatureCard">
             <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
@@ -304,19 +304,24 @@ export default async function DashboardPage({
       <style>
         {`
           .dashboardPage {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
             width: 100%;
             max-width: 100%;
+          }
+
+          .dashboardOverviewCard,
+          .dashboardSummarySection,
+          .dashboardFullWidthSection {
+            grid-column: 1 / -1;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            clear: both;
+            float: none;
           }
 
           .dashboardOverviewCard {
             display: grid;
             gap: 14px;
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
           }
 
           .dashboardHeaderTop {
@@ -345,14 +350,8 @@ export default async function DashboardPage({
             width: 100%;
           }
 
-          .dashboardSummaryBlock {
-            display: grid;
-            grid-template-columns: 1fr;
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
-            padding-top: 16px;
-            border-top: 1px solid var(--border);
+          .dashboardSummarySection {
+            display: block;
           }
 
           .dashboardSummaryCards {
@@ -369,12 +368,7 @@ export default async function DashboardPage({
           .dashboardSummaryCards > .card {
             width: 100%;
             min-width: 0;
-          }
-
-          .dashboardFullWidthSection {
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
+            float: none;
           }
 
           @media (max-width: 920px) {
