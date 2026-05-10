@@ -4,10 +4,13 @@ import { buildTutorPrompt } from '@/lib/prompts';
 import { normalizeGraphExpression } from '@/lib/graphing';
 import { createAdminSupabase } from '@/lib/supabase-admin';
 import { createClient as createAuthClient } from '@/lib/supabase/server';
+import { planAllowsImageProcessing } from '@/lib/plans';
 import { getSubjectConfig, type SubjectConfig } from '@/lib/subjects';
 import { getUserPlanAccess } from '@/lib/subscriptions';
 
 const FALLBACK_DAILY_FREE_LIMIT = 10;
+const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+const SUPPORTED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type ParentHelpStyle =
   | 'explain-simply'
@@ -15,6 +18,13 @@ type ParentHelpStyle =
   | 'simple-example'
   | 'practice-questions'
   | 'likely-mistake';
+
+type ImageRequestPayload = {
+  data: string;
+  mimeType: string;
+  sizeBytes: number;
+  originalName: string | null;
+};
 
 function getClientIp(request: NextRequest) {
   const forwardedFor = request.headers.get('x-forwarded-for');
@@ -411,11 +421,118 @@ Showing the graph for $y = ${expression}$.
 Ask to explain the graph, identify intercepts, describe the vertex, or compare it to another function.`;
 }
 
+function estimateBase64SizeBytes(base64: string) {
+  const cleaned = base64.replace(/\s/g, '');
+  if (!cleaned) return 0;
+
+  const padding = cleaned.endsWith('==') ? 2 : cleaned.endsWith('=') ? 1 : 0;
+  return Math.max(0, Math.floor((cleaned.length * 3) / 4) - padding);
+}
+
+function sanitizeImagePayload(value: unknown): {
+  image: ImageRequestPayload | null;
+  error?: string;
+} {
+  if (!value) {
+    return { image: null };
+  }
+
+  if (typeof value !== 'object') {
+    return { image: null, error: 'Invalid image payload.' };
+  }
+
+  const raw = value as Record<string, unknown>;
+  const mimeType = typeof raw.mimeType === 'string' ? raw.mimeType.trim().toLowerCase() : '';
+  const originalName =
+    typeof raw.originalName === 'string' && raw.originalName.trim()
+      ? raw.originalName.trim().slice(0, 180)
+      : null;
+
+  let data = typeof raw.data === 'string' ? raw.data.trim() : '';
+
+  if (data.startsWith('data:')) {
+    data = data.replace(/^data:[^;]+;base64,/, '');
+  }
+
+  data = data.replace(/\s/g, '');
+
+  if (!data) {
+    return { image: null, error: 'Image data was missing.' };
+  }
+
+  if (!SUPPORTED_IMAGE_MIME_TYPES.has(mimeType)) {
+    return {
+      image: null,
+      error: 'Unsupported image type. Please use PNG, JPG, JPEG, or WebP.'
+    };
+  }
+
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data)) {
+    return {
+      image: null,
+      error: 'The uploaded image could not be read. Please try another file.'
+    };
+  }
+
+  const estimatedSize = estimateBase64SizeBytes(data);
+  const providedSize =
+    typeof raw.sizeBytes === 'number' && Number.isFinite(raw.sizeBytes)
+      ? Math.max(0, Math.floor(raw.sizeBytes))
+      : 0;
+
+  const sizeBytes = Math.max(estimatedSize, providedSize);
+
+  if (sizeBytes > MAX_IMAGE_SIZE_BYTES) {
+    return {
+      image: null,
+      error: 'Image is too large. Please upload an image under 8 MB.'
+    };
+  }
+
+  return {
+    image: {
+      data,
+      mimeType,
+      sizeBytes,
+      originalName
+    }
+  };
+}
+
+function getCurrentMonthStartIso() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
+
+function buildImageInstruction({
+  audience,
+  subject
+}: {
+  audience: string;
+  subject: SubjectConfig;
+}) {
+  if (audience === 'parent') {
+    return `
+The user attached an image related to the child’s ${subject.name} work.
+Use the image as evidence when helpful.
+If the image is unclear, say what you can and cannot read.
+Focus on helping the parent understand the child’s work and guide the child without simply doing everything for them.
+`;
+  }
+
+  return `
+The user attached an image related to this ${subject.name} question.
+Use the image as evidence when helpful.
+If the image is unclear, say what you can and cannot read.
+Explain the reasoning step by step and connect your answer to the visible work in the image.
+`;
+}
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-async function generateTutorAnswerWithRetry(prompt: string) {
+async function generateTutorAnswerWithRetry(prompt: string, image?: ImageRequestPayload | null) {
   const retryDelays = [0, 900];
 
   let lastError: any = null;
@@ -426,9 +543,21 @@ async function generateTutorAnswerWithRetry(prompt: string) {
     }
 
     try {
+      const contents = image
+        ? ([
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: image.mimeType,
+                data: image.data
+              }
+            }
+          ] as any)
+        : prompt;
+
       const response = await ai.models.generateContent({
         model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-        contents: prompt
+        contents
       });
 
       const answer = response.text?.trim() || '';
@@ -451,6 +580,8 @@ async function generateTutorAnswerWithRetry(prompt: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+
     const {
       question,
       gradeLevel = 'high-school',
@@ -463,8 +594,15 @@ export async function POST(request: NextRequest) {
       stuckPoint = '',
       graphOnlyBypass = false,
       graphExpression = null,
-      subject = 'math'
-    } = await request.json();
+      subject = 'math',
+      image = null
+    } = body;
+
+    const { image: imagePayload, error: imagePayloadError } = sanitizeImagePayload(image);
+
+    if (imagePayloadError) {
+      return NextResponse.json({ error: imagePayloadError }, { status: 400 });
+    }
 
     const subjectConfig = getRequestedSubject(subject);
 
@@ -522,6 +660,62 @@ export async function POST(request: NextRequest) {
           email: normalizedEmail
         })
       : null;
+
+    if (imagePayload) {
+      if (!user?.id || !planAccess?.hasActivePaidAccess) {
+        return NextResponse.json(
+          {
+            error:
+              'Image and worksheet support is included with Plus and Pro. Please sign in with an active paid plan to upload images.'
+          },
+          { status: 403 }
+        );
+      }
+
+      if (!planAllowsImageProcessing(planAccess.plan)) {
+        return NextResponse.json(
+          {
+            error:
+              'Your current plan does not include image and worksheet support. Upgrade to Plus or Pro to upload images.'
+          },
+          { status: 403 }
+        );
+      }
+
+      const monthlyImageLimit = planAccess.imageUploadsPerMonth || 0;
+
+      if (!bypassDailyLimit) {
+        const since = getCurrentMonthStartIso();
+
+        let imageCountQuery = supabase
+          .from('learner_sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('has_image', true)
+          .gte('created_at', since);
+
+        if (user.id) {
+          imageCountQuery = imageCountQuery.eq('user_id', user.id);
+        } else if (normalizedEmail) {
+          imageCountQuery = imageCountQuery.eq('email', normalizedEmail);
+        }
+
+        const { count: imageCount, error: imageCountError } = await imageCountQuery;
+
+        if (imageCountError) {
+          console.error('SUPABASE IMAGE COUNT ERROR:', imageCountError);
+          return NextResponse.json({ error: 'Could not verify image limit.' }, { status: 500 });
+        }
+
+        if ((imageCount || 0) >= monthlyImageLimit) {
+          return NextResponse.json(
+            {
+              error: `Monthly image limit reached for your ${planAccess.plan} plan. You can upload up to ${monthlyImageLimit} images per month.`
+            },
+            { status: 429 }
+          );
+        }
+      }
+    }
 
     const dailyTutorLimit = planAccess?.dailyTutorLimit || FALLBACK_DAILY_FREE_LIMIT;
 
@@ -617,6 +811,7 @@ export async function POST(request: NextRequest) {
     if (
       subjectConfig.features.graphing &&
       graphOnlyBypass &&
+      !imagePayload &&
       audience === 'student' &&
       normalizedGraphExpression
     ) {
@@ -624,7 +819,7 @@ export async function POST(request: NextRequest) {
     } else {
       const conversationContext = buildConversationContext(existingTurns);
 
-      const effectiveQuestion =
+      const baseEffectiveQuestion =
         audience === 'parent'
           ? buildParentQuestion({
               question: questionText,
@@ -635,6 +830,15 @@ export async function POST(request: NextRequest) {
               subject: subjectConfig
             })
           : buildStudentQuestion(questionText, mode, subjectConfig);
+
+      const effectiveQuestion = imagePayload
+        ? `${baseEffectiveQuestion}
+
+${buildImageInstruction({
+  audience,
+  subject: subjectConfig
+})}`
+        : baseEffectiveQuestion;
 
       const prompt = buildTutorPrompt({
         question: conversationContext
@@ -647,7 +851,7 @@ export async function POST(request: NextRequest) {
         subject: subjectConfig
       });
 
-      answer = await generateTutorAnswerWithRetry(prompt);
+      answer = await generateTutorAnswerWithRetry(prompt, imagePayload);
     }
 
     if (!activeConversationId) {
@@ -684,7 +888,12 @@ export async function POST(request: NextRequest) {
         mode,
         level: gradeLevel,
         prompt: questionText,
-        response: answer
+        response: answer,
+        has_image: Boolean(imagePayload),
+        image_mime_type: imagePayload?.mimeType || null,
+        image_size_bytes: imagePayload?.sizeBytes || null,
+        image_original_name: imagePayload?.originalName || null,
+        image_plan: imagePayload ? planAccess?.plan || 'free' : null
       });
     } catch (dbError) {
       console.error('SUPABASE SAVE ERROR:', dbError);
@@ -693,7 +902,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       answer,
       conversationId: activeConversationId,
-      subject: activeSubject
+      subject: activeSubject,
+      imageUsed: Boolean(imagePayload)
     });
   } catch (error: any) {
     console.error('CHAT API ERROR:', error);

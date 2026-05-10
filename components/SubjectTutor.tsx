@@ -13,6 +13,9 @@ import {
   isGraphReferenceRequest
 } from '@/lib/graphing';
 
+const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+const SUPPORTED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
 type SubjectTutorProps = {
   subject?: SubjectKey;
   audience?: 'student' | 'parent';
@@ -33,6 +36,13 @@ type ParentHelpStyle =
   | 'practice-questions'
   | 'likely-mistake';
 
+type SelectedImage = {
+  data: string;
+  mimeType: string;
+  sizeBytes: number;
+  originalName: string;
+};
+
 type TutorRequestPayload = {
   subject: SubjectKey;
   question: string;
@@ -46,6 +56,29 @@ type TutorRequestPayload = {
   stuckPoint: string;
   graphOnlyBypass?: boolean;
   graphExpression?: string | null;
+  image?: SelectedImage | null;
+};
+
+type AccountPlanAccess = {
+  signedIn: boolean;
+  email?: string | null;
+  plan: string;
+  isPaidPlan: boolean;
+  hasActivePaidAccess: boolean;
+  imageUploadsPerMonth: number;
+  dailyTutorLimit: number;
+  canUseImages: boolean;
+};
+
+const defaultPlanAccess: AccountPlanAccess = {
+  signedIn: false,
+  email: null,
+  plan: 'free',
+  isPaidPlan: false,
+  hasActivePaidAccess: false,
+  imageUploadsPerMonth: 0,
+  dailyTutorLimit: 10,
+  canUseImages: false
 };
 
 function ReadOnlyField({ value }: { value: string }) {
@@ -222,6 +255,39 @@ function getModeLabel(mode: TutorMode) {
   return 'Quiz mode';
 }
 
+function getPlanLabel(plan: string) {
+  if (plan === 'plus') return 'Plus';
+  if (plan === 'pro') return 'Pro';
+  return 'Free';
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function readFileAsBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const base64 = result.includes(',') ? result.split(',')[1] : result;
+
+      if (!base64) {
+        reject(new Error('Could not read image file.'));
+        return;
+      }
+
+      resolve(base64);
+    };
+
+    reader.onerror = () => reject(new Error('Could not read image file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function SubjectTutor({
   subject = 'math',
   audience = 'student',
@@ -234,12 +300,15 @@ export default function SubjectTutor({
 }: SubjectTutorProps) {
   const router = useRouter();
   const questionRef = useRef<HTMLTextAreaElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const subjectConfig = useMemo(() => getSubjectConfig(subject) || subjects.math, [subject]);
   const graphingEnabled = subjectConfig.features.graphing;
 
   const [email, setEmail] = useState('');
   const [accountEmail, setAccountEmail] = useState('');
+  const [planAccess, setPlanAccess] = useState<AccountPlanAccess>(defaultPlanAccess);
+  const [planAccessLoading, setPlanAccessLoading] = useState(true);
 
   const defaultQuestion = useMemo(
     () => getDefaultQuestion({ audience, subject: subjectConfig }),
@@ -258,6 +327,8 @@ export default function SubjectTutor({
   const [rememberedGraphExpression, setRememberedGraphExpression] = useState('');
   const [showGraphForCurrentTurn, setShowGraphForCurrentTurn] = useState(false);
   const [lastRequestPayload, setLastRequestPayload] = useState<TutorRequestPayload | null>(null);
+  const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(null);
+  const [imageStatus, setImageStatus] = useState('');
 
   const [parentHelpStyle, setParentHelpStyle] =
     useState<ParentHelpStyle>('explain-simply');
@@ -265,7 +336,9 @@ export default function SubjectTutor({
   const [parentStuckPoint, setParentStuckPoint] = useState('');
 
   useEffect(() => {
-    async function loadUser() {
+    async function loadUserAndPlan() {
+      setPlanAccessLoading(true);
+
       const supabase = createClient();
       const {
         data: { user }
@@ -291,9 +364,30 @@ export default function SubjectTutor({
         const nextParentGrade = preferences.parentDefaults?.gradeLevel || 'elementary';
         setGradeLevel(nextParentGrade);
       }
+
+      try {
+        const response = await fetch('/api/account/plan-access', {
+          method: 'GET',
+          cache: 'no-store'
+        });
+
+        if (response.ok) {
+          const data = (await response.json()) as AccountPlanAccess;
+          setPlanAccess({
+            ...defaultPlanAccess,
+            ...data
+          });
+        } else {
+          setPlanAccess(defaultPlanAccess);
+        }
+      } catch {
+        setPlanAccess(defaultPlanAccess);
+      } finally {
+        setPlanAccessLoading(false);
+      }
     }
 
-    void loadUser();
+    void loadUserAndPlan();
   }, [audience, lockedMode]);
 
   useEffect(() => {
@@ -309,8 +403,55 @@ export default function SubjectTutor({
       setParentTopic('');
       setParentStuckPoint('');
       setParentHelpStyle('explain-simply');
+      clearSelectedImage();
     }
   }, [initialConversationId, defaultQuestion]);
+
+  function clearSelectedImage() {
+    setSelectedImage(null);
+    setImageStatus('');
+
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  }
+
+  async function handleImageChange(file: File | null) {
+    if (!file || loading) return;
+
+    if (!planAccess.canUseImages) {
+      setImageStatus('Image support is included with Plus and Pro.');
+      return;
+    }
+
+    if (!SUPPORTED_IMAGE_MIME_TYPES.has(file.type)) {
+      setImageStatus('Please upload a PNG, JPG, JPEG, or WebP image.');
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setImageStatus('Please upload an image under 8 MB.');
+      return;
+    }
+
+    setImageStatus('Reading image...');
+
+    try {
+      const data = await readFileAsBase64(file);
+
+      setSelectedImage({
+        data,
+        mimeType: file.type,
+        sizeBytes: file.size,
+        originalName: file.name
+      });
+
+      setImageStatus('Image attached. Add your question above, then ask TutoVera.');
+    } catch {
+      setImageStatus('Could not read this image. Please try another file.');
+      setSelectedImage(null);
+    }
+  }
 
   function startNewSession() {
     if (newSessionHref) {
@@ -329,6 +470,7 @@ export default function SubjectTutor({
     setRememberedGraphExpression('');
     setShowGraphForCurrentTurn(false);
     setLastRequestPayload(null);
+    clearSelectedImage();
   }
 
   function buildPayload(overridePayload?: TutorRequestPayload): TutorRequestPayload | null {
@@ -349,7 +491,8 @@ export default function SubjectTutor({
       conversationId,
       parentHelpStyle: audience === 'parent' ? parentHelpStyle : null,
       topic: audience === 'parent' ? parentTopic : '',
-      stuckPoint: audience === 'parent' ? parentStuckPoint : ''
+      stuckPoint: audience === 'parent' ? parentStuckPoint : '',
+      image: selectedImage && planAccess.canUseImages ? selectedImage : null
     };
   }
 
@@ -375,7 +518,7 @@ export default function SubjectTutor({
     const nextRememberedExpression = rememberedCandidate || rememberedGraphExpression;
 
     const payload: TutorRequestPayload =
-      graphOnlyDisplayRequest && nextRememberedExpression
+      graphOnlyDisplayRequest && nextRememberedExpression && !basePayload.image
         ? {
             ...basePayload,
             graphOnlyBypass: true,
@@ -423,6 +566,8 @@ export default function SubjectTutor({
       } else {
         setShowGraphForCurrentTurn(false);
       }
+
+      clearSelectedImage();
 
       if (!overridePayload || question.trim() === basePayload.question.trim()) {
         setQuestion('');
@@ -554,6 +699,103 @@ export default function SubjectTutor({
             style={{ minHeight: 150 }}
           />
         </div>
+
+        <details className="tutorLaterDetails">
+          <summary>Image and worksheet support</summary>
+
+          <div style={{ display: 'grid', gap: 14, paddingTop: 14 }}>
+            {planAccessLoading ? (
+              <p className="small" style={{ margin: 0 }}>
+                Checking image support for your account...
+              </p>
+            ) : planAccess.canUseImages ? (
+              <div className="card questionSurface" style={{ display: 'grid', gap: 14, padding: 16 }}>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <p className="small" style={{ margin: 0 }}>
+                    <strong>{getPlanLabel(planAccess.plan)} image support</strong>
+                  </p>
+                  <p className="small" style={{ margin: 0 }}>
+                    Attach one worksheet photo, screenshot, or image-based question. Your plan
+                    includes {planAccess.imageUploadsPerMonth} image uploads per month.
+                  </p>
+                </div>
+
+                <div>
+                  <label>Attach image (optional)</label>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={loading}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      void handleImageChange(file);
+                    }}
+                  />
+                </div>
+
+                {selectedImage ? (
+                  <div
+                    className="card innerFeatureCard"
+                    style={{
+                      display: 'grid',
+                      gap: 12,
+                      padding: 14
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '96px minmax(0, 1fr)',
+                        gap: 12,
+                        alignItems: 'center'
+                      }}
+                    >
+                      <img
+                        src={`data:${selectedImage.mimeType};base64,${selectedImage.data}`}
+                        alt="Selected worksheet or question image"
+                        style={{
+                          width: 96,
+                          height: 96,
+                          objectFit: 'cover',
+                          borderRadius: 16,
+                          border: '1px solid var(--border)'
+                        }}
+                      />
+
+                      <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+                        <p className="small" style={{ margin: 0 }}>
+                          <strong>{selectedImage.originalName}</strong>
+                        </p>
+                        <p className="small" style={{ margin: 0 }}>
+                          {selectedImage.mimeType} · {formatFileSize(selectedImage.sizeBytes)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="buttonRow">
+                      <button type="button" className="secondary" onClick={clearSelectedImage}>
+                        Remove Image
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {imageStatus ? (
+                  <p className="small" style={{ margin: 0 }}>
+                    {imageStatus}
+                  </p>
+                ) : (
+                  <p className="small" style={{ margin: 0 }}>
+                    Supported formats: PNG, JPG, JPEG, and WebP. Maximum size: 8 MB.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <PaidImageUploadPlaceholder compact context={audience} />
+            )}
+          </div>
+        </details>
 
         <div
           style={{
@@ -753,17 +995,6 @@ export default function SubjectTutor({
           </div>
         </section>
       ) : null}
-
-      <details className="card tutorLaterDetails">
-        <summary>Image and worksheet support</summary>
-        <div style={{ display: 'grid', gap: 14, paddingTop: 14 }}>
-          <p className="small" style={{ margin: 0 }}>
-            Image processing is planned as a paid-only feature for Plus and Pro. Text-based tutoring
-            stays available in the main workspace above.
-          </p>
-          <PaidImageUploadPlaceholder compact context={audience} />
-        </div>
-      </details>
 
       <style>
         {`
