@@ -118,7 +118,7 @@ export const plans: Plan[] = [
     annualPrice: '$199.99/year',
     annualNote: 'Annual plan saves about 2 months',
     description:
-      'For heavier study, larger worksheet/photo usage, deeper revision workflows, and early access to advanced subject tools.',
+      'For heavier study, larger worksheet/photo usage, deeper revision workflows, and stronger access to advanced subject tools.',
     audience: 'Best for serious users, heavier study periods, and advanced learning workflows.',
     positioning: 'The deeper study system for revision, mistake patterns, and advanced tools.',
     highlighted: false,
@@ -137,7 +137,7 @@ export const plans: Plan[] = [
       'Longer session context',
       'Advanced subject tools',
       'Deeper revision workflows',
-      'Early access to simulators and diagrams',
+      'Advanced access to simulators and diagrams',
       'Best access for future premium tools',
       'Generous high-usage limits without calling it unlimited'
     ],
