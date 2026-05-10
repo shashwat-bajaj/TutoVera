@@ -91,7 +91,7 @@ function getPriceLabel(plan: PaidPlanKey, billingCycle: BillingCycle) {
 
 function getPlanDescription(plan: PaidPlanKey) {
   if (plan === 'plus') {
-    return 'Higher usage, worksheet/photo support, extended history, and guided practice for regular study.';
+    return 'Higher usage, worksheet and image support, extended history, and guided practice for regular study.';
   }
 
   return 'The highest TutoVera access for heavier study, larger worksheet use, and deeper revision workflows.';
