@@ -89,8 +89,8 @@ export default async function SettingsPage() {
             <p className="small" style={{ margin: 0, maxWidth: 760 }}>
               Your current plan allows {planAccess.dailyTutorLimit} tutor requests per day
               {planAccess.imageUploadsPerMonth > 0
-                ? ` and includes ${planAccess.imageUploadsPerMonth} image uploads per month once image support is enabled.`
-                : '. Image and worksheet support are planned for Plus and Pro.'}
+                ? ` and includes ${planAccess.imageUploadsPerMonth} image uploads per month.`
+                : '. Image and worksheet support is included with Plus and Pro.'}
             </p>
           </div>
 

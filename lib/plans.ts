@@ -88,7 +88,7 @@ export const plans: Plan[] = [
     features: [
       'Everything in Free',
       'Higher tutor request limits',
-      'Paid-only image upload enabled',
+      'Image uploads with monthly cap',
       'Worksheet/photo help with monthly cap',
       'Extended saved history',
       'Mistake diagnosis',
