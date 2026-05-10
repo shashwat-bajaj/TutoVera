@@ -131,7 +131,7 @@ export default async function DashboardPage({
   ] = await Promise.all([getTutorSessions(), getUpdateListSignups(), getContactMessages()]);
 
   return (
-    <div className="grid dashboardPage" style={{ gap: 24 }}>
+    <div className="dashboardPage">
       <section className="card spotlightCard dashboardOverviewCard">
         <div className="dashboardHeaderTop">
           <span className="badge">Admin dashboard</span>
@@ -152,32 +152,34 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      <section className="dashboardSummaryCards" aria-label="Dashboard summary">
-        <div className="card innerFeatureCard">
-          <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
-          <p className="small" style={{ marginBottom: 0 }}>
-            {signupsError
-              ? 'Unable to load signups.'
-              : `${signups?.length || 0} recent records loaded.`}
-          </p>
-        </div>
+      <section className="dashboardSummaryBlock" aria-label="Dashboard summary">
+        <div className="dashboardSummaryCards">
+          <div className="card innerFeatureCard">
+            <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
+            <p className="small" style={{ marginBottom: 0 }}>
+              {signupsError
+                ? 'Unable to load signups.'
+                : `${signups?.length || 0} recent records loaded.`}
+            </p>
+          </div>
 
-        <div className="card innerFeatureCard">
-          <h3 style={{ marginTop: 0 }}>Contact messages</h3>
-          <p className="small" style={{ marginBottom: 0 }}>
-            {messagesError
-              ? 'Unable to load messages.'
-              : `${messages?.length || 0} recent records loaded.`}
-          </p>
-        </div>
+          <div className="card innerFeatureCard">
+            <h3 style={{ marginTop: 0 }}>Contact messages</h3>
+            <p className="small" style={{ marginBottom: 0 }}>
+              {messagesError
+                ? 'Unable to load messages.'
+                : `${messages?.length || 0} recent records loaded.`}
+            </p>
+          </div>
 
-        <div className="card innerFeatureCard">
-          <h3 style={{ marginTop: 0 }}>Tutor sessions</h3>
-          <p className="small" style={{ marginBottom: 0 }}>
-            {sessionsError
-              ? 'Unable to load sessions.'
-              : `${sessions?.length || 0} recent records loaded.`}
-          </p>
+          <div className="card innerFeatureCard">
+            <h3 style={{ marginTop: 0 }}>Tutor sessions</h3>
+            <p className="small" style={{ marginBottom: 0 }}>
+              {sessionsError
+                ? 'Unable to load sessions.'
+                : `${sessions?.length || 0} recent records loaded.`}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -307,23 +309,14 @@ export default async function DashboardPage({
             gap: 24px;
             width: 100%;
             max-width: 100%;
-            clear: both;
-          }
-
-          .dashboardOverviewCard,
-          .dashboardSummaryCards,
-          .dashboardFullWidthSection {
-            grid-column: 1 / -1;
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
-            clear: both;
-            float: none;
           }
 
           .dashboardOverviewCard {
             display: grid;
             gap: 14px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
           }
 
           .dashboardHeaderTop {
@@ -352,10 +345,23 @@ export default async function DashboardPage({
             width: 100%;
           }
 
+          .dashboardSummaryBlock {
+            display: grid;
+            grid-template-columns: 1fr;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+          }
+
           .dashboardSummaryCards {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 18px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
             align-items: stretch;
             justify-items: stretch;
           }
@@ -363,7 +369,12 @@ export default async function DashboardPage({
           .dashboardSummaryCards > .card {
             width: 100%;
             min-width: 0;
-            float: none;
+          }
+
+          .dashboardFullWidthSection {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
           }
 
           @media (max-width: 920px) {
