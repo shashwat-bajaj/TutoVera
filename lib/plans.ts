@@ -53,7 +53,7 @@ export const plans: Plan[] = [
       'Basic translation access',
       'Math graphing',
       'Tables and math formatting',
-      'No image upload or worksheet-photo support'
+      'No worksheet or image upload support'
     ],
     paidValue: [
       'Good for trying the platform',
@@ -61,7 +61,7 @@ export const plans: Plan[] = [
       'Limited enough that regular users have a reason to upgrade'
     ],
     futureTools: [
-      'Upgrade for worksheet/photo support',
+      'Upgrade for worksheet and image support',
       'Upgrade for deeper revision workflows',
       'Upgrade for higher usage and longer saved history'
     ]
@@ -74,9 +74,9 @@ export const plans: Plan[] = [
     annualPrice: '$99.99/year',
     annualNote: 'Annual plan saves about 2 months',
     description:
-      'For regular students and parents who want worksheet/photo support, higher usage, guided practice, and longer saved history.',
+      'For regular students and parents who want worksheet and image support, higher usage, guided practice, and longer saved history.',
     audience: 'Best for students, parents, and families using TutoVera regularly.',
-    positioning: 'The main study plan for regular homework, worksheets, and guided practice.',
+    positioning: 'The main study plan for regular homework, worksheets, images, and guided practice.',
     highlighted: true,
     ctaLabel: 'Subscribe with PayPal',
     ctaHref: '/pricing',
@@ -89,7 +89,7 @@ export const plans: Plan[] = [
       'Everything in Free',
       'Higher tutor request limits',
       'Image uploads with monthly cap',
-      'Worksheet/photo help with monthly cap',
+      'Worksheet and screenshot help',
       'Extended saved history',
       'Mistake diagnosis',
       'Practice generation',
@@ -104,7 +104,7 @@ export const plans: Plan[] = [
       'Keep more study history across subjects'
     ],
     futureTools: [
-      'Worksheet/photo support',
+      'Worksheet and image support',
       'Practice set generation',
       'Mistake-focused follow-up prompts',
       'Stronger parent support workflows'
@@ -118,7 +118,7 @@ export const plans: Plan[] = [
     annualPrice: '$199.99/year',
     annualNote: 'Annual plan saves about 2 months',
     description:
-      'For heavier study, larger worksheet/photo usage, deeper revision workflows, and stronger access to advanced subject tools.',
+      'For heavier study, larger worksheet and image usage, deeper revision workflows, and stronger access to advanced subject tools.',
     audience: 'Best for serious users, heavier study periods, and advanced learning workflows.',
     positioning: 'The deeper study system for revision, mistake patterns, and advanced tools.',
     highlighted: false,
@@ -132,14 +132,14 @@ export const plans: Plan[] = [
     features: [
       'Everything in Plus',
       'Highest tutor request limits',
-      'Larger image and worksheet cap',
-      'Advanced worksheet/photo help',
-      'Longer session context',
-      'Advanced subject tools',
+      'Larger worksheet and image cap',
+      'Advanced worksheet and image help',
+      'Longer session continuity',
+      'Advanced subject tools as available',
       'Deeper revision workflows',
-      'Advanced access to simulators and diagrams',
-      'Best access for future premium tools',
-      'Generous high-usage limits without calling it unlimited'
+      'Advanced access to diagrams and simulators as added',
+      'Best access for advanced study tools',
+      'Generous high-usage limits'
     ],
     paidValue: [
       'Build revision from saved sessions',
