@@ -133,26 +133,26 @@ export default async function DashboardPage({
   return (
     <div className="grid dashboardPage" style={{ gap: 24 }}>
       <section className="card spotlightCard dashboardOverviewCard">
-        <span className="badge">Admin dashboard</span>
+        <div className="dashboardHeaderTop">
+          <span className="badge">Admin dashboard</span>
 
-        <div className="dashboardHeaderCopy">
-          <h1 style={{ margin: 0 }}>TutoVera internal overview.</h1>
-          <p className="small" style={{ margin: 0 }}>
-            Review recent platform activity across update-list signups, contact messages, and tutor
-            sessions for Math, Physics, Chemistry, Biology, and future branches.
-          </p>
-        </div>
-
-        <div className="dashboardLockRow">
           <form method="POST" action="/api/dashboard-logout">
             <button type="submit" className="secondary">
               Lock dashboard
             </button>
           </form>
         </div>
+
+        <div className="dashboardHeaderCopy">
+          <h1 style={{ margin: 0 }}>TutoVera internal overview.</h1>
+          <p className="small" style={{ margin: 0 }}>
+            Review recent update-list signups, contact messages, and tutor sessions across active
+            TutoVera branches.
+          </p>
+        </div>
       </section>
 
-      <section className="dashboardSummaryGrid">
+      <section className="dashboardSummaryGrid" aria-label="Dashboard summary">
         <div className="card innerFeatureCard">
           <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
           <p className="small" style={{ marginBottom: 0 }}>
@@ -181,7 +181,7 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      <section className="card" style={{ display: 'grid', gap: 16 }}>
+      <section className="card dashboardFullWidthSection" style={{ display: 'grid', gap: 16 }}>
         <div style={{ display: 'grid', gap: 8 }}>
           <h2 style={{ margin: 0 }}>Recent update-list signups</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -215,7 +215,7 @@ export default async function DashboardPage({
         )}
       </section>
 
-      <section className="card" style={{ display: 'grid', gap: 16 }}>
+      <section className="card dashboardFullWidthSection" style={{ display: 'grid', gap: 16 }}>
         <div style={{ display: 'grid', gap: 8 }}>
           <h2 style={{ margin: 0 }}>Recent contact messages</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -250,7 +250,7 @@ export default async function DashboardPage({
         )}
       </section>
 
-      <section className="card" style={{ display: 'grid', gap: 16 }}>
+      <section className="card dashboardFullWidthSection" style={{ display: 'grid', gap: 16 }}>
         <div style={{ display: 'grid', gap: 8 }}>
           <h2 style={{ margin: 0 }}>Recent tutor sessions</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -302,15 +302,41 @@ export default async function DashboardPage({
       <style>
         {`
           .dashboardPage {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
             width: 100%;
             max-width: 100%;
+            clear: both;
+          }
+
+          .dashboardOverviewCard,
+          .dashboardSummaryGrid,
+          .dashboardFullWidthSection {
+            grid-column: 1 / -1;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            clear: both;
+            float: none;
           }
 
           .dashboardOverviewCard {
             display: grid;
-            gap: 16px;
+            gap: 14px;
+          }
+
+          .dashboardHeaderTop {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: center;
             width: 100%;
-            max-width: 100%;
+            min-width: 0;
+          }
+
+          .dashboardHeaderTop form {
+            justify-self: end;
           }
 
           .dashboardHeaderCopy {
@@ -326,33 +352,33 @@ export default async function DashboardPage({
             width: 100%;
           }
 
-          .dashboardLockRow {
-            display: flex;
-            justify-content: flex-start;
-            width: 100%;
-            padding-top: 14px;
-            border-top: 1px solid var(--border);
-          }
-
           .dashboardSummaryGrid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 18px;
-            width: 100%;
-            max-width: 100%;
             align-items: stretch;
             justify-items: stretch;
-            clear: both;
           }
 
           .dashboardSummaryGrid > .card {
             width: 100%;
             min-width: 0;
+            float: none;
           }
 
           @media (max-width: 920px) {
             .dashboardSummaryGrid {
               grid-template-columns: 1fr;
+            }
+          }
+
+          @media (max-width: 640px) {
+            .dashboardHeaderTop {
+              grid-template-columns: 1fr;
+            }
+
+            .dashboardHeaderTop form {
+              justify-self: start;
             }
           }
         `}
