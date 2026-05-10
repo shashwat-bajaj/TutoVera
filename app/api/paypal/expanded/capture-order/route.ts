@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
     const existingOrder = orderRecord as ExpandedOrderRecord;
 
-    if (existingOrder.user_id !== user.id && existingOrder.email !== normalizedEmail) {
+    if (existingOrder.user_id !== user.id) {
       return NextResponse.json(
         { error: 'This PayPal order does not belong to the signed-in account.' },
         { status: 403 }
