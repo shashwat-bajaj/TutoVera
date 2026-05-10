@@ -152,32 +152,36 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      <section className="dashboardSummaryGrid" aria-label="Dashboard summary">
-        <div className="card innerFeatureCard">
-          <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
-          <p className="small" style={{ marginBottom: 0 }}>
-            {signupsError
-              ? 'Unable to load signups.'
-              : `${signups?.length || 0} recent records loaded.`}
-          </p>
-        </div>
+      <section className="dashboardSummaryBlock" aria-label="Dashboard summary">
+        <div className="dashboardSummaryDivider" aria-hidden="true" />
 
-        <div className="card innerFeatureCard">
-          <h3 style={{ marginTop: 0 }}>Contact messages</h3>
-          <p className="small" style={{ marginBottom: 0 }}>
-            {messagesError
-              ? 'Unable to load messages.'
-              : `${messages?.length || 0} recent records loaded.`}
-          </p>
-        </div>
+        <div className="dashboardSummaryCards">
+          <div className="card innerFeatureCard">
+            <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
+            <p className="small" style={{ marginBottom: 0 }}>
+              {signupsError
+                ? 'Unable to load signups.'
+                : `${signups?.length || 0} recent records loaded.`}
+            </p>
+          </div>
 
-        <div className="card innerFeatureCard">
-          <h3 style={{ marginTop: 0 }}>Tutor sessions</h3>
-          <p className="small" style={{ marginBottom: 0 }}>
-            {sessionsError
-              ? 'Unable to load sessions.'
-              : `${sessions?.length || 0} recent records loaded.`}
-          </p>
+          <div className="card innerFeatureCard">
+            <h3 style={{ marginTop: 0 }}>Contact messages</h3>
+            <p className="small" style={{ marginBottom: 0 }}>
+              {messagesError
+                ? 'Unable to load messages.'
+                : `${messages?.length || 0} recent records loaded.`}
+            </p>
+          </div>
+
+          <div className="card innerFeatureCard">
+            <h3 style={{ marginTop: 0 }}>Tutor sessions</h3>
+            <p className="small" style={{ marginBottom: 0 }}>
+              {sessionsError
+                ? 'Unable to load sessions.'
+                : `${sessions?.length || 0} recent records loaded.`}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -311,7 +315,7 @@ export default async function DashboardPage({
           }
 
           .dashboardOverviewCard,
-          .dashboardSummaryGrid,
+          .dashboardSummaryBlock,
           .dashboardFullWidthSection {
             grid-column: 1 / -1;
             width: 100%;
@@ -352,22 +356,39 @@ export default async function DashboardPage({
             width: 100%;
           }
 
-          .dashboardSummaryGrid {
+          .dashboardSummaryBlock {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+          }
+
+          .dashboardSummaryDivider {
+            display: block;
+            width: 100%;
+            height: 1px;
+            background: var(--border);
+            grid-column: 1 / -1;
+          }
+
+          .dashboardSummaryCards {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 18px;
+            width: 100%;
+            max-width: 100%;
             align-items: stretch;
             justify-items: stretch;
+            grid-column: 1 / -1;
           }
 
-          .dashboardSummaryGrid > .card {
+          .dashboardSummaryCards > .card {
             width: 100%;
             min-width: 0;
             float: none;
           }
 
           @media (max-width: 920px) {
-            .dashboardSummaryGrid {
+            .dashboardSummaryCards {
               grid-template-columns: 1fr;
             }
           }
