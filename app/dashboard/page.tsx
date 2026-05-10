@@ -357,15 +357,13 @@ export default async function DashboardPage({
           .dashboardSummaryBlock {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 18px;
+            gap: 14px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
           }
 
-          .dashboardSummaryDivider {
-            display: block;
-            width: 100%;
-            height: 1px;
-            background: var(--border);
-            grid-column: 1 / -1;
+          .dashboardSummaryBlock + .dashboardFullWidthSection {
+            margin-top: -4px;
           }
 
           .dashboardSummaryCards {
