@@ -10,11 +10,11 @@ export default function TermsPage() {
           <div style={{ display: 'grid', gap: 10 }}>
             <h1 style={{ margin: 0 }}>Terms for using TutoVera.</h1>
             <p className="small" style={{ margin: 0 }}>
-              Last updated: April 2026
+              Last updated: May 2026
             </p>
             <p className="small" style={{ margin: 0, maxWidth: 840 }}>
-              These Terms of Use govern access to and use of TutoVera as the product continues to
-              evolve. By using the service, you agree to use it responsibly and accept these terms.
+              These Terms of Use govern access to and use of TutoVera. By using the service, you
+              agree to use it responsibly and accept these terms.
             </p>
           </div>
         </section>
@@ -31,10 +31,10 @@ export default function TermsPage() {
           </div>
 
           <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Evolving service</h3>
+            <h3 style={{ marginTop: 0 }}>Service updates</h3>
             <p className="small" style={{ marginBottom: 0 }}>
               Features, workflows, availability, limits, and access rules may change as the product
-              continues to evolve.
+              is maintained and improved.
             </p>
           </div>
 
@@ -95,10 +95,10 @@ export default function TermsPage() {
 
       <Reveal delay={0.22}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
-          <h2 style={{ margin: 0 }}>Service development</h2>
+          <h2 style={{ margin: 0 }}>Service changes</h2>
           <p className="small" style={{ margin: 0 }}>
-            TutoVera is an evolving product. Features may be added, changed, limited, interrupted,
-            removed, or discontinued at any time as the service develops.
+            TutoVera may add, change, limit, interrupt, remove, or discontinue features, workflows,
+            plan access, limits, or parts of the service at any time.
           </p>
         </section>
       </Reveal>
@@ -107,14 +107,25 @@ export default function TermsPage() {
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Usage limits</h2>
           <p className="small" style={{ margin: 0 }}>
-            Free access may be subject to request limits, technical restrictions, admin controls,
-            provider-side limitations, or temporary suspension in order to protect reliability,
-            prevent abuse, and manage platform capacity.
+            Free and paid access may be subject to request limits, technical restrictions, admin
+            controls, provider-side limitations, temporary suspension, or plan-specific usage rules
+            in order to protect reliability, prevent abuse, and manage platform capacity.
           </p>
         </section>
       </Reveal>
 
       <Reveal delay={0.26}>
+        <section className="card" style={{ display: 'grid', gap: 14 }}>
+          <h2 style={{ margin: 0 }}>Accounts, plans, and billing</h2>
+          <p className="small" style={{ margin: 0 }}>
+            Some features may require an account or paid plan. Paid plan access, billing cycles,
+            renewal behavior, cancellation handling, and payment processing may depend on the payment
+            provider and the account state shown inside TutoVera.
+          </p>
+        </section>
+      </Reveal>
+
+      <Reveal delay={0.28}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>User content and saved sessions</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -126,7 +137,7 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.28}>
+      <Reveal delay={0.3}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Intellectual property</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -138,7 +149,7 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.3}>
+      <Reveal delay={0.32}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Third-party services</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -149,7 +160,7 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.32}>
+      <Reveal delay={0.34}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Disclaimer of warranties</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -159,7 +170,7 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.34}>
+      <Reveal delay={0.36}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Limitation of liability</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -170,13 +181,12 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.36}>
+      <Reveal delay={0.38}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Changes to these terms</h2>
           <p className="small" style={{ margin: 0 }}>
-            These terms may be updated from time to time as the product continues to evolve into a
-            more mature public service. Continued use of the product after updates means you accept
-            the revised terms.
+            These terms may be updated from time to time as TutoVera changes. Continued use of the
+            product after updates means you accept the revised terms.
           </p>
         </section>
       </Reveal>

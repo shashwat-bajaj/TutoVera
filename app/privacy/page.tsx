@@ -10,12 +10,11 @@ export default function PrivacyPage() {
           <div style={{ display: 'grid', gap: 10 }}>
             <h1 style={{ margin: 0 }}>How TutoVera handles information.</h1>
             <p className="small" style={{ margin: 0 }}>
-              Last updated: April 2026
+              Last updated: May 2026
             </p>
             <p className="small" style={{ margin: 0, maxWidth: 840 }}>
-              TutoVera is an evolving learning product. This Privacy Policy explains what
-              information may be collected, how it may be used, and how it is handled while the
-              platform continues to develop.
+              TutoVera is a learning support product. This Privacy Policy explains what information
+              may be collected, how it may be used, and how it is handled when you use the platform.
             </p>
           </div>
         </section>
@@ -26,8 +25,8 @@ export default function PrivacyPage() {
           <div className="card innerFeatureCard">
             <h3 style={{ marginTop: 0 }}>Product operation</h3>
             <p className="small" style={{ marginBottom: 0 }}>
-              Some information is used to run the tutor, support sign-in, save sessions, and keep the
-              product functioning normally.
+              Some information is used to run the tutor, support sign-in, save sessions, process
+              account activity, and keep the product functioning normally.
             </p>
           </div>
 
@@ -60,8 +59,8 @@ export default function PrivacyPage() {
             <div className="card featureCard">
               <h3 style={{ marginTop: 0 }}>Account details</h3>
               <p className="small" style={{ marginBottom: 0 }}>
-                This may include your email address and sign-in related account information when you
-                create or use an account.
+                This may include your email address, name, username, account role, sign-in details,
+                and related account information when you create or use an account.
               </p>
             </div>
 
@@ -89,8 +88,9 @@ export default function PrivacyPage() {
           <h2 style={{ margin: 0 }}>How information may be used</h2>
           <p className="small" style={{ margin: 0 }}>
             Submitted information may be used to operate the tutor, save session history, support
-            account features, improve product quality, understand product usage, reduce abuse,
-            diagnose technical issues, and help shape subject branches, tools, and workflows.
+            account features, process plan access, improve product quality, understand product usage,
+            reduce abuse, diagnose technical issues, and shape subject branches, tools, and
+            workflows.
           </p>
         </section>
       </Reveal>
@@ -122,10 +122,10 @@ export default function PrivacyPage() {
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Data retention</h2>
           <p className="small" style={{ margin: 0 }}>
-            Early access submissions, saved history, signup information, contact messages, and
-            related product data may be retained for development, debugging, analytics, product
-            improvement, and service continuity unless deletion is requested and technically
-            feasible.
+            Updates-list submissions, saved history, signup information, profile information, contact
+            messages, billing records, and related product data may be retained for account support,
+            debugging, analytics, product improvement, legal compliance, and service continuity
+            unless deletion is requested and technically feasible.
           </p>
         </section>
       </Reveal>
@@ -145,8 +145,8 @@ export default function PrivacyPage() {
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Privacy questions</h2>
           <p className="small" style={{ margin: 0 }}>
-            For privacy-related questions, feedback, or deletion requests, please use the contact page
-            as the product continues to expand.
+            For privacy-related questions, feedback, or deletion requests, please use the contact
+            page.
           </p>
 
           <div className="buttonRow">

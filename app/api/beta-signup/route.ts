@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Could not save early access interest.' },
+      { error: error?.message || 'Could not save update-list interest.' },
       { status: 500 }
     );
   }
