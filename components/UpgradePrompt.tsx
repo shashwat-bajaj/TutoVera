@@ -11,7 +11,7 @@ type UpgradePromptProps = {
 
 export default function UpgradePrompt({
   title = 'Upgrade to unlock this feature.',
-  description = 'This feature is planned for paid TutoVera plans so regular learners can access higher limits and more advanced study tools.',
+  description = 'This feature is included with paid TutoVera plans so regular learners can access higher limits and more advanced study tools.',
   featureLabel = 'Paid feature',
   recommendedPlan = 'plus',
   compact = false

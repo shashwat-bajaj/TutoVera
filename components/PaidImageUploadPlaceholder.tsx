@@ -19,8 +19,8 @@ export default function PaidImageUploadPlaceholder({
       title="Image and worksheet support is included in Plus and Pro."
       description={
         isParent
-          ? 'Parent workspaces will support worksheet photos and image-based questions for paid plans, so adults can get clearer guidance from a child’s actual work.'
-          : 'Student workspaces will support worksheet photos, screenshots, and image-based questions for paid plans. Free users can continue using text-based tutoring across all subjects.'
+          ? 'Upgrade to Plus or Pro to attach worksheet photos and image-based questions so TutoVera can help explain a child’s actual work.'
+          : 'Upgrade to Plus or Pro to attach worksheet photos, screenshots, and image-based questions. Free users can continue using text-based tutoring across all subjects.'
       }
     />
   );

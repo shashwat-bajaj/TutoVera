@@ -7,13 +7,22 @@ create table if not exists subscriptions (
   plan text not null default 'free',
   billing_cycle text,
   status text not null default 'inactive',
+  billing_provider text not null default 'paypal',
+  billing_mode text not null default 'manual',
   paypal_subscription_id text unique,
   paypal_plan_id text,
   paypal_status text,
   paypal_payer_id text,
+  paypal_payment_token_id text,
+  paypal_order_id text,
+  paypal_capture_id text,
   current_period_start timestamptz,
   current_period_end timestamptz,
+  next_renewal_at timestamptz,
+  last_renewal_at timestamptz,
+  renewal_attempt_count integer not null default 0,
   cancel_at_period_end boolean not null default false,
+  cancelled_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -157,8 +166,40 @@ create table if not exists learner_sessions (
   user_id uuid,
   conversation_id uuid,
   subject text not null default 'math',
-  turn_index integer
+  turn_index integer,
+  has_image boolean not null default false,
+  image_mime_type text,
+  image_size_bytes integer,
+  image_original_name text,
+  image_plan text
 );
+
+alter table learner_sessions
+add column if not exists user_id uuid;
+
+alter table learner_sessions
+add column if not exists conversation_id uuid;
+
+alter table learner_sessions
+add column if not exists subject text not null default 'math';
+
+alter table learner_sessions
+add column if not exists turn_index integer;
+
+alter table learner_sessions
+add column if not exists has_image boolean not null default false;
+
+alter table learner_sessions
+add column if not exists image_mime_type text;
+
+alter table learner_sessions
+add column if not exists image_size_bytes integer;
+
+alter table learner_sessions
+add column if not exists image_original_name text;
+
+alter table learner_sessions
+add column if not exists image_plan text;
 
 create table if not exists learner_mistakes (
   id uuid primary key default gen_random_uuid(),
@@ -226,6 +267,30 @@ create table if not exists paypal_expanded_orders (
   updated_at timestamptz not null default now()
 );
 
+alter table paypal_expanded_orders
+add column if not exists user_id uuid;
+
+alter table paypal_expanded_orders
+add column if not exists paypal_capture_id text;
+
+alter table paypal_expanded_orders
+add column if not exists paypal_payment_token_id text;
+
+alter table paypal_expanded_orders
+add column if not exists paypal_status text;
+
+alter table paypal_expanded_orders
+add column if not exists raw_create_payload jsonb;
+
+alter table paypal_expanded_orders
+add column if not exists raw_capture_payload jsonb;
+
+alter table paypal_expanded_orders
+add column if not exists captured_at timestamptz;
+
+alter table paypal_expanded_orders
+add column if not exists updated_at timestamptz not null default now();
+
 create table if not exists paypal_payment_methods (
   id uuid primary key default gen_random_uuid(),
   user_id uuid,
@@ -243,6 +308,36 @@ create table if not exists paypal_payment_methods (
   updated_at timestamptz not null default now()
 );
 
+alter table paypal_payment_methods
+add column if not exists user_id uuid;
+
+alter table paypal_payment_methods
+add column if not exists payment_source text not null default 'card';
+
+alter table paypal_payment_methods
+add column if not exists payer_id text;
+
+alter table paypal_payment_methods
+add column if not exists brand text;
+
+alter table paypal_payment_methods
+add column if not exists last_digits text;
+
+alter table paypal_payment_methods
+add column if not exists expiry_month text;
+
+alter table paypal_payment_methods
+add column if not exists expiry_year text;
+
+alter table paypal_payment_methods
+add column if not exists status text not null default 'active';
+
+alter table paypal_payment_methods
+add column if not exists raw_payload jsonb;
+
+alter table paypal_payment_methods
+add column if not exists updated_at timestamptz not null default now();
+
 create table if not exists billing_events (
   id uuid primary key default gen_random_uuid(),
   user_id uuid,
@@ -259,15 +354,12 @@ create table if not exists billing_events (
   paypal_capture_id text,
   paypal_payment_token_id text,
   error_message text,
-  metadata jsonb default '{}'::jsonb,
+  metadata jsonb,
   created_at timestamptz not null default now()
 );
 
 alter table billing_events
 add column if not exists user_id uuid;
-
-alter table billing_events
-add column if not exists email text;
 
 alter table billing_events
 add column if not exists subscription_id uuid references subscriptions(id) on delete set null;
@@ -285,7 +377,10 @@ alter table billing_events
 add column if not exists amount_cents integer;
 
 alter table billing_events
-add column if not exists currency text default 'USD';
+add column if not exists currency text not null default 'USD';
+
+alter table billing_events
+add column if not exists status text not null default 'recorded';
 
 alter table billing_events
 add column if not exists paypal_order_id text;
@@ -300,43 +395,7 @@ alter table billing_events
 add column if not exists error_message text;
 
 alter table billing_events
-add column if not exists metadata jsonb default '{}'::jsonb;
-
-alter table beta_signups enable row level security;
-
-alter table contact_messages enable row level security;
-
-alter table profiles enable row level security;
-
-alter table paypal_webhook_events enable row level security;
-
-alter table paypal_expanded_orders enable row level security;
-
-alter table paypal_payment_methods enable row level security;
-
-alter table billing_events enable row level security;
-
-drop policy if exists profiles_select_own on profiles;
-
-create policy profiles_select_own
-on profiles
-for select
-using (auth.uid() = user_id);
-
-drop policy if exists profiles_insert_own on profiles;
-
-create policy profiles_insert_own
-on profiles
-for insert
-with check (auth.uid() = user_id);
-
-drop policy if exists profiles_update_own on profiles;
-
-create policy profiles_update_own
-on profiles
-for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+add column if not exists metadata jsonb;
 
 create index if not exists learner_conversations_subject_idx
 on learner_conversations(subject);
@@ -350,25 +409,37 @@ on learner_conversations(user_id, subject, updated_at desc);
 create index if not exists learner_sessions_conversation_subject_idx
 on learner_sessions(conversation_id, subject);
 
-create index if not exists beta_signups_created_at_idx
+create index if not exists learner_sessions_user_image_created_idx
+on learner_sessions(user_id, has_image, created_at desc);
+
+create index if not exists learner_sessions_email_image_created_idx
+on learner_sessions(email, has_image, created_at desc);
+
+create index if not exists learner_sessions_user_created_idx
+on learner_sessions(user_id, created_at desc);
+
+create index if not exists learner_sessions_email_created_idx
+on learner_sessions(email, created_at desc);
+
+create index if not exists learner_sessions_ip_created_idx
+on learner_sessions(ip_address, created_at desc);
+
+create index if not exists learner_sessions_conversation_turn_idx
+on learner_sessions(conversation_id, turn_index);
+
+create index if not exists beta_signups_created_idx
 on beta_signups(created_at desc);
 
-create index if not exists beta_signups_email_idx
-on beta_signups(email);
-
-create index if not exists contact_messages_created_at_idx
+create index if not exists contact_messages_created_idx
 on contact_messages(created_at desc);
-
-create index if not exists contact_messages_email_idx
-on contact_messages(email);
 
 create index if not exists paypal_webhook_events_event_type_idx
 on paypal_webhook_events(event_type);
 
-create index if not exists paypal_webhook_events_resource_id_idx
+create index if not exists paypal_webhook_events_resource_idx
 on paypal_webhook_events(paypal_resource_id);
 
-create index if not exists paypal_webhook_events_created_at_idx
+create index if not exists paypal_webhook_events_created_idx
 on paypal_webhook_events(created_at desc);
 
 create index if not exists paypal_expanded_orders_email_idx
@@ -392,20 +463,20 @@ on paypal_payment_methods(user_id);
 create index if not exists paypal_payment_methods_status_idx
 on paypal_payment_methods(status);
 
-create index if not exists billing_events_email_idx
-on billing_events(email);
+create index if not exists billing_events_email_created_idx
+on billing_events(email, created_at desc);
 
-create index if not exists billing_events_user_id_idx
-on billing_events(user_id);
+create index if not exists billing_events_user_created_idx
+on billing_events(user_id, created_at desc);
 
-create index if not exists billing_events_subscription_id_idx
-on billing_events(subscription_id);
-
-create index if not exists billing_events_provider_idx
-on billing_events(provider);
+create index if not exists billing_events_subscription_created_idx
+on billing_events(subscription_id, created_at desc);
 
 create index if not exists billing_events_event_type_idx
 on billing_events(event_type);
 
-create index if not exists billing_events_created_at_idx
-on billing_events(created_at desc);
+create index if not exists billing_events_paypal_order_idx
+on billing_events(paypal_order_id);
+
+create index if not exists billing_events_paypal_payment_token_idx
+on billing_events(paypal_payment_token_id);
