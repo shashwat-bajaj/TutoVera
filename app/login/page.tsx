@@ -20,6 +20,15 @@ function getFriendlyError(value: string | null) {
   return '';
 }
 
+function getSafeNext(value: string | null) {
+  if (!value) return '/account';
+
+  if (!value.startsWith('/')) return '/account';
+  if (value.startsWith('//')) return '/account';
+
+  return value;
+}
+
 function cleanUsername(value: string) {
   return value.trim().replace(/\s+/g, '').toLowerCase();
 }
@@ -34,7 +43,7 @@ function LoginPageInner() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  const nextPath = searchParams.get('next') || '/account';
+  const nextPath = getSafeNext(searchParams.get('next'));
   const errorMessage = getFriendlyError(searchParams.get('error'));
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -91,7 +100,7 @@ function LoginPageInner() {
       }
 
       if (!isValidUsername(normalizedUsername)) {
-        setStatus('Display names can use 3–32 letters, numbers, dots, underscores, or hyphens.');
+        setStatus('Display usernames can use 3–32 letters, numbers, dots, underscores, or hyphens.');
         return;
       }
     }
