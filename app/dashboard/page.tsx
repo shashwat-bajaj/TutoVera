@@ -153,8 +153,6 @@ export default async function DashboardPage({
       </section>
 
       <section className="dashboardSummaryBlock" aria-label="Dashboard summary">
-        <div className="dashboardSummaryDivider" aria-hidden="true" />
-
         <div className="dashboardSummaryCards">
           <div className="card innerFeatureCard">
             <h3 style={{ marginTop: 0 }}>Update-list signups</h3>
