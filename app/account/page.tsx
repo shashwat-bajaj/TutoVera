@@ -19,6 +19,63 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+function getCurrentMonthStartIso() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
+
+function getRemaining(limit: number, used: number) {
+  return Math.max(0, Math.max(0, limit) - Math.max(0, used));
+}
+
+function getTutorUsageMessage({
+  used,
+  limit,
+  remaining
+}: {
+  used: number;
+  limit: number;
+  remaining: number;
+}) {
+  if (remaining <= 0) {
+    return `Limit reached: ${used}/${limit} used in the last 24 hours.`;
+  }
+
+  if (limit <= 10 && remaining <= 2) {
+    return `Heads up: ${remaining} tutor ${remaining === 1 ? 'request' : 'requests'} left in this 24-hour period.`;
+  }
+
+  if (limit > 10 && remaining <= 10) {
+    return `Heads up: ${remaining} tutor ${remaining === 1 ? 'request' : 'requests'} left in this 24-hour period.`;
+  }
+
+  return `${remaining} remaining in this 24-hour period.`;
+}
+
+function getImageUsageMessage({
+  used,
+  limit,
+  remaining
+}: {
+  used: number;
+  limit: number;
+  remaining: number;
+}) {
+  if (limit <= 0) {
+    return 'Upgrade to Plus or Pro to use worksheet and image uploads.';
+  }
+
+  if (remaining <= 0) {
+    return `Limit reached: ${used}/${limit} used this month.`;
+  }
+
+  if (remaining <= 10) {
+    return `Heads up: ${remaining} image ${remaining === 1 ? 'upload' : 'uploads'} left this month.`;
+  }
+
+  return `${remaining} remaining this month.`;
+}
+
 export default async function AccountPage() {
   const supabaseAuth = await createClient();
   const {
@@ -43,6 +100,37 @@ export default async function AccountPage() {
       email: user.email || null
     })
   ]);
+
+  const since24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const currentMonthStart = getCurrentMonthStartIso();
+
+  const [tutorUsageResult, imageUsageResult] = await Promise.all([
+    supabase
+      .from('learner_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', since24Hours),
+    supabase
+      .from('learner_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('has_image', true)
+      .gte('created_at', currentMonthStart)
+  ]);
+
+  if (tutorUsageResult.error) {
+    console.error('ACCOUNT TUTOR USAGE COUNT ERROR:', tutorUsageResult.error);
+  }
+
+  if (imageUsageResult.error) {
+    console.error('ACCOUNT IMAGE USAGE COUNT ERROR:', imageUsageResult.error);
+  }
+
+  const tutorRequestsUsed = tutorUsageResult.count || 0;
+  const imageUploadsUsed = imageUsageResult.count || 0;
+
+  const tutorRequestsRemaining = getRemaining(planAccess.dailyTutorLimit, tutorRequestsUsed);
+  const imageUploadsRemaining = getRemaining(planAccess.imageUploadsPerMonth, imageUploadsUsed);
 
   const displayName = getProfileDisplayName({ profile, user });
   const planName = formatPlanName(planAccess.plan);
@@ -120,23 +208,37 @@ export default async function AccountPage() {
               </p>
             </div>
 
-            <div className="card innerFeatureCard">
-              <p className="small" style={{ margin: '0 0 4px' }}>
+            <div className="card innerFeatureCard" style={{ display: 'grid', gap: 8 }}>
+              <p className="small" style={{ margin: 0 }}>
                 <strong>Tutor requests</strong>
               </p>
               <p className="small" style={{ margin: 0 }}>
-                {planAccess.dailyTutorLimit}/day
+                {tutorRequestsUsed}/{planAccess.dailyTutorLimit} used
+              </p>
+              <p className="small" style={{ margin: 0 }}>
+                {getTutorUsageMessage({
+                  used: tutorRequestsUsed,
+                  limit: planAccess.dailyTutorLimit,
+                  remaining: tutorRequestsRemaining
+                })}
               </p>
             </div>
 
-            <div className="card innerFeatureCard">
-              <p className="small" style={{ margin: '0 0 4px' }}>
+            <div className="card innerFeatureCard" style={{ display: 'grid', gap: 8 }}>
+              <p className="small" style={{ margin: 0 }}>
                 <strong>Image support</strong>
               </p>
               <p className="small" style={{ margin: 0 }}>
                 {planAccess.imageUploadsPerMonth > 0
-                  ? `${planAccess.imageUploadsPerMonth}/month`
+                  ? `${imageUploadsUsed}/${planAccess.imageUploadsPerMonth} used`
                   : 'Not included'}
+              </p>
+              <p className="small" style={{ margin: 0 }}>
+                {getImageUsageMessage({
+                  used: imageUploadsUsed,
+                  limit: planAccess.imageUploadsPerMonth,
+                  remaining: imageUploadsRemaining
+                })}
               </p>
             </div>
           </div>
