@@ -19,51 +19,11 @@ function getParentWorkspaceDescription(subjectKey: string) {
   }
 }
 
-function getParentWorkspaceDetails(subjectKey: string) {
-  switch (subjectKey) {
-    case 'math':
-      return [
-        'Simple explanations parents can say aloud',
-        'Guided hints without just giving the answer',
-        'Likely mistake and misconception support',
-        'Short examples and practice prompts'
-      ];
-    case 'physics':
-      return [
-        'Concepts explained before formulas',
-        'Help with variables, units, and setup',
-        'Parent-friendly analogies and examples',
-        'Support for common physics confusions'
-      ];
-    case 'chemistry':
-      return [
-        'Reaction and equation explanations',
-        'Balancing and conversion guidance',
-        'Gentle ways to explain tricky steps',
-        'Practice prompts parents can use'
-      ];
-    case 'biology':
-      return [
-        'Vocabulary explained in everyday language',
-        'Process comparisons like mitosis vs. meiosis',
-        'Systems and relationships explained clearly',
-        'Review prompts for child-friendly study'
-      ];
-    default:
-      return [
-        'Parent-friendly explanation support',
-        'Talking points and examples',
-        'Likely mistake guidance',
-        'Practice prompts for follow-up'
-      ];
-  }
-}
-
 export default function ParentsPage() {
   const activeSubjects = Object.values(subjects).filter((subject) => subject.status === 'active');
 
   return (
-    <div className="grid parentHubPage" style={{ gap: 24 }}>
+    <div className="grid" style={{ gap: 24 }}>
       <Reveal delay={0.02}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
           <span className="badge">Parent workspaces</span>
@@ -80,52 +40,30 @@ export default function ParentsPage() {
       </Reveal>
 
       <Reveal delay={0.08}>
-        <section className="parentSubjectAccordion" aria-label="Parent subject workspaces">
-          {activeSubjects.map((subject, index) => (
-            <details
+        <section className="grid cols-3">
+          {activeSubjects.map((subject) => (
+            <Link
               key={subject.key}
-              className="card subjectWorkspaceDetails"
-              open={index === 0}
+              href={`${subject.path}/parents`}
+              className="card featureCard"
+              style={{
+                textDecoration: 'none',
+                color: 'inherit',
+                borderColor: 'var(--accent-border)'
+              }}
             >
-              <summary className="subjectWorkspaceSummary">
-                <span className="subjectWorkspaceSummaryMain">
-                  <span>
-                    <span className="badge">{subject.name} Parents</span>
-                    <h2 style={{ margin: '8px 0 0' }}>{subject.name}</h2>
-                  </span>
+              <span className="badge">{subject.name} Parents</span>
 
-                  <span className="small subjectWorkspaceSummaryText">
-                    {getParentWorkspaceDescription(subject.key)}
-                  </span>
-                </span>
-              </summary>
+              <h2 style={{ marginBottom: 8 }}>{subject.name}</h2>
 
-              <div className="subjectWorkspacePanel">
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <p className="small" style={{ margin: 0 }}>
-                    {getParentWorkspaceDescription(subject.key)}
-                  </p>
+              <p className="small" style={{ margin: 0 }}>
+                {getParentWorkspaceDescription(subject.key)}
+              </p>
 
-                  <ul className="list" style={{ marginTop: 0 }}>
-                    {getParentWorkspaceDetails(subject.key).map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="buttonRow">
-                  <Link className="btn" href={`${subject.path}/parents`}>
-                    Open {subject.name} Parent Workspace
-                  </Link>
-                  <Link className="btn secondary" href={`${subject.path}/history`}>
-                    View {subject.name} History
-                  </Link>
-                  <Link className="btn secondary" href={subject.path}>
-                    About {subject.name}
-                  </Link>
-                </div>
-              </div>
-            </details>
+              <p className="small" style={{ margin: '14px 0 0' }}>
+                <strong>Open {subject.name} Parent Workspace →</strong>
+              </p>
+            </Link>
           ))}
         </section>
       </Reveal>
@@ -150,74 +88,6 @@ export default function ParentsPage() {
           </div>
         </section>
       </Reveal>
-
-      <style>
-        {`
-          .parentSubjectAccordion {
-            display: grid;
-            gap: 14px;
-          }
-
-          .subjectWorkspaceDetails {
-            display: grid;
-            gap: 0;
-            overflow: hidden;
-          }
-
-          .subjectWorkspaceSummary {
-            cursor: pointer;
-            list-style: none;
-          }
-
-          .subjectWorkspaceSummary::-webkit-details-marker {
-            display: none;
-          }
-
-          .subjectWorkspaceSummary::after {
-            content: '+';
-            float: right;
-            color: var(--text-soft);
-            font-weight: 800;
-            margin-top: -34px;
-          }
-
-          .subjectWorkspaceDetails[open] .subjectWorkspaceSummary::after {
-            content: '−';
-          }
-
-          .subjectWorkspaceSummaryMain {
-            display: grid;
-            grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
-            gap: 18px;
-            align-items: center;
-            padding-right: 24px;
-          }
-
-          .subjectWorkspaceSummaryText {
-            margin: 0;
-            color: var(--text-soft);
-          }
-
-          .subjectWorkspacePanel {
-            display: grid;
-            gap: 16px;
-            padding-top: 16px;
-            margin-top: 16px;
-            border-top: 1px solid var(--border);
-          }
-
-          @media (max-width: 760px) {
-            .subjectWorkspaceSummaryMain {
-              grid-template-columns: 1fr;
-              gap: 10px;
-            }
-
-            .subjectWorkspaceSummary::after {
-              margin-top: -28px;
-            }
-          }
-        `}
-      </style>
     </div>
   );
 }
