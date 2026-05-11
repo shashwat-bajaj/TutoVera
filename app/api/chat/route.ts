@@ -556,7 +556,7 @@ async function generateTutorAnswerWithRetry(prompt: string, image?: ImageRequest
         : prompt;
 
       const response = await ai.models.generateContent({
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+        model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
         contents
       });
 
@@ -631,7 +631,7 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY is missing in .env.local' },
+        { error: 'GEMINI_API_KEY is missing in environment variables.' },
         { status: 500 }
       );
     }
@@ -765,7 +765,7 @@ export async function POST(request: NextRequest) {
     if (activeConversationId) {
       const { data: activeConversation, error: conversationLookupError } = await supabase
         .from('learner_conversations')
-        .select('id, subject')
+        .select('id, subject, user_id, email')
         .eq('id', activeConversationId)
         .eq('subject', activeSubject)
         .maybeSingle();
@@ -782,6 +782,29 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'Conversation was not found for this subject.' },
           { status: 404 }
+        );
+      }
+
+      const conversationUserId =
+        typeof activeConversation.user_id === 'string' ? activeConversation.user_id : null;
+
+      const conversationEmail =
+        typeof activeConversation.email === 'string'
+          ? activeConversation.email.trim().toLowerCase()
+          : '';
+
+      const canUseConversation = user?.id
+        ? conversationUserId === user.id
+        : conversationUserId
+          ? false
+          : conversationEmail
+            ? Boolean(normalizedEmail && conversationEmail === normalizedEmail)
+            : true;
+
+      if (!canUseConversation) {
+        return NextResponse.json(
+          { error: 'Not authorized to continue this conversation.' },
+          { status: 403 }
         );
       }
 
