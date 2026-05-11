@@ -333,8 +333,7 @@ function AudienceHistoryDetails({
   firstPromptByConversation,
   historyHref,
   historyMode,
-  fallbackEmail,
-  defaultOpen
+  fallbackEmail
 }: {
   audienceGroup: AudienceGroup;
   selectedConversation: ConversationRecord | null;
@@ -342,10 +341,9 @@ function AudienceHistoryDetails({
   historyHref: string;
   historyMode: 'account' | 'email' | 'none';
   fallbackEmail: string;
-  defaultOpen: boolean;
 }) {
   return (
-    <details className="historyAudienceDetails" open={defaultOpen}>
+    <details className="historyAudienceDetails">
       <summary className="historyAudienceSummary">
         <span className="historyAudienceSummaryMain">
           <strong>{audienceGroup.label}</strong>
@@ -516,14 +514,6 @@ export default async function HistoryPageContent({
   const conversationGroups = buildConversationGroups(conversations);
   const subjectAudienceGroups = buildAudienceGroups(conversations);
   const isGlobalHistory = !subject;
-  const firstNonEmptySubject = conversationGroups.find((group) => group.conversations.length > 0)
-    ?.subject;
-
-  const defaultOpenSubject = selectedConversation?.subject || firstNonEmptySubject || '';
-  const firstNonEmptyAudience = subjectAudienceGroups.find((group) => group.conversations.length > 0)
-    ?.audience;
-  const selectedAudienceKey = selectedConversation ? getAudienceKey(selectedConversation.audience) : '';
-  const defaultOpenAudience = selectedAudienceKey || firstNonEmptyAudience || 'student';
 
   const selectedContinueHref = selectedConversation ? buildWorkspaceHref(selectedConversation) : '';
 
@@ -654,22 +644,9 @@ export default async function HistoryPageContent({
                 <div className="subjectHistoryAccordion">
                   {conversationGroups.map((group) => {
                     const audienceGroups = buildAudienceGroups(group.conversations);
-                    const firstNonEmptyGroupAudience = audienceGroups.find(
-                      (audienceGroup) => audienceGroup.conversations.length > 0
-                    )?.audience;
-                    const selectedGroupAudience =
-                      selectedConversation?.subject === group.subject
-                        ? getAudienceKey(selectedConversation.audience)
-                        : '';
-                    const defaultOpenGroupAudience =
-                      selectedGroupAudience || firstNonEmptyGroupAudience || 'student';
 
                     return (
-                      <details
-                        key={group.subject}
-                        className="subjectHistoryDetails"
-                        open={group.subject === defaultOpenSubject}
-                      >
+                      <details key={group.subject} className="subjectHistoryDetails">
                         <summary className="subjectHistorySummary">
                           <span className="subjectHistorySummaryMain">
                             <strong>{group.subjectName}</strong>
@@ -698,7 +675,6 @@ export default async function HistoryPageContent({
                                   historyHref={historyHref}
                                   historyMode={historyMode}
                                   fallbackEmail={fallbackEmail}
-                                  defaultOpen={audienceGroup.audience === defaultOpenGroupAudience}
                                 />
                               ))}
                             </div>
@@ -719,7 +695,6 @@ export default async function HistoryPageContent({
                       historyHref={historyHref}
                       historyMode={historyMode}
                       fallbackEmail={fallbackEmail}
-                      defaultOpen={audienceGroup.audience === defaultOpenAudience}
                     />
                   ))}
                 </div>
