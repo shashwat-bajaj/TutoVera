@@ -68,12 +68,20 @@ function makePreview(text: string, max = 110) {
 
 function buildHistoryHref({
   historyHref,
+  historyMode,
+  fallbackEmail,
   conversationId
 }: {
   historyHref: string;
+  historyMode: 'account' | 'email' | 'none';
+  fallbackEmail: string;
   conversationId: string;
 }) {
-  return `${historyHref}?conversation=${conversationId}`;
+  if (historyMode === 'account') {
+    return `${historyHref}?conversation=${conversationId}`;
+  }
+
+  return `${historyHref}?email=${encodeURIComponent(fallbackEmail)}&conversation=${conversationId}`;
 }
 
 function getSubjectName(value: string) {
@@ -154,28 +162,30 @@ function getHistoryDescription({
   if (subject) {
     return (
       <>
-        Sign in to view your saved {subjectName} conversations. TutoVera history is private and tied
-        to your account.
+        You are not signed in yet. Legacy email history is view-only. Use it for older {subjectName}{' '}
+        conversations that were not attached to an account yet, then log in to continue account-linked
+        sessions.
       </>
     );
   }
 
   return (
     <>
-      Sign in to view your saved conversations. TutoVera history is private and tied to your account.
+      You are not signed in yet. Legacy email history is view-only. Use it for older conversations
+      that were not attached to an account yet, then log in to continue account-linked sessions.
     </>
   );
 }
 
 function getEmptyMessage(subject?: SubjectKey) {
   if (!subject) {
-    return 'No saved conversations were found for your account yet.';
+    return 'No saved conversations were found for this history view.';
   }
 
   const subjectConfig = getSubjectConfig(subject);
   const subjectName = subjectConfig?.name.toLowerCase() || subject;
 
-  return `No saved ${subjectName} conversations were found for your account yet.`;
+  return `No saved ${subjectName} conversations were found for this history view.`;
 }
 
 function buildConversationGroups(conversations: ConversationRecord[]): ConversationGroup[] {
@@ -255,15 +265,21 @@ function ConversationHistoryCard({
   conversation,
   firstPrompt,
   isActive,
-  historyHref
+  historyHref,
+  historyMode,
+  fallbackEmail
 }: {
   conversation: ConversationRecord;
   firstPrompt: string;
   isActive: boolean;
   historyHref: string;
+  historyMode: 'account' | 'email' | 'none';
+  fallbackEmail: string;
 }) {
   const viewHref = buildHistoryHref({
     historyHref,
+    historyMode,
+    fallbackEmail,
     conversationId: conversation.id
   });
 
@@ -289,17 +305,89 @@ function ConversationHistoryCard({
           Preview Thread
         </a>
 
-        <a className="btn" href={continueHref}>
-          Continue in Workspace
-        </a>
+        {historyMode === 'account' ? (
+          <a className="btn" href={continueHref}>
+            Continue in Workspace
+          </a>
+        ) : (
+          <a className="btn secondary" href="/login">
+            Log in to Continue
+          </a>
+        )}
 
-        <DeleteConversationButton
-          conversationId={conversation.id}
-          redirectHref={historyHref}
-          compact
-        />
+        {historyMode === 'account' ? (
+          <DeleteConversationButton
+            conversationId={conversation.id}
+            redirectHref={historyHref}
+            compact
+          />
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function AudienceHistoryDetails({
+  audienceGroup,
+  selectedConversation,
+  firstPromptByConversation,
+  historyHref,
+  historyMode,
+  fallbackEmail,
+  defaultOpen
+}: {
+  audienceGroup: AudienceGroup;
+  selectedConversation: ConversationRecord | null;
+  firstPromptByConversation: Record<string, string>;
+  historyHref: string;
+  historyMode: 'account' | 'email' | 'none';
+  fallbackEmail: string;
+  defaultOpen: boolean;
+}) {
+  return (
+    <details className="historyAudienceDetails" open={defaultOpen}>
+      <summary className="historyAudienceSummary">
+        <span className="historyAudienceSummaryMain">
+          <strong>{audienceGroup.label}</strong>
+          <span className="small">
+            {audienceGroup.conversations.length}{' '}
+            {audienceGroup.conversations.length === 1 ? 'session' : 'sessions'}
+          </span>
+        </span>
+      </summary>
+
+      <div className="historyAudiencePanel">
+        {audienceGroup.conversations.length === 0 ? (
+          <div className="card questionSurface" style={{ padding: 14 }}>
+            <p className="small" style={{ margin: 0 }}>
+              No {audienceGroup.label.toLowerCase()} yet.
+            </p>
+          </div>
+        ) : (
+          <div className="sessionList">
+            {audienceGroup.conversations.map((conversation) => {
+              const isActive = selectedConversation?.id === conversation.id;
+              const firstPrompt = getConversationFirstPrompt({
+                conversation,
+                firstPromptByConversation
+              });
+
+              return (
+                <ConversationHistoryCard
+                  key={conversation.id}
+                  conversation={conversation}
+                  firstPrompt={firstPrompt}
+                  isActive={isActive}
+                  historyHref={historyHref}
+                  historyMode={historyMode}
+                  fallbackEmail={fallbackEmail}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -309,6 +397,7 @@ export default async function HistoryPageContent({
   subject
 }: HistoryPageContentProps) {
   const params = await searchParams;
+  const fallbackEmail = (params.email || '').trim().toLowerCase();
   const selectedConversationId = (params.conversation || '').trim();
 
   const authClient = await createAuthClient();
@@ -321,14 +410,37 @@ export default async function HistoryPageContent({
   let conversations: ConversationRecord[] = [];
   let turns: TurnRecord[] = [];
   let errorMessage = '';
+  let historyMode: 'account' | 'email' | 'none' = 'none';
   const firstPromptByConversation: Record<string, string> = {};
-  const loginHref = `/login?next=${encodeURIComponent(historyHref)}`;
 
   if (user?.id) {
+    historyMode = 'account';
+
     let query = supabase
       .from('learner_conversations')
       .select('id, title, audience, subject, created_at, updated_at')
       .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(80);
+
+    if (subject) {
+      query = query.eq('subject', subject);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      errorMessage = error.message;
+    } else {
+      conversations = (data || []) as ConversationRecord[];
+    }
+  } else if (fallbackEmail) {
+    historyMode = 'email';
+
+    let query = supabase
+      .from('learner_conversations')
+      .select('id, title, audience, subject, created_at, updated_at')
+      .eq('email', fallbackEmail)
       .order('updated_at', { ascending: false })
       .limit(80);
 
@@ -408,6 +520,10 @@ export default async function HistoryPageContent({
     ?.subject;
 
   const defaultOpenSubject = selectedConversation?.subject || firstNonEmptySubject || '';
+  const firstNonEmptyAudience = subjectAudienceGroups.find((group) => group.conversations.length > 0)
+    ?.audience;
+  const selectedAudienceKey = selectedConversation ? getAudienceKey(selectedConversation.audience) : '';
+  const defaultOpenAudience = selectedAudienceKey || firstNonEmptyAudience || 'student';
 
   const selectedContinueHref = selectedConversation ? buildWorkspaceHref(selectedConversation) : '';
 
@@ -416,7 +532,6 @@ export default async function HistoryPageContent({
       <Reveal delay={0.02}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
           <div style={{ display: 'grid', gap: 10 }}>
-            <span className="badge">History</span>
             <h1 style={{ margin: 0 }}>{getHistoryTitle(subject)}</h1>
             <p className="small" style={{ margin: 0, maxWidth: 860 }}>
               {getHistoryDescription({
@@ -432,23 +547,64 @@ export default async function HistoryPageContent({
         <Reveal delay={0.04}>
           <section className="card" style={{ display: 'grid', gap: 14 }}>
             <div style={{ display: 'grid', gap: 8 }}>
-              <h2 style={{ margin: 0 }}>Sign in to view history</h2>
-              <p className="small" style={{ margin: 0, maxWidth: 760 }}>
-                Saved conversations are private and tied to your TutoVera account. Log in to preview
-                older threads, continue sessions, and manage saved history.
+              <h2 style={{ margin: 0 }}>Load older email-based history</h2>
+              <p className="small" style={{ margin: 0 }}>
+                Legacy email history is view-only. Use it for older email-based conversations that
+                were not attached to an account yet. To continue saved sessions in the Student or
+                Parent workspace, please log in first.
               </p>
             </div>
 
-            <div className="buttonRow">
-              <a className="btn" href={loginHref}>
-                Log in
-              </a>
-              <a className="btn secondary" href="/subjects">
-                Explore Subjects
-              </a>
-            </div>
+            <form
+              method="GET"
+              className="historyLookupForm"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(220px, 420px) auto',
+                gap: 12,
+                alignItems: 'end',
+                justifyContent: 'start',
+                maxWidth: 820
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <label>Email</label>
+                <input
+                  name="email"
+                  type="email"
+                  defaultValue={fallbackEmail}
+                  placeholder="you@example.com"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div
+                className="buttonRow"
+                style={{
+                  flexWrap: 'nowrap',
+                  justifyContent: 'flex-start',
+                  alignItems: 'center'
+                }}
+              >
+                <button type="submit" style={{ whiteSpace: 'nowrap' }}>
+                  Load legacy email history
+                </button>
+                <a className="btn secondary" href="/login" style={{ whiteSpace: 'nowrap' }}>
+                  Log in instead
+                </a>
+              </div>
+            </form>
           </section>
         </Reveal>
+      ) : null}
+
+      {historyMode === 'none' ? (
+        <section className="card">
+          <p className="small" style={{ margin: 0 }}>
+            Sign in to view private history, or use the email lookup form for older email-based
+            conversations.
+          </p>
+        </section>
       ) : errorMessage ? (
         <section className="card">
           <p className="small" style={{ margin: 0 }}>
@@ -489,7 +645,8 @@ export default async function HistoryPageContent({
                 </h2>
                 <p className="small" style={{ margin: 0 }}>
                   {conversations.length} saved{' '}
-                  {conversations.length === 1 ? 'conversation' : 'conversations'} in your account.
+                  {conversations.length === 1 ? 'conversation' : 'conversations'}
+                  {historyMode === 'account' ? ' in your account.' : ' found from email lookup.'}
                 </p>
               </div>
 
@@ -497,6 +654,15 @@ export default async function HistoryPageContent({
                 <div className="subjectHistoryAccordion">
                   {conversationGroups.map((group) => {
                     const audienceGroups = buildAudienceGroups(group.conversations);
+                    const firstNonEmptyGroupAudience = audienceGroups.find(
+                      (audienceGroup) => audienceGroup.conversations.length > 0
+                    )?.audience;
+                    const selectedGroupAudience =
+                      selectedConversation?.subject === group.subject
+                        ? getAudienceKey(selectedConversation.audience)
+                        : '';
+                    const defaultOpenGroupAudience =
+                      selectedGroupAudience || firstNonEmptyGroupAudience || 'student';
 
                     return (
                       <details
@@ -524,46 +690,16 @@ export default async function HistoryPageContent({
                           ) : (
                             <div className="historyAudienceStack">
                               {audienceGroups.map((audienceGroup) => (
-                                <div key={audienceGroup.audience} className="historyAudienceGroup">
-                                  <div className="historyAudienceHeader">
-                                    <strong>{audienceGroup.label}</strong>
-                                    <span className="small">
-                                      {audienceGroup.conversations.length}{' '}
-                                      {audienceGroup.conversations.length === 1
-                                        ? 'session'
-                                        : 'sessions'}
-                                    </span>
-                                  </div>
-
-                                  {audienceGroup.conversations.length === 0 ? (
-                                    <div className="card questionSurface" style={{ padding: 14 }}>
-                                      <p className="small" style={{ margin: 0 }}>
-                                        No {audienceGroup.label.toLowerCase()} yet.
-                                      </p>
-                                    </div>
-                                  ) : (
-                                    <div className="sessionList">
-                                      {audienceGroup.conversations.map((conversation) => {
-                                        const isActive =
-                                          selectedConversation?.id === conversation.id;
-                                        const firstPrompt = getConversationFirstPrompt({
-                                          conversation,
-                                          firstPromptByConversation
-                                        });
-
-                                        return (
-                                          <ConversationHistoryCard
-                                            key={conversation.id}
-                                            conversation={conversation}
-                                            firstPrompt={firstPrompt}
-                                            isActive={isActive}
-                                            historyHref={historyHref}
-                                          />
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
+                                <AudienceHistoryDetails
+                                  key={audienceGroup.audience}
+                                  audienceGroup={audienceGroup}
+                                  selectedConversation={selectedConversation}
+                                  firstPromptByConversation={firstPromptByConversation}
+                                  historyHref={historyHref}
+                                  historyMode={historyMode}
+                                  fallbackEmail={fallbackEmail}
+                                  defaultOpen={audienceGroup.audience === defaultOpenGroupAudience}
+                                />
                               ))}
                             </div>
                           )}
@@ -575,43 +711,16 @@ export default async function HistoryPageContent({
               ) : (
                 <div className="historyAudienceStack">
                   {subjectAudienceGroups.map((audienceGroup) => (
-                    <div key={audienceGroup.audience} className="historyAudienceGroup">
-                      <div className="historyAudienceHeader">
-                        <strong>{audienceGroup.label}</strong>
-                        <span className="small">
-                          {audienceGroup.conversations.length}{' '}
-                          {audienceGroup.conversations.length === 1 ? 'session' : 'sessions'}
-                        </span>
-                      </div>
-
-                      {audienceGroup.conversations.length === 0 ? (
-                        <div className="card questionSurface" style={{ padding: 14 }}>
-                          <p className="small" style={{ margin: 0 }}>
-                            No {audienceGroup.label.toLowerCase()} yet.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="sessionList">
-                          {audienceGroup.conversations.map((conversation) => {
-                            const isActive = selectedConversation?.id === conversation.id;
-                            const firstPrompt = getConversationFirstPrompt({
-                              conversation,
-                              firstPromptByConversation
-                            });
-
-                            return (
-                              <ConversationHistoryCard
-                                key={conversation.id}
-                                conversation={conversation}
-                                firstPrompt={firstPrompt}
-                                isActive={isActive}
-                                historyHref={historyHref}
-                              />
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                    <AudienceHistoryDetails
+                      key={audienceGroup.audience}
+                      audienceGroup={audienceGroup}
+                      selectedConversation={selectedConversation}
+                      firstPromptByConversation={firstPromptByConversation}
+                      historyHref={historyHref}
+                      historyMode={historyMode}
+                      fallbackEmail={fallbackEmail}
+                      defaultOpen={audienceGroup.audience === defaultOpenAudience}
+                    />
                   ))}
                 </div>
               )}
@@ -645,21 +754,31 @@ export default async function HistoryPageContent({
                   </h2>
                   <p className="small" style={{ margin: 0 }}>
                     {selectedConversation
-                      ? 'Preview the full question-and-answer flow here, or continue the session in the correct workspace.'
+                      ? historyMode === 'account'
+                        ? 'Preview the full question-and-answer flow here, or continue the session in the correct workspace.'
+                        : 'Preview the full question-and-answer flow here. Legacy email history is view-only.'
                       : 'Select a saved session to preview the thread here.'}
                   </p>
                 </div>
 
                 {selectedConversation ? (
                   <div className="buttonRow" style={{ justifySelf: 'end' }}>
-                    <a className="btn" href={selectedContinueHref}>
-                      Continue in Workspace
-                    </a>
+                    {historyMode === 'account' ? (
+                      <a className="btn" href={selectedContinueHref}>
+                        Continue in Workspace
+                      </a>
+                    ) : (
+                      <a className="btn secondary" href="/login">
+                        Log in to Continue
+                      </a>
+                    )}
 
-                    <DeleteConversationButton
-                      conversationId={selectedConversation.id}
-                      redirectHref={historyHref}
-                    />
+                    {historyMode === 'account' ? (
+                      <DeleteConversationButton
+                        conversationId={selectedConversation.id}
+                        redirectHref={historyHref}
+                      />
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -672,8 +791,12 @@ export default async function HistoryPageContent({
                     createdAt={selectedConversation.created_at}
                     updatedAt={selectedConversation.updated_at}
                     turns={turns}
-                    showDeleteTurnControls
-                    redirectHref={`${historyHref}?conversation=${selectedConversation.id}`}
+                    showDeleteTurnControls={historyMode === 'account'}
+                    redirectHref={
+                      historyMode === 'account'
+                        ? `${historyHref}?conversation=${selectedConversation.id}`
+                        : undefined
+                    }
                     graphingEnabled={graphingEnabledForSelectedConversation}
                   />
                 ) : (
@@ -683,12 +806,12 @@ export default async function HistoryPageContent({
                 )
               ) : selectedConversationId ? (
                 <p className="small" style={{ margin: 0 }}>
-                  This selected conversation was not found in your account history.
+                  This selected conversation was not found in this history view.
                 </p>
               ) : (
                 <p className="small" style={{ margin: 0 }}>
-                  Choose a Student or Parent session from the left to preview it here. You can
-                  continue sessions from the matching workspace.
+                  Choose a Student or Parent session from the left to preview it here. Logged-in
+                  users can continue sessions from the matching workspace.
                 </p>
               )}
             </main>
@@ -756,26 +879,72 @@ export default async function HistoryPageContent({
 
           .historyAudienceStack {
             display: grid;
-            gap: 16px;
+            gap: 12px;
           }
 
-          .historyAudienceGroup {
-            display: grid;
-            gap: 10px;
+          .historyAudienceDetails {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: color-mix(in srgb, var(--surface) 84%, transparent);
+            overflow: hidden;
           }
 
-          .historyAudienceHeader {
+          .historyAudienceSummary {
+            cursor: pointer;
+            list-style: none;
+            padding: 12px 14px;
+          }
+
+          .historyAudienceSummary::-webkit-details-marker {
+            display: none;
+          }
+
+          .historyAudienceSummary::after {
+            content: '+';
+            float: right;
+            color: var(--text-soft);
+            font-weight: 700;
+            margin-top: -20px;
+          }
+
+          .historyAudienceDetails[open] .historyAudienceSummary::after {
+            content: '−';
+          }
+
+          .historyAudienceSummaryMain {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 12px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid var(--border);
+            padding-right: 18px;
+          }
+
+          .historyAudiencePanel {
+            display: grid;
+            gap: 12px;
+            padding: 0 14px 14px;
           }
 
           @media (max-width: 900px) {
             .historyLayout {
               grid-template-columns: 1fr !important;
+            }
+          }
+
+          @media (max-width: 760px) {
+            .historyLookupForm {
+              grid-template-columns: 1fr !important;
+              max-width: 100% !important;
+            }
+
+            .historyLookupForm .buttonRow {
+              flex-wrap: wrap !important;
+            }
+
+            .historyAudienceSummaryMain,
+            .subjectHistorySummaryMain {
+              align-items: flex-start;
+              flex-direction: column;
             }
           }
         `}
