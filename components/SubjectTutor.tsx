@@ -68,6 +68,16 @@ type AccountPlanAccess = {
   imageUploadsPerMonth: number;
   dailyTutorLimit: number;
   canUseImages: boolean;
+
+  tutorRequestsUsedLast24Hours: number;
+  tutorRequestsRemainingLast24Hours: number;
+  tutorRequestLimitWarning: boolean;
+  tutorRequestLimitReached: boolean;
+
+  imageUploadsUsedThisMonth: number;
+  imageUploadsRemainingThisMonth: number;
+  imageUploadLimitWarning: boolean;
+  imageUploadLimitReached: boolean;
 };
 
 const defaultPlanAccess: AccountPlanAccess = {
@@ -78,7 +88,17 @@ const defaultPlanAccess: AccountPlanAccess = {
   hasActivePaidAccess: false,
   imageUploadsPerMonth: 0,
   dailyTutorLimit: 10,
-  canUseImages: false
+  canUseImages: false,
+
+  tutorRequestsUsedLast24Hours: 0,
+  tutorRequestsRemainingLast24Hours: 10,
+  tutorRequestLimitWarning: false,
+  tutorRequestLimitReached: false,
+
+  imageUploadsUsedThisMonth: 0,
+  imageUploadsRemainingThisMonth: 0,
+  imageUploadLimitWarning: false,
+  imageUploadLimitReached: false
 };
 
 function ReadOnlyField({ value }: { value: string }) {
@@ -267,6 +287,90 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function getTutorUsageText(planAccess: AccountPlanAccess) {
+  if (!planAccess.signedIn) {
+    return 'Sign in to track usage and save history.';
+  }
+
+  if (planAccess.tutorRequestLimitReached) {
+    return `Tutor limit reached: ${planAccess.tutorRequestsUsedLast24Hours}/${planAccess.dailyTutorLimit} used in the last 24 hours.`;
+  }
+
+  if (planAccess.tutorRequestLimitWarning) {
+    return `Heads up: ${planAccess.tutorRequestsRemainingLast24Hours} tutor ${
+      planAccess.tutorRequestsRemainingLast24Hours === 1 ? 'request' : 'requests'
+    } left in this 24-hour period.`;
+  }
+
+  return `${planAccess.tutorRequestsUsedLast24Hours}/${planAccess.dailyTutorLimit} tutor requests used in the last 24 hours · ${planAccess.tutorRequestsRemainingLast24Hours} remaining.`;
+}
+
+function getImageUsageText(planAccess: AccountPlanAccess) {
+  if (!planAccess.canUseImages) {
+    return 'Image uploads are included with Plus and Pro.';
+  }
+
+  if (planAccess.imageUploadLimitReached) {
+    return `Image upload limit reached: ${planAccess.imageUploadsUsedThisMonth}/${planAccess.imageUploadsPerMonth} used this month.`;
+  }
+
+  if (planAccess.imageUploadLimitWarning) {
+    return `Heads up: ${planAccess.imageUploadsRemainingThisMonth} image ${
+      planAccess.imageUploadsRemainingThisMonth === 1 ? 'upload' : 'uploads'
+    } left this month.`;
+  }
+
+  return `${planAccess.imageUploadsUsedThisMonth}/${planAccess.imageUploadsPerMonth} image uploads used this month · ${planAccess.imageUploadsRemainingThisMonth} remaining.`;
+}
+
+function getUpdatedUsageAfterSuccess({
+  current,
+  usedImage
+}: {
+  current: AccountPlanAccess;
+  usedImage: boolean;
+}): AccountPlanAccess {
+  if (!current.signedIn) {
+    return current;
+  }
+
+  const tutorRequestsUsedLast24Hours = current.tutorRequestsUsedLast24Hours + 1;
+  const tutorRequestsRemainingLast24Hours = Math.max(
+    0,
+    current.dailyTutorLimit - tutorRequestsUsedLast24Hours
+  );
+  const tutorWarningThreshold = current.dailyTutorLimit <= 10 ? 2 : 10;
+
+  const imageUploadsUsedThisMonth = usedImage
+    ? current.imageUploadsUsedThisMonth + 1
+    : current.imageUploadsUsedThisMonth;
+  const imageUploadsRemainingThisMonth = Math.max(
+    0,
+    current.imageUploadsPerMonth - imageUploadsUsedThisMonth
+  );
+
+  return {
+    ...current,
+
+    tutorRequestsUsedLast24Hours,
+    tutorRequestsRemainingLast24Hours,
+    tutorRequestLimitWarning:
+      current.dailyTutorLimit > 0 &&
+      tutorRequestsRemainingLast24Hours > 0 &&
+      tutorRequestsRemainingLast24Hours <= tutorWarningThreshold,
+    tutorRequestLimitReached: current.dailyTutorLimit > 0 && tutorRequestsRemainingLast24Hours <= 0,
+
+    imageUploadsUsedThisMonth,
+    imageUploadsRemainingThisMonth,
+    imageUploadLimitWarning:
+      current.imageUploadsPerMonth > 0 &&
+      imageUploadsRemainingThisMonth > 0 &&
+      imageUploadsRemainingThisMonth <= 10,
+    imageUploadLimitReached:
+      current.imageUploadsPerMonth > 0 && imageUploadsRemainingThisMonth <= 0
+  };
+}
+
 function readFileAsBase64(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -421,16 +525,25 @@ export default function SubjectTutor({
 
     if (!planAccess.canUseImages) {
       setImageStatus('Image support is included with Plus and Pro.');
+      if (imageInputRef.current) imageInputRef.current.value = '';
+      return;
+    }
+
+    if (planAccess.imageUploadLimitReached) {
+      setImageStatus('Monthly image upload limit reached.');
+      if (imageInputRef.current) imageInputRef.current.value = '';
       return;
     }
 
     if (!SUPPORTED_IMAGE_MIME_TYPES.has(file.type)) {
       setImageStatus('Please upload a PNG, JPG, JPEG, or WebP image.');
+      if (imageInputRef.current) imageInputRef.current.value = '';
       return;
     }
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
       setImageStatus('Please upload an image under 8 MB.');
+      if (imageInputRef.current) imageInputRef.current.value = '';
       return;
     }
 
@@ -450,6 +563,7 @@ export default function SubjectTutor({
     } catch {
       setImageStatus('Could not read this image. Please try another file.');
       setSelectedImage(null);
+      if (imageInputRef.current) imageInputRef.current.value = '';
     }
   }
 
@@ -492,7 +606,9 @@ export default function SubjectTutor({
       parentHelpStyle: audience === 'parent' ? parentHelpStyle : null,
       topic: audience === 'parent' ? parentTopic : '',
       stuckPoint: audience === 'parent' ? parentStuckPoint : '',
-      image: selectedImage && planAccess.canUseImages ? selectedImage : null
+      image: selectedImage && planAccess.canUseImages && !planAccess.imageUploadLimitReached
+        ? selectedImage
+        : null
     };
   }
 
@@ -566,6 +682,13 @@ export default function SubjectTutor({
       } else {
         setShowGraphForCurrentTurn(false);
       }
+
+      setPlanAccess((current) =>
+        getUpdatedUsageAfterSuccess({
+          current,
+          usedImage: Boolean(payload.image)
+        })
+      );
 
       clearSelectedImage();
 
@@ -715,8 +838,18 @@ export default function SubjectTutor({
                     <strong>{getPlanLabel(planAccess.plan)} image support</strong>
                   </p>
                   <p className="small" style={{ margin: 0 }}>
-                    Attach one worksheet photo, screenshot, or image-based question. Your plan
-                    includes {planAccess.imageUploadsPerMonth} image uploads per month.
+                    Attach one worksheet photo, screenshot, or image-based question.
+                  </p>
+                  <p
+                    className="small"
+                    style={{
+                      margin: 0,
+                      color: planAccess.imageUploadLimitWarning || planAccess.imageUploadLimitReached
+                        ? 'var(--accent-warm)'
+                        : 'var(--text-soft)'
+                    }}
+                  >
+                    {getImageUsageText(planAccess)}
                   </p>
                 </div>
 
@@ -726,7 +859,7 @@ export default function SubjectTutor({
                     ref={imageInputRef}
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
-                    disabled={loading}
+                    disabled={loading || planAccess.imageUploadLimitReached}
                     onChange={(event) => {
                       const file = event.target.files?.[0] || null;
                       void handleImageChange(file);
@@ -926,7 +1059,8 @@ export default function SubjectTutor({
               style={{
                 display: 'grid',
                 gap: 5,
-                justifyItems: 'center'
+                justifyItems: 'center',
+                maxWidth: 320
               }}
             >
               <button type="button" onClick={() => void submitQuestion()} disabled={loading || !question.trim()}>
@@ -943,6 +1077,20 @@ export default function SubjectTutor({
                 }}
               >
                 Cmd/Ctrl + Enter
+              </p>
+
+              <p
+                className="small"
+                style={{
+                  margin: 0,
+                  textAlign: 'center',
+                  lineHeight: 1.35,
+                  color: planAccess.tutorRequestLimitWarning || planAccess.tutorRequestLimitReached
+                    ? 'var(--accent-warm)'
+                    : 'var(--text-soft)'
+                }}
+              >
+                {planAccessLoading ? 'Checking usage...' : getTutorUsageText(planAccess)}
               </p>
             </div>
 
