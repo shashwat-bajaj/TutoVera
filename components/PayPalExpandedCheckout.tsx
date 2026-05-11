@@ -30,27 +30,65 @@ declare global {
 }
 
 let expandedPayPalScriptPromise: Promise<void> | null = null;
+let expandedPayPalScriptClientId = '';
 
 function loadExpandedPayPalScript(clientId: string) {
   if (typeof window === 'undefined') return Promise.resolve();
 
-  if (window.paypal?.CardFields) return Promise.resolve();
+  const existingScript = document.querySelector<HTMLScriptElement>(
+    'script[data-tutovera-paypal-expanded]'
+  );
 
-  if (expandedPayPalScriptPromise) return expandedPayPalScriptPromise;
+  const existingClientId = existingScript?.dataset.paypalClientId || '';
 
-  expandedPayPalScriptPromise = new Promise<void>((resolve, reject) => {
-    const existingScript = document.querySelector<HTMLScriptElement>(
-      'script[data-tutovera-paypal-expanded]'
-    );
+  if (window.paypal?.CardFields && expandedPayPalScriptClientId === clientId) {
+    return Promise.resolve();
+  }
 
-    if (existingScript) {
-      existingScript.addEventListener('load', () => resolve());
-      existingScript.addEventListener('error', () =>
+  if (window.paypal?.CardFields && existingClientId === clientId) {
+    expandedPayPalScriptClientId = clientId;
+    return Promise.resolve();
+  }
+
+  if (
+    expandedPayPalScriptPromise &&
+    expandedPayPalScriptClientId === clientId
+  ) {
+    return expandedPayPalScriptPromise;
+  }
+
+  if (existingScript && existingClientId && existingClientId !== clientId) {
+    existingScript.remove();
+    window.paypal = undefined;
+    expandedPayPalScriptPromise = null;
+    expandedPayPalScriptClientId = '';
+  }
+
+  const matchingScript = document.querySelector<HTMLScriptElement>(
+    `script[data-tutovera-paypal-expanded][data-paypal-client-id="${clientId}"]`
+  );
+
+  if (matchingScript) {
+    expandedPayPalScriptClientId = clientId;
+
+    expandedPayPalScriptPromise = new Promise<void>((resolve, reject) => {
+      if (window.paypal?.CardFields) {
+        resolve();
+        return;
+      }
+
+      matchingScript.addEventListener('load', () => resolve());
+      matchingScript.addEventListener('error', () =>
         reject(new Error('PayPal secure card checkout failed to load.'))
       );
-      return;
-    }
+    });
 
+    return expandedPayPalScriptPromise;
+  }
+
+  expandedPayPalScriptClientId = clientId;
+
+  expandedPayPalScriptPromise = new Promise<void>((resolve, reject) => {
     const script = document.createElement('script');
     const params = new URLSearchParams({
       'client-id': clientId,
@@ -63,10 +101,15 @@ function loadExpandedPayPalScript(clientId: string) {
     script.src = `https://www.paypal.com/sdk/js?${params.toString()}`;
     script.async = true;
     script.dataset.tutoveraPaypalExpanded = 'true';
+    script.dataset.paypalClientId = clientId;
+
     script.addEventListener('load', () => resolve());
-    script.addEventListener('error', () =>
-      reject(new Error('PayPal secure card checkout failed to load.'))
-    );
+
+    script.addEventListener('error', () => {
+      expandedPayPalScriptPromise = null;
+      expandedPayPalScriptClientId = '';
+      reject(new Error('PayPal secure card checkout failed to load.'));
+    });
 
     document.body.appendChild(script);
   });
@@ -399,7 +442,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
   if (!isSignedIn) {
     return (
-      <div style={{ display: 'grid', gap: 10, width: '100%' }}>
+      <div style={{ display: 'grid', gap: 10, width: '100%', minWidth: 0 }}>
         <a className="btn" href="/login?next=/pricing">
           Log in to check out
         </a>
@@ -413,7 +456,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
   if (statusKind === 'success') {
     return (
       <div
-        className="card questionSurface"
+        className="card questionSurface expandedCheckoutCard"
         style={{
           display: 'grid',
           gap: 12,
@@ -422,7 +465,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
           borderColor: 'var(--accent-border)'
         }}
       >
-        <p className="small" style={{ margin: 0 }}>
+        <p className="small expandedCheckoutStatus" style={{ margin: 0 }}>
           <strong>{statusMessage}</strong>
         </p>
 
@@ -448,7 +491,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         padding: 16
       }}
     >
-      <div style={{ display: 'grid', gap: 8 }}>
+      <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
         <p className="small" style={{ margin: 0 }}>
           <strong>Secure TutoVera checkout</strong>
         </p>
@@ -457,7 +500,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         </p>
       </div>
 
-      <div className="themeSwitcher" style={{ width: 'fit-content' }}>
+      <div className="themeSwitcher expandedBillingSwitcher">
         <button
           type="button"
           className={`themeOption ${billingCycle === 'monthly' ? 'active' : ''}`}
@@ -481,13 +524,14 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         style={{
           display: 'grid',
           gap: 4,
-          padding: 14
+          padding: 14,
+          minWidth: 0
         }}
       >
         <p className="small" style={{ margin: 0 }}>
           Selected plan
         </p>
-        <p className="small" style={{ margin: 0 }}>
+        <p className="small expandedCheckoutStatus" style={{ margin: 0 }}>
           <strong>
             TutoVera {planName} · {getBillingLabel(billingCycle)} · {selectedPrice}
           </strong>
@@ -500,7 +544,8 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
           style={{
             display: 'grid',
             gap: 10,
-            padding: 14
+            padding: 14,
+            minWidth: 0
           }}
         >
           <p className="small" style={{ margin: 0 }}>
@@ -522,16 +567,18 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
           style={{
             display: 'grid',
             gap: 10,
-            padding: 14
+            padding: 14,
+            minWidth: 0
           }}
         >
           <div
             style={{
               display: 'grid',
-              gap: 8
+              gap: 8,
+              minWidth: 0
             }}
           >
-            <div style={{ display: 'grid', gap: 4 }}>
+            <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
               <p className="small" style={{ margin: 0 }}>
                 <strong>Card details</strong>
               </p>
@@ -603,7 +650,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
       {isWorking || statusMessage ? (
         <p
-          className="small"
+          className="small expandedCheckoutStatus"
           style={{
             margin: 0,
             color: statusKind === 'error' ? 'var(--accent-warm)' : 'var(--text-soft)'
@@ -616,13 +663,35 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
       <style>
         {`
           .expandedCheckoutCard {
-            overflow: visible;
+            max-width: 100%;
+            min-width: 0;
+            overflow: hidden;
+          }
+
+          .expandedCheckoutCard * {
+            max-width: 100%;
+            min-width: 0;
+          }
+
+          .expandedCheckoutStatus {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            white-space: pre-wrap;
+          }
+
+          .expandedBillingSwitcher {
+            width: fit-content;
+            max-width: 100%;
+            flex-wrap: wrap;
           }
 
           .expandedCardFieldsGrid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
+            max-width: 100%;
+            min-width: 0;
           }
 
           .expandedCardFieldFull {
@@ -672,7 +741,8 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
               grid-template-columns: 1fr;
             }
 
-            .expandedBackButton {
+            .expandedBackButton,
+            .expandedBillingSwitcher {
               width: 100%;
             }
           }
