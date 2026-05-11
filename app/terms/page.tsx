@@ -127,6 +127,34 @@ export default function TermsPage() {
 
       <Reveal delay={0.28}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
+          <h2 style={{ margin: 0 }}>Refunds and cancellations</h2>
+          <p className="small" style={{ margin: 0 }}>
+            TutoVera subscriptions renew automatically unless cancelled. You may cancel future
+            renewals from your Account page. When you cancel, your paid access remains available
+            until the end of the current billing period, and you will not be charged again for that
+            subscription.
+          </p>
+          <p className="small" style={{ margin: 0 }}>
+            Subscription payments are generally non-refundable once a billing period has started,
+            except where required by law. If you believe there was a billing error, duplicate charge,
+            technical access issue, or other exceptional circumstance, please contact support at{' '}
+            <a href="mailto:support@tutovera.com">
+              <strong>support@tutovera.com</strong>
+            </a>
+            .
+          </p>
+          <p className="small" style={{ margin: 0 }}>
+            Refund requests are reviewed case by case. If TutoVera approves a discretionary refund,
+            the refund may be full or partial depending on the situation, account usage, timing of
+            the request, and any non-recoverable payment processing costs, where permitted by law.
+            Refunds, when issued, are returned to the original payment method through the payment
+            processor.
+          </p>
+        </section>
+      </Reveal>
+
+      <Reveal delay={0.3}>
+        <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>User content and saved sessions</h2>
           <p className="small" style={{ margin: 0 }}>
             Users may submit questions, learning materials, messages, and related content while using
@@ -137,7 +165,7 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.3}>
+      <Reveal delay={0.32}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Intellectual property</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -149,7 +177,7 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.32}>
+      <Reveal delay={0.34}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Third-party services</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -160,7 +188,7 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.34}>
+      <Reveal delay={0.36}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Disclaimer of warranties</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -170,7 +198,7 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.36}>
+      <Reveal delay={0.38}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Limitation of liability</h2>
           <p className="small" style={{ margin: 0 }}>
@@ -181,7 +209,7 @@ export default function TermsPage() {
         </section>
       </Reveal>
 
-      <Reveal delay={0.38}>
+      <Reveal delay={0.4}>
         <section className="card" style={{ display: 'grid', gap: 14 }}>
           <h2 style={{ margin: 0 }}>Changes to these terms</h2>
           <p className="small" style={{ margin: 0 }}>
