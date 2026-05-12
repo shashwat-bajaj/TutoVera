@@ -456,6 +456,7 @@ export default async function PricingPageContent() {
           .pricingCards {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-rows: repeat(5, auto);
             gap: 18px;
             align-items: stretch;
             width: 100%;
@@ -466,12 +467,13 @@ export default async function PricingPageContent() {
 
           .pricingPlanCard {
             display: grid;
-            grid-template-rows: auto auto auto auto auto;
+            grid-template-rows: subgrid;
+            grid-row: span 5;
             gap: 0;
             min-width: 0;
             height: 100%;
             float: none;
-            align-content: start;
+            align-content: stretch;
             align-items: stretch;
             overflow: visible;
           }
@@ -493,7 +495,6 @@ export default async function PricingPageContent() {
           .pricingCardTop {
             gap: 14px;
             padding-bottom: 16px;
-            min-height: 330px;
           }
 
           .pricingPlanIntro {
@@ -531,7 +532,6 @@ export default async function PricingPageContent() {
             padding-top: 16px;
             padding-bottom: 16px;
             border-top: 1px solid var(--border);
-            min-height: 270px;
           }
 
           .pricingMiniStat {
@@ -541,31 +541,26 @@ export default async function PricingPageContent() {
             min-height: 70px;
           }
 
-          .pricingFeatureBlock {
-            gap: 10px;
-            padding-top: 16px;
-            padding-bottom: 16px;
-            border-top: 1px solid var(--border);
-            min-height: 210px;
-          }
-
+          .pricingFeatureBlock,
           .pricingBestFitBlock {
             gap: 10px;
             padding-top: 16px;
             padding-bottom: 16px;
             border-top: 1px solid var(--border);
-            min-height: 130px;
-            align-content: start;
           }
 
           .pricingFeatureList {
             margin-top: 0;
           }
 
+          .pricingBestFitBlock {
+            align-content: start;
+          }
+
           .pricingButtonRow {
             display: grid;
             gap: 12px;
-            align-self: start;
+            align-self: stretch;
             align-content: start;
             min-width: 0;
             padding-top: 16px;
@@ -577,6 +572,33 @@ export default async function PricingPageContent() {
             gap: 10px;
             padding: 16px;
             min-width: 0;
+          }
+
+          @supports not (grid-template-rows: subgrid) {
+            .pricingCards {
+              grid-template-rows: none;
+            }
+
+            .pricingPlanCard {
+              grid-template-rows: auto auto auto auto auto;
+              grid-row: auto;
+            }
+
+            .pricingCardTop {
+              min-height: 330px;
+            }
+
+            .pricingMiniStats {
+              min-height: 270px;
+            }
+
+            .pricingFeatureBlock {
+              min-height: 210px;
+            }
+
+            .pricingBestFitBlock {
+              min-height: 130px;
+            }
           }
 
           .pricingCompareDetails {
@@ -666,10 +688,12 @@ export default async function PricingPageContent() {
           @media (max-width: 1100px) {
             .pricingCards {
               grid-template-columns: 1fr;
+              grid-template-rows: none;
             }
 
             .pricingPlanCard {
               grid-template-rows: none;
+              grid-row: auto;
               gap: 16px;
               height: auto;
               overflow: visible;
