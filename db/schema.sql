@@ -219,6 +219,80 @@ create table if not exists mastery_scores (
   unique (email, topic)
 );
 
+create table if not exists learning_profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  email text not null,
+  subject text not null default 'math',
+  audience text not null default 'student',
+  grade_level text,
+  profile_summary text,
+  common_mistakes text,
+  weak_areas text,
+  strengths text,
+  preferred_style text,
+  parent_guidance_notes text,
+  last_observation text,
+  is_enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, subject, audience)
+);
+
+alter table learning_profiles
+add column if not exists user_id uuid;
+
+alter table learning_profiles
+add column if not exists email text;
+
+alter table learning_profiles
+add column if not exists subject text not null default 'math';
+
+alter table learning_profiles
+add column if not exists audience text not null default 'student';
+
+alter table learning_profiles
+add column if not exists grade_level text;
+
+alter table learning_profiles
+add column if not exists profile_summary text;
+
+alter table learning_profiles
+add column if not exists common_mistakes text;
+
+alter table learning_profiles
+add column if not exists weak_areas text;
+
+alter table learning_profiles
+add column if not exists strengths text;
+
+alter table learning_profiles
+add column if not exists preferred_style text;
+
+alter table learning_profiles
+add column if not exists parent_guidance_notes text;
+
+alter table learning_profiles
+add column if not exists last_observation text;
+
+alter table learning_profiles
+add column if not exists is_enabled boolean not null default true;
+
+alter table learning_profiles
+add column if not exists updated_at timestamptz not null default now();
+
+create unique index if not exists learning_profiles_user_subject_audience_unique
+on learning_profiles(user_id, subject, audience);
+
+create index if not exists learning_profiles_user_updated_idx
+on learning_profiles(user_id, updated_at desc);
+
+create index if not exists learning_profiles_email_updated_idx
+on learning_profiles(email, updated_at desc);
+
+create index if not exists learning_profiles_subject_audience_idx
+on learning_profiles(subject, audience);
+
 create table if not exists beta_signups (
   id uuid primary key default gen_random_uuid(),
   name text,

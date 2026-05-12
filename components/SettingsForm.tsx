@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 type ThemePreference = 'system' | 'light' | 'dark';
@@ -16,6 +16,21 @@ type TranslationLanguage =
 type GradeLevel = 'elementary' | 'middle-school' | 'high-school' | 'college';
 type TutorMode = 'auto' | 'teach' | 'hint' | 'diagnose' | 'quiz';
 type AccountRole = 'student' | 'parent' | 'student-parent';
+
+type LearningProfileSummary = {
+  id: string;
+  subject: string;
+  audience: string;
+  grade_level: string | null;
+  profile_summary: string | null;
+  common_mistakes: string | null;
+  weak_areas: string | null;
+  strengths: string | null;
+  preferred_style: string | null;
+  parent_guidance_notes: string | null;
+  last_observation: string | null;
+  updated_at: string;
+};
 
 const STORAGE_KEY = 'tutovera-theme';
 const THEME_EVENT = 'tutovera-theme-change';
@@ -43,6 +58,32 @@ function cleanUsername(value: string) {
 function isValidUsername(value: string) {
   if (!value) return true;
   return /^[a-z0-9._-]{3,32}$/.test(value);
+}
+
+function formatSubject(value: string) {
+  if (value === 'math') return 'Math';
+  if (value === 'physics') return 'Physics';
+  if (value === 'chemistry') return 'Chemistry';
+  if (value === 'biology') return 'Biology';
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Subject';
+}
+
+function formatAudience(value: string) {
+  if (value === 'parent') return 'Parent';
+  if (value === 'student') return 'Student';
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Learner';
+}
+
+function formatDate(value: string) {
+  try {
+    return new Intl.DateTimeFormat('en', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
 }
 
 export default function SettingsForm({
@@ -83,8 +124,83 @@ export default function SettingsForm({
   const [parentGradeLevel, setParentGradeLevel] =
     useState<GradeLevel>(initialParentGradeLevel);
 
+  const [learningProfiles, setLearningProfiles] = useState<LearningProfileSummary[]>([]);
+  const [learningProfileLoading, setLearningProfileLoading] = useState(true);
+  const [learningProfileStatus, setLearningProfileStatus] = useState('');
+  const [clearingLearningProfile, setClearingLearningProfile] = useState(false);
+
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
+
+  async function loadLearningProfiles() {
+    setLearningProfileLoading(true);
+
+    try {
+      const response = await fetch('/api/learning-profile', {
+        method: 'GET',
+        cache: 'no-store'
+      });
+
+      const data = (await response.json()) as {
+        profiles?: LearningProfileSummary[];
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setLearningProfileStatus(data.error || 'Could not load Learning Profile.');
+        setLearningProfiles([]);
+        return;
+      }
+
+      setLearningProfiles(Array.isArray(data.profiles) ? data.profiles : []);
+      setLearningProfileStatus('');
+    } catch {
+      setLearningProfileStatus('Could not load Learning Profile.');
+      setLearningProfiles([]);
+    } finally {
+      setLearningProfileLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadLearningProfiles();
+  }, []);
+
+  async function clearLearningProfile() {
+    if (clearingLearningProfile) return;
+
+    const confirmed = window.confirm(
+      'Clear your Learning Profile? TutoVera will forget stored learning patterns, weak areas, and preferred teaching style summaries.'
+    );
+
+    if (!confirmed) return;
+
+    setClearingLearningProfile(true);
+    setLearningProfileStatus('Clearing Learning Profile...');
+
+    try {
+      const response = await fetch('/api/learning-profile', {
+        method: 'DELETE'
+      });
+
+      const data = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !data.success) {
+        setLearningProfileStatus(data.error || 'Could not clear Learning Profile.');
+        return;
+      }
+
+      setLearningProfiles([]);
+      setLearningProfileStatus('Learning Profile cleared.');
+    } catch {
+      setLearningProfileStatus('Could not clear Learning Profile.');
+    } finally {
+      setClearingLearningProfile(false);
+    }
+  }
 
   async function saveSettings() {
     if (loading) return;
@@ -352,7 +468,9 @@ export default function SettingsForm({
       <section
         style={{
           display: 'grid',
-          gap: 16
+          gap: 16,
+          paddingBottom: 18,
+          borderBottom: '1px solid var(--border)'
         }}
       >
         <div style={{ display: 'grid', gap: 8 }}>
@@ -383,6 +501,148 @@ export default function SettingsForm({
             </select>
           </div>
         </div>
+      </section>
+
+      <section
+        style={{
+          display: 'grid',
+          gap: 16
+        }}
+      >
+        <div style={{ display: 'grid', gap: 8 }}>
+          <h3 style={{ margin: 0 }}>Learning Profile</h3>
+          <p className="small" style={{ margin: 0 }}>
+            TutoVera can remember short learning patterns across signed-in sessions, such as common
+            weak areas, preferred teaching style, and recent learning observations. This helps future
+            tutor responses feel less like a brand-new session every time.
+          </p>
+        </div>
+
+        {learningProfileLoading ? (
+          <p className="small" style={{ margin: 0 }}>
+            Loading Learning Profile...
+          </p>
+        ) : learningProfiles.length > 0 ? (
+          <div style={{ display: 'grid', gap: 12 }}>
+            {learningProfiles.map((profile) => (
+              <div
+                key={profile.id}
+                className="card questionSurface"
+                style={{
+                  display: 'grid',
+                  gap: 10,
+                  padding: 16
+                }}
+              >
+                <div style={{ display: 'grid', gap: 4 }}>
+                  <p className="small" style={{ margin: 0 }}>
+                    <strong>
+                      {formatSubject(profile.subject)} · {formatAudience(profile.audience)}
+                    </strong>
+                  </p>
+                  <p className="small" style={{ margin: 0 }}>
+                    Last updated {formatDate(profile.updated_at)}
+                    {profile.grade_level ? ` · ${profile.grade_level}` : ''}
+                  </p>
+                </div>
+
+                {profile.profile_summary ? (
+                  <p className="small" style={{ margin: 0 }}>
+                    <strong>Summary:</strong> {profile.profile_summary}
+                  </p>
+                ) : null}
+
+                {profile.common_mistakes ? (
+                  <p className="small" style={{ margin: 0 }}>
+                    <strong>Common mistakes:</strong> {profile.common_mistakes}
+                  </p>
+                ) : null}
+
+                {profile.weak_areas ? (
+                  <p className="small" style={{ margin: 0 }}>
+                    <strong>Weak areas:</strong> {profile.weak_areas}
+                  </p>
+                ) : null}
+
+                {profile.strengths ? (
+                  <p className="small" style={{ margin: 0 }}>
+                    <strong>Strengths:</strong> {profile.strengths}
+                  </p>
+                ) : null}
+
+                {profile.preferred_style ? (
+                  <p className="small" style={{ margin: 0 }}>
+                    <strong>Preferred style:</strong> {profile.preferred_style}
+                  </p>
+                ) : null}
+
+                {profile.parent_guidance_notes ? (
+                  <p className="small" style={{ margin: 0 }}>
+                    <strong>Parent guidance:</strong> {profile.parent_guidance_notes}
+                  </p>
+                ) : null}
+
+                {profile.last_observation ? (
+                  <p className="small" style={{ margin: 0 }}>
+                    <strong>Recent observation:</strong> {profile.last_observation}
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            className="card questionSurface"
+            style={{
+              display: 'grid',
+              gap: 8,
+              padding: 16
+            }}
+          >
+            <p className="small" style={{ margin: 0 }}>
+              <strong>No Learning Profile yet.</strong>
+            </p>
+            <p className="small" style={{ margin: 0 }}>
+              Ask TutoVera a few signed-in questions, and this area will start showing concise
+              learning patterns that help future sessions feel more personalized.
+            </p>
+          </div>
+        )}
+
+        <div className="buttonRow">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void loadLearningProfiles()}
+            disabled={learningProfileLoading || clearingLearningProfile}
+          >
+            Refresh Learning Profile
+          </button>
+
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void clearLearningProfile()}
+            disabled={
+              learningProfileLoading ||
+              clearingLearningProfile ||
+              learningProfiles.length === 0
+            }
+          >
+            {clearingLearningProfile ? 'Clearing...' : 'Clear Learning Profile'}
+          </button>
+        </div>
+
+        {learningProfileStatus ? (
+          <p className="small" style={{ margin: 0 }}>
+            {learningProfileStatus}
+          </p>
+        ) : (
+          <p className="small" style={{ margin: 0 }}>
+            Clearing this profile does not delete your saved conversations. It only clears the short
+            personalization summary TutoVera uses for future responses.
+          </p>
+        )}
       </section>
 
       <div

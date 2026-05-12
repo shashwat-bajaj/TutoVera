@@ -7,6 +7,11 @@ import { createClient as createAuthClient } from '@/lib/supabase/server';
 import { planAllowsImageProcessing } from '@/lib/plans';
 import { getSubjectConfig, type SubjectConfig } from '@/lib/subjects';
 import { getUserPlanAccess } from '@/lib/subscriptions';
+import {
+  buildLearningProfileContext,
+  getLearningProfileForTutor,
+  updateLearningProfileFromTurn
+} from '@/lib/learning-profile';
 
 const FALLBACK_DAILY_FREE_LIMIT = 10;
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
@@ -661,6 +666,15 @@ export async function POST(request: NextRequest) {
         })
       : null;
 
+    const learningProfile = user?.id
+      ? await getLearningProfileForTutor({
+          supabase,
+          userId: user.id,
+          subject: activeSubject,
+          audience
+        })
+      : null;
+
     if (imagePayload) {
       if (!user?.id || !planAccess?.hasActivePaidAccess) {
         return NextResponse.json(
@@ -841,6 +855,7 @@ export async function POST(request: NextRequest) {
       answer = buildLocalGraphOnlyAnswer(normalizedGraphExpression);
     } else {
       const conversationContext = buildConversationContext(existingTurns);
+      const learningProfileContext = buildLearningProfileContext(learningProfile);
 
       const baseEffectiveQuestion =
         audience === 'parent'
@@ -863,10 +878,15 @@ ${buildImageInstruction({
 })}`
         : baseEffectiveQuestion;
 
+      const tutorContext = [
+        learningProfileContext,
+        conversationContext ? `Conversation context:\n${conversationContext}` : ''
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+
       const prompt = buildTutorPrompt({
-        question: conversationContext
-          ? `${effectiveQuestion}\n\nConversation context:\n${conversationContext}`
-          : effectiveQuestion,
+        question: tutorContext ? `${effectiveQuestion}\n\n${tutorContext}` : effectiveQuestion,
         gradeLevel,
         mode,
         symbolicCheck: '',
@@ -920,6 +940,27 @@ ${buildImageInstruction({
       });
     } catch (dbError) {
       console.error('SUPABASE SAVE ERROR:', dbError);
+    }
+
+    if (user?.id && normalizedEmail) {
+      try {
+        await updateLearningProfileFromTurn({
+          supabase,
+          ai,
+          model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
+          userId: user.id,
+          email: normalizedEmail,
+          subject: activeSubject,
+          audience,
+          gradeLevel,
+          mode,
+          question: questionText,
+          answer,
+          existingProfile: learningProfile
+        });
+      } catch (profileError) {
+        console.error('LEARNING PROFILE UPDATE ERROR:', profileError);
+      }
     }
 
     return NextResponse.json({
