@@ -52,6 +52,7 @@ export type PlanAccessSummary = {
 
   isPaidPlan: boolean;
   hasActivePaidAccess: boolean;
+  isAdminAccess: boolean;
 
   isExpandedPayPalBilling: boolean;
   isLegacyPayPalSubscription: boolean;
@@ -103,6 +104,38 @@ const SUBSCRIPTION_SELECT = [
   'updated_at'
 ].join(', ');
 
+function getConfiguredList(value?: string) {
+  return (value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+export function isConfiguredAdminUser({
+  userId,
+  email
+}: {
+  userId?: string | null;
+  email?: string | null;
+}) {
+  const adminUserIds = new Set(getConfiguredList(process.env.ADMIN_USER_IDS));
+  const adminEmails = new Set(
+    getConfiguredList(process.env.ADMIN_EMAILS).map((item) => item.toLowerCase())
+  );
+
+  const normalizedEmail = email?.trim().toLowerCase() || '';
+
+  if (userId && adminUserIds.has(userId)) {
+    return true;
+  }
+
+  if (normalizedEmail && adminEmails.has(normalizedEmail)) {
+    return true;
+  }
+
+  return false;
+}
+
 export function normalizePlan(value: string | null | undefined): PlanKey {
   if (value === 'plus' || value === 'pro') return value;
   return 'free';
@@ -129,6 +162,37 @@ export function isLegacyPayPalSubscriptionMode(
   subscription: SubscriptionRecord | null | undefined
 ) {
   return Boolean(subscription?.paypal_subscription_id);
+}
+
+export function getAdminPlanAccess(): PlanAccessSummary {
+  return {
+    plan: 'pro',
+    status: 'active',
+    billingCycle: 'admin',
+
+    billingProvider: 'admin',
+    billingMode: 'admin_access',
+
+    paypalStatus: 'ADMIN_ACCESS',
+    currentPeriodEnd: null,
+    nextRenewalAt: null,
+
+    cancelAtPeriodEnd: false,
+    cancelledAt: null,
+
+    isPaidPlan: true,
+    hasActivePaidAccess: true,
+    isAdminAccess: true,
+
+    isExpandedPayPalBilling: false,
+    isLegacyPayPalSubscription: false,
+    canCancelSubscription: false,
+
+    dailyTutorLimit: DAILY_TUTOR_LIMITS.pro,
+    imageUploadsPerMonth: IMAGE_UPLOAD_LIMITS.pro,
+    savedHistoryLabel: 'Admin access',
+    subscription: null
+  };
 }
 
 export function getPlanAccessFromSubscription(
@@ -165,6 +229,7 @@ export function getPlanAccessFromSubscription(
 
     isPaidPlan: plan === 'plus' || plan === 'pro',
     hasActivePaidAccess,
+    isAdminAccess: false,
 
     isExpandedPayPalBilling,
     isLegacyPayPalSubscription,
@@ -187,6 +252,15 @@ export async function getUserPlanAccess({
   email?: string | null;
 }): Promise<PlanAccessSummary> {
   const normalizedEmail = email?.trim().toLowerCase() || null;
+
+  if (
+    isConfiguredAdminUser({
+      userId,
+      email: normalizedEmail
+    })
+  ) {
+    return getAdminPlanAccess();
+  }
 
   if (!userId && !normalizedEmail) {
     return getPlanAccessFromSubscription(null);
@@ -228,6 +302,7 @@ export function formatPlanName(plan: PlanKey) {
 export function formatBillingCycle(value: string | null | undefined) {
   if (value === 'monthly') return 'Monthly';
   if (value === 'annual') return 'Annual';
+  if (value === 'admin') return 'Admin access';
   return 'Not active';
 }
 
@@ -245,6 +320,7 @@ export function formatPaymentStatus(value: string | null | undefined) {
   const normalized = (value || '').toUpperCase();
 
   if (!normalized) return 'Not connected';
+  if (normalized === 'ADMIN_ACCESS') return 'Admin access';
   if (normalized === 'COMPLETED') return 'Active';
   if (normalized === 'VAULTED') return 'Payment method saved';
   if (normalized === 'CANCELLED_AT_PERIOD_END') return 'Renewal cancelled';
@@ -274,6 +350,10 @@ export function formatDate(value: string | null | undefined) {
 }
 
 export function getPlanSummarySentence(planAccess: PlanAccessSummary) {
+  if (planAccess.isAdminAccess) {
+    return 'Admin access is active. This account can test all TutoVera Pro features without a PayPal subscription.';
+  }
+
   if (planAccess.hasActivePaidAccess) {
     if (planAccess.cancelAtPeriodEnd) {
       if (planAccess.currentPeriodEnd) {

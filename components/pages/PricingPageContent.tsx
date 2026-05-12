@@ -34,7 +34,12 @@ const comparisonRows = [
     group: 'Worksheet and image support',
     rows: [
       { label: 'Image uploads', free: 'Not included', plus: '100/month', pro: '500/month' },
-      { label: 'Worksheet and screenshot help', free: 'Not included', plus: 'Included', pro: 'Advanced' },
+      {
+        label: 'Worksheet and screenshot help',
+        free: 'Not included',
+        plus: 'Included',
+        pro: 'Advanced'
+      },
       { label: 'Mistake diagnosis', free: 'Not included', plus: 'Guided', pro: 'Advanced' },
       { label: 'Practice generation', free: 'Basic prompts', plus: 'Included', pro: 'Advanced' }
     ]
@@ -42,10 +47,25 @@ const comparisonRows = [
   {
     group: 'Advanced study support',
     rows: [
-      { label: 'Revision workflows', free: 'Not included', plus: 'Guided practice', pro: 'Deeper revision support' },
+      {
+        label: 'Revision workflows',
+        free: 'Not included',
+        plus: 'Guided practice',
+        pro: 'Deeper revision support'
+      },
       { label: 'Mistake pattern tools', free: 'Not included', plus: 'Basic', pro: 'Advanced' },
-      { label: 'Advanced subject tools', free: 'Not included', plus: 'Selected access', pro: 'Highest access' },
-      { label: 'Diagrams and simulators as added', free: 'Not included', plus: 'Selected access', pro: 'Highest access' }
+      {
+        label: 'Advanced subject tools',
+        free: 'Not included',
+        plus: 'Selected access',
+        pro: 'Highest access'
+      },
+      {
+        label: 'Diagrams and simulators as added',
+        free: 'Not included',
+        plus: 'Selected access',
+        pro: 'Highest access'
+      }
     ]
   }
 ];
@@ -193,7 +213,7 @@ export default async function PricingPageContent() {
                   borderColor: plan.highlighted ? 'var(--accent-warm-border)' : 'var(--border)'
                 }}
               >
-                <div className="pricingCardTop">
+                <div className="pricingCardTop pricingCardSection">
                   <div className="pricingPlanHeader">
                     <span className="badge">{isCurrentPlan ? 'Current plan' : plan.badge}</span>
                     {plan.highlighted ? (
@@ -201,7 +221,7 @@ export default async function PricingPageContent() {
                     ) : null}
                   </div>
 
-                  <div style={{ display: 'grid', gap: 8 }}>
+                  <div className="pricingPlanIntro">
                     <h2 style={{ margin: 0 }}>{plan.name}</h2>
                     <p className="small" style={{ margin: 0 }}>
                       <strong>{getPlanHeadline(plan.key)}</strong>
@@ -223,7 +243,7 @@ export default async function PricingPageContent() {
                   </div>
                 </div>
 
-                <div className="pricingMiniStats">
+                <div className="pricingMiniStats pricingCardSection">
                   <div className="card questionSurface pricingMiniStat">
                     <p className="small" style={{ margin: '0 0 4px' }}>
                       <strong>Tutor requests</strong>
@@ -252,7 +272,7 @@ export default async function PricingPageContent() {
                   </div>
                 </div>
 
-                <div className="pricingFeatureBlock">
+                <div className="pricingFeatureBlock pricingCardSection">
                   <p className="small" style={{ margin: 0 }}>
                     <strong>What you get</strong>
                   </p>
@@ -264,7 +284,7 @@ export default async function PricingPageContent() {
                   </ul>
                 </div>
 
-                <div className="pricingBestFitBlock">
+                <div className="pricingBestFitBlock pricingCardSection">
                   <p className="small" style={{ margin: 0 }}>
                     <strong>Best fit</strong>
                   </p>
@@ -283,10 +303,7 @@ export default async function PricingPageContent() {
                       {isSignedIn ? 'Open Free Tutor' : plan.ctaLabel}
                     </a>
                   ) : blockPlanChange ? (
-                    <div
-                      className="card questionSurface"
-                      style={{ display: 'grid', gap: 10, padding: 16 }}
-                    >
+                    <div className="card questionSurface pricingPlanChangeNotice">
                       <p className="small" style={{ margin: 0 }}>
                         {getPlanChangeMessage(planAccess.plan)}
                       </p>
@@ -437,6 +454,11 @@ export default async function PricingPageContent() {
           }
 
           .pricingCards {
+            --pricing-card-top-row: 330px;
+            --pricing-card-stats-row: 270px;
+            --pricing-card-features-row: 210px;
+            --pricing-card-bestfit-row: 130px;
+
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 18px;
@@ -449,20 +471,43 @@ export default async function PricingPageContent() {
 
           .pricingPlanCard {
             display: grid;
-            grid-template-rows: auto auto auto minmax(100px, 1fr) auto auto;
-            gap: 16px;
+            grid-template-rows:
+              var(--pricing-card-top-row)
+              var(--pricing-card-stats-row)
+              var(--pricing-card-features-row)
+              var(--pricing-card-bestfit-row)
+              auto;
+            gap: 0;
             min-width: 0;
             height: 100%;
             float: none;
             align-content: start;
             align-items: stretch;
-            overflow: visible;
+            overflow: hidden;
+          }
+
+          .pricingPlanCard,
+          .pricingPlanCard * {
+            min-width: 0;
+            max-width: 100%;
+          }
+
+          .pricingCardSection {
+            display: grid;
+            align-content: start;
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: normal;
           }
 
           .pricingCardTop {
-            display: grid;
             gap: 14px;
-            align-content: start;
+            padding-bottom: 16px;
+          }
+
+          .pricingPlanIntro {
+            display: grid;
+            gap: 8px;
             min-width: 0;
           }
 
@@ -490,30 +535,34 @@ export default async function PricingPageContent() {
           }
 
           .pricingMiniStats {
-            display: grid;
             grid-template-columns: 1fr;
             gap: 10px;
-            padding-top: 12px;
+            padding-top: 16px;
+            padding-bottom: 16px;
             border-top: 1px solid var(--border);
-            align-content: start;
           }
 
           .pricingMiniStat {
+            display: grid;
+            align-content: center;
             padding: 14px;
-            min-height: 68px;
+            min-height: 70px;
           }
 
           .pricingFeatureBlock,
           .pricingBestFitBlock {
-            display: grid;
             gap: 10px;
-            padding-top: 12px;
+            padding-top: 16px;
+            padding-bottom: 16px;
             border-top: 1px solid var(--border);
-            align-content: start;
           }
 
           .pricingFeatureList {
             margin-top: 0;
+          }
+
+          .pricingBestFitBlock {
+            align-content: start;
           }
 
           .pricingButtonRow {
@@ -521,6 +570,15 @@ export default async function PricingPageContent() {
             gap: 12px;
             align-self: start;
             align-content: start;
+            min-width: 0;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+          }
+
+          .pricingPlanChangeNotice {
+            display: grid;
+            gap: 10px;
+            padding: 16px;
             min-width: 0;
           }
 
@@ -608,6 +666,15 @@ export default async function PricingPageContent() {
             border-bottom: 0;
           }
 
+          @media (max-width: 1180px) {
+            .pricingCards {
+              --pricing-card-top-row: 355px;
+              --pricing-card-stats-row: 278px;
+              --pricing-card-features-row: 226px;
+              --pricing-card-bestfit-row: 146px;
+            }
+          }
+
           @media (max-width: 1100px) {
             .pricingCards {
               grid-template-columns: 1fr;
@@ -615,7 +682,26 @@ export default async function PricingPageContent() {
 
             .pricingPlanCard {
               grid-template-rows: none;
+              gap: 16px;
               height: auto;
+              overflow: visible;
+            }
+
+            .pricingCardTop,
+            .pricingMiniStats,
+            .pricingFeatureBlock,
+            .pricingBestFitBlock,
+            .pricingButtonRow {
+              padding-top: 0;
+              padding-bottom: 0;
+            }
+
+            .pricingMiniStats,
+            .pricingFeatureBlock,
+            .pricingBestFitBlock,
+            .pricingButtonRow {
+              border-top: 1px solid var(--border);
+              padding-top: 16px;
             }
           }
 

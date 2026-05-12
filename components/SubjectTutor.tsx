@@ -287,22 +287,35 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function getTutorUsageText(planAccess: AccountPlanAccess) {
+function getTutorUsageWarningText(planAccess: AccountPlanAccess) {
   if (!planAccess.signedIn) {
-    return 'Sign in to track usage and save history.';
+    return '';
   }
 
   if (planAccess.tutorRequestLimitReached) {
-    return `Tutor limit reached: ${planAccess.tutorRequestsUsedLast24Hours}/${planAccess.dailyTutorLimit} used in the last 24 hours.`;
+    if (planAccess.isPaidPlan) {
+      return `You have reached today’s tutor request limit for your ${getPlanLabel(
+        planAccess.plan
+      )} plan. You can continue when the 24-hour window resets.`;
+    }
+
+    return 'You have reached today’s Free plan tutor request limit. You can continue when the 24-hour window resets, or upgrade for higher limits.';
   }
 
   if (planAccess.tutorRequestLimitWarning) {
-    return `Heads up: ${planAccess.tutorRequestsRemainingLast24Hours} tutor ${
-      planAccess.tutorRequestsRemainingLast24Hours === 1 ? 'request' : 'requests'
-    } left in this 24-hour period.`;
+    const remaining = planAccess.tutorRequestsRemainingLast24Hours;
+    const requestLabel = remaining === 1 ? 'request' : 'requests';
+
+    if (planAccess.isPaidPlan) {
+      return `You are close to today’s tutor request limit for your ${getPlanLabel(
+        planAccess.plan
+      )} plan. You have ${remaining} tutor ${requestLabel} left in this 24-hour period.`;
+    }
+
+    return `You have ${remaining} tutor ${requestLabel} left in this 24-hour period. Upgrade to Plus or Pro for higher limits.`;
   }
 
-  return `${planAccess.tutorRequestsUsedLast24Hours}/${planAccess.dailyTutorLimit} tutor requests used in the last 24 hours · ${planAccess.tutorRequestsRemainingLast24Hours} remaining.`;
+  return '';
 }
 
 function getImageUsageText(planAccess: AccountPlanAccess) {
@@ -606,9 +619,10 @@ export default function SubjectTutor({
       parentHelpStyle: audience === 'parent' ? parentHelpStyle : null,
       topic: audience === 'parent' ? parentTopic : '',
       stuckPoint: audience === 'parent' ? parentStuckPoint : '',
-      image: selectedImage && planAccess.canUseImages && !planAccess.imageUploadLimitReached
-        ? selectedImage
-        : null
+      image:
+        selectedImage && planAccess.canUseImages && !planAccess.imageUploadLimitReached
+          ? selectedImage
+          : null
     };
   }
 
@@ -749,6 +763,9 @@ export default function SubjectTutor({
     subject: subjectConfig,
     customPlaceholder: placeholder
   });
+
+  const tutorUsageWarningText = getTutorUsageWarningText(planAccess);
+  const showTutorUsageWarning = Boolean(answer && !loading && tutorUsageWarningText);
 
   return (
     <div className="grid tutorSurface" style={{ gap: 18 }}>
@@ -1063,7 +1080,11 @@ export default function SubjectTutor({
                 maxWidth: 320
               }}
             >
-              <button type="button" onClick={() => void submitQuestion()} disabled={loading || !question.trim()}>
+              <button
+                type="button"
+                onClick={() => void submitQuestion()}
+                disabled={loading || !question.trim()}
+              >
                 {loading ? 'Thinking...' : conversationId ? 'Send Follow-up' : 'Ask TutoVera'}
               </button>
 
@@ -1077,20 +1098,6 @@ export default function SubjectTutor({
                 }}
               >
                 Cmd/Ctrl + Enter
-              </p>
-
-              <p
-                className="small"
-                style={{
-                  margin: 0,
-                  textAlign: 'center',
-                  lineHeight: 1.35,
-                  color: planAccess.tutorRequestLimitWarning || planAccess.tutorRequestLimitReached
-                    ? 'var(--accent-warm)'
-                    : 'var(--text-soft)'
-                }}
-              >
-                {planAccessLoading ? 'Checking usage...' : getTutorUsageText(planAccess)}
               </p>
             </div>
 
@@ -1112,6 +1119,38 @@ export default function SubjectTutor({
         <div className="responseBox">
           {answer ? <AnswerDisplay text={answer} /> : <p>Your tutor response will appear here.</p>}
         </div>
+
+        {showTutorUsageWarning ? (
+          <div
+            className="card questionSurface"
+            style={{
+              display: 'grid',
+              gap: 8,
+              padding: 14,
+              borderColor: 'var(--accent-warm-border)'
+            }}
+          >
+            <p
+              className="small"
+              style={{
+                margin: 0,
+                color: 'var(--accent-warm)'
+              }}
+            >
+              <strong>Usage note:</strong> {tutorUsageWarningText}
+            </p>
+            <div className="buttonRow">
+              <a className="btn secondary" href="/account">
+                View Usage
+              </a>
+              {!planAccess.isPaidPlan ? (
+                <a className="btn secondary" href="/pricing">
+                  View Plans
+                </a>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {graphingEnabled && audience === 'student' && showGraphForCurrentTurn && activeGraphExpression ? (
           <FunctionGraph expression={activeGraphExpression} />
