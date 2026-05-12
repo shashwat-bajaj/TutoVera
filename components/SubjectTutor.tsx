@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AnswerDisplay from '@/components/AnswerDisplay';
 import FunctionGraph from '@/components/FunctionGraph';
 import PaidImageUploadPlaceholder from '@/components/PaidImageUploadPlaceholder';
+import ProRevisionReviewPanel from '@/components/ProRevisionReviewPanel';
 import { createClient } from '@/lib/supabase/client';
 import { getSubjectConfig, subjects, type SubjectConfig, type SubjectKey } from '@/lib/subjects';
 import {
@@ -944,6 +945,14 @@ export default function SubjectTutor({
             ) : (
               <PaidImageUploadPlaceholder compact context={audience} />
             )}
+          </div>
+        </details>
+
+        <details className="tutorLaterDetails">
+          <summary>Pro study tools</summary>
+
+          <div style={{ display: 'grid', gap: 14, paddingTop: 14 }}>
+            <ProRevisionReviewPanel conversationId={conversationId} />
           </div>
         </details>
 

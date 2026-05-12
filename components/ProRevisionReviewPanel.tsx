@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import AnswerDisplay from '@/components/AnswerDisplay';
 
 type ProRevisionReviewPanelProps = {
-  conversationId: string;
+  conversationId?: string | null;
 };
 
 type AccountPlanAccess = {
@@ -59,6 +59,7 @@ export default function ProRevisionReviewPanel({
     planAccess.plan === 'pro' &&
     planAccess.hasActivePaidAccess;
 
+  const hasSavedSession = Boolean(conversationId);
   const activeReview = reviews[activeReviewType];
 
   useEffect(() => {
@@ -183,10 +184,7 @@ export default function ProRevisionReviewPanel({
           </div>
         </div>
 
-        <div
-          className="proStudyToolPreviewGrid"
-          aria-label="Pro study tool previews"
-        >
+        <div className="proStudyToolPreviewGrid" aria-label="Pro study tool previews">
           <div className="card innerFeatureCard proStudyToolPreview">
             <p className="small" style={{ margin: 0 }}>
               <strong>Revision Review</strong>
@@ -258,6 +256,25 @@ export default function ProRevisionReviewPanel({
         </div>
       </div>
 
+      {!hasSavedSession ? (
+        <div
+          className="card innerFeatureCard"
+          style={{
+            display: 'grid',
+            gap: 6,
+            padding: 14
+          }}
+        >
+          <p className="small" style={{ margin: 0 }}>
+            <strong>Ask TutoVera at least once first.</strong>
+          </p>
+          <p className="small" style={{ margin: 0 }}>
+            Once this workspace has a saved session, Pro Study Tools can generate a Revision Review
+            or Mistake Review from the conversation.
+          </p>
+        </div>
+      ) : null}
+
       <div className="proStudyToolGrid">
         <div className="card innerFeatureCard proStudyToolCard">
           <div style={{ display: 'grid', gap: 6 }}>
@@ -273,7 +290,7 @@ export default function ProRevisionReviewPanel({
           <button
             type="button"
             onClick={() => void generateReview('revision')}
-            disabled={Boolean(loadingReviewType)}
+            disabled={!hasSavedSession || Boolean(loadingReviewType)}
           >
             {loadingReviewType === 'revision'
               ? 'Creating Revision Review...'
@@ -297,7 +314,7 @@ export default function ProRevisionReviewPanel({
           <button
             type="button"
             onClick={() => void generateReview('mistake')}
-            disabled={Boolean(loadingReviewType)}
+            disabled={!hasSavedSession || Boolean(loadingReviewType)}
           >
             {loadingReviewType === 'mistake'
               ? 'Creating Mistake Review...'
