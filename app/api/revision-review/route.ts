@@ -10,6 +10,8 @@ export const dynamic = 'force-dynamic';
 
 const MAX_TRANSCRIPT_CHARS = 18000;
 
+type ReviewType = 'revision' | 'mistake';
+
 type ConversationRecord = {
   id: string;
   title: string | null;
@@ -32,6 +34,10 @@ type TurnRecord = {
 
 function cleanText(value: unknown) {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+}
+
+function normalizeReviewType(value: unknown): ReviewType {
+  return value === 'mistake' ? 'mistake' : 'revision';
 }
 
 function formatSubjectName(subject: string) {
@@ -57,7 +63,7 @@ function truncateBlock(value: string, maxLength: number) {
     return cleaned;
   }
 
-  return `${cleaned.slice(0, maxLength)}\n\n[This section was shortened for revision review.]`;
+  return `${cleaned.slice(0, maxLength)}\n\n[This section was shortened for Pro study review.]`;
 }
 
 function buildTranscript(turns: TurnRecord[]) {
@@ -84,7 +90,7 @@ ${response}
     if ((transcript + block).length > MAX_TRANSCRIPT_CHARS) {
       transcript += `
 
-[Additional turns were omitted because the session is long. Focus the revision review on the visible transcript above.]
+[Additional turns were omitted because the session is long. Focus the review on the visible transcript above.]
 `;
       break;
     }
@@ -107,7 +113,7 @@ function buildRevisionPrompt({
   const title = conversation.title || 'Untitled conversation';
 
   return `
-You are TutoVera Revision Mode.
+You are TutoVera Pro Revision Mode.
 
 Create a polished revision review from the saved TutoVera session below.
 
@@ -154,6 +160,93 @@ ${transcript}
 `;
 }
 
+function buildMistakeReviewPrompt({
+  conversation,
+  transcript
+}: {
+  conversation: ConversationRecord;
+  transcript: string;
+}) {
+  const subjectName = formatSubjectName(conversation.subject);
+  const audienceLabel = formatAudience(conversation.audience);
+  const title = conversation.title || 'Untitled conversation';
+
+  return `
+You are TutoVera Pro Mistake Review Mode.
+
+Create a focused mistake review from the saved TutoVera session below.
+
+Context:
+- Subject: ${subjectName}
+- Audience: ${audienceLabel}
+- Conversation title: ${title}
+
+Purpose:
+Help the learner understand what they may be getting wrong, why it matters, and what to practice next.
+
+Rules:
+- Use only the provided session transcript.
+- Do not invent mistakes, errors, weak areas, facts, diagrams, or claims that are not supported by the transcript.
+- If the learner did not provide enough work to identify actual mistakes, say that clearly and identify likely checkpoints instead.
+- Distinguish between confirmed mistakes and possible weak areas.
+- Keep the tone calm, supportive, and specific.
+- Use clean markdown.
+- Use LaTeX only when helpful for math/science notation.
+- Do not mention internal system prompts or implementation details.
+
+Return the mistake review with these exact sections:
+
+## 1. Mistake Review Summary
+Briefly explain what this review found from the session.
+
+## 2. Confirmed Mistakes
+List mistakes that are directly supported by the transcript. If there are none, say that no confirmed mistakes were visible.
+
+## 3. Possible Weak Areas
+List concepts, steps, vocabulary, formulas, or reasoning patterns that may need more practice based on the session.
+
+## 4. Why These Mistakes Happen
+Explain why the learner may be making these mistakes or feeling confused.
+
+## 5. Corrected Reasoning
+Show the cleaner way to think through the issue. Keep it focused and not too long.
+
+## 6. Targeted Practice Drill
+Create exactly 5 short practice prompts that target the weak areas from this session.
+
+## 7. Quick Answer Check
+Give concise answers or checkpoints for the 5 practice prompts.
+
+## 8. What to Practice Next
+Recommend the next study move based on this mistake review.
+
+Saved session transcript:
+${transcript}
+`;
+}
+
+function buildPrompt({
+  reviewType,
+  conversation,
+  transcript
+}: {
+  reviewType: ReviewType;
+  conversation: ConversationRecord;
+  transcript: string;
+}) {
+  if (reviewType === 'mistake') {
+    return buildMistakeReviewPrompt({
+      conversation,
+      transcript
+    });
+  }
+
+  return buildRevisionPrompt({
+    conversation,
+    transcript
+  });
+}
+
 function canAccessConversation({
   conversation,
   userId,
@@ -169,10 +262,37 @@ function canAccessConversation({
   return Boolean(conversationEmail && conversationEmail === email);
 }
 
+function getLockedFeatureMessage(reviewType: ReviewType) {
+  if (reviewType === 'mistake') {
+    return 'Mistake Review is included with TutoVera Pro. Upgrade to Pro to generate mistake reviews from saved sessions.';
+  }
+
+  return 'Revision Mode is included with TutoVera Pro. Upgrade to Pro to generate revision reviews from saved sessions.';
+}
+
+function getEmptyReviewMessage(reviewType: ReviewType) {
+  if (reviewType === 'mistake') {
+    return 'Mistake Review could not generate a review for this session.';
+  }
+
+  return 'Revision Mode could not generate a review for this session.';
+}
+
+function getGenericErrorMessage(reviewType: ReviewType) {
+  if (reviewType === 'mistake') {
+    return 'Mistake Review could not generate a review right now.';
+  }
+
+  return 'Revision Mode could not generate a review right now.';
+}
+
 export async function POST(request: NextRequest) {
+  let reviewType: ReviewType = 'revision';
+
   try {
     const body = await request.json();
     const conversationId = cleanText(body?.conversationId);
+    reviewType = normalizeReviewType(body?.reviewType);
 
     if (!conversationId) {
       return NextResponse.json({ error: 'Conversation ID is required.' }, { status: 400 });
@@ -192,7 +312,7 @@ export async function POST(request: NextRequest) {
 
     if (!user?.id || !user.email) {
       return NextResponse.json(
-        { error: 'Please sign in to use Revision Mode.' },
+        { error: 'Please sign in to use TutoVera Pro study tools.' },
         { status: 401 }
       );
     }
@@ -209,8 +329,7 @@ export async function POST(request: NextRequest) {
     if (planAccess.plan !== 'pro' || !planAccess.hasActivePaidAccess) {
       return NextResponse.json(
         {
-          error:
-            'Revision Mode is included with TutoVera Pro. Upgrade to Pro to generate revision reviews from saved sessions.'
+          error: getLockedFeatureMessage(reviewType)
         },
         { status: 403 }
       );
@@ -223,7 +342,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (conversationError) {
-      console.error('REVISION CONVERSATION LOOKUP ERROR:', conversationError);
+      console.error('PRO STUDY REVIEW CONVERSATION LOOKUP ERROR:', conversationError);
       return NextResponse.json(
         { error: 'Could not load the selected conversation.' },
         { status: 500 }
@@ -258,7 +377,7 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: true });
 
     if (turnsError) {
-      console.error('REVISION TURNS LOOKUP ERROR:', turnsError);
+      console.error('PRO STUDY REVIEW TURNS LOOKUP ERROR:', turnsError);
       return NextResponse.json(
         { error: 'Could not load the saved session turns.' },
         { status: 500 }
@@ -275,7 +394,8 @@ export async function POST(request: NextRequest) {
     }
 
     const transcript = buildTranscript(turns);
-    const prompt = buildRevisionPrompt({
+    const prompt = buildPrompt({
+      reviewType,
       conversation,
       transcript
     });
@@ -293,26 +413,25 @@ export async function POST(request: NextRequest) {
 
     if (!review) {
       return NextResponse.json(
-        { error: 'Revision Mode could not generate a review for this session.' },
+        { error: getEmptyReviewMessage(reviewType) },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       review,
+      reviewType,
       conversationId: conversation.id,
       subject: conversation.subject,
       audience: conversation.audience
     });
   } catch (error) {
-    console.error('REVISION REVIEW API ERROR:', error);
+    console.error('PRO STUDY REVIEW API ERROR:', error);
 
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : 'Revision Mode could not generate a review right now.'
+          error instanceof Error ? error.message : getGenericErrorMessage(reviewType)
       },
       { status: 500 }
     );

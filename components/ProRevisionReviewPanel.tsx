@@ -13,20 +13,53 @@ type AccountPlanAccess = {
   hasActivePaidAccess: boolean;
 };
 
+type ReviewType = 'revision' | 'mistake';
+
+type ReviewState = {
+  revision: string;
+  mistake: string;
+};
+
+function getReviewLabel(reviewType: ReviewType) {
+  return reviewType === 'mistake' ? 'Mistake Review' : 'Revision Review';
+}
+
+function getLoadingMessage(reviewType: ReviewType) {
+  if (reviewType === 'mistake') {
+    return 'Creating a Pro mistake review from this saved session...';
+  }
+
+  return 'Creating a Pro revision review from this saved session...';
+}
+
+function getFailureMessage(reviewType: ReviewType) {
+  if (reviewType === 'mistake') {
+    return 'Mistake Review could not generate a review right now.';
+  }
+
+  return 'Revision Mode could not generate a review right now.';
+}
+
 export default function ProRevisionReviewPanel({
   conversationId
 }: ProRevisionReviewPanelProps) {
   const [planAccess, setPlanAccess] = useState<AccountPlanAccess | null>(null);
   const [planLoading, setPlanLoading] = useState(true);
-  const [review, setReview] = useState('');
+  const [activeReviewType, setActiveReviewType] = useState<ReviewType>('revision');
+  const [reviews, setReviews] = useState<ReviewState>({
+    revision: '',
+    mistake: ''
+  });
   const [status, setStatus] = useState('');
   const [statusKind, setStatusKind] = useState<'idle' | 'info' | 'error' | 'success'>('idle');
-  const [loading, setLoading] = useState(false);
+  const [loadingReviewType, setLoadingReviewType] = useState<ReviewType | null>(null);
 
   const hasProAccess =
     planAccess?.signedIn &&
     planAccess.plan === 'pro' &&
     planAccess.hasActivePaidAccess;
+
+  const activeReview = reviews[activeReviewType];
 
   useEffect(() => {
     async function loadPlanAccess() {
@@ -63,13 +96,18 @@ export default function ProRevisionReviewPanel({
     void loadPlanAccess();
   }, []);
 
-  async function generateRevisionReview() {
-    if (loading || !conversationId) return;
+  async function generateReview(reviewType: ReviewType) {
+    if (loadingReviewType || !conversationId) return;
 
-    setLoading(true);
+    setActiveReviewType(reviewType);
+    setLoadingReviewType(reviewType);
     setStatusKind('info');
-    setStatus('Creating a Pro revision review from this saved session...');
-    setReview('');
+    setStatus(getLoadingMessage(reviewType));
+
+    setReviews((current) => ({
+      ...current,
+      [reviewType]: ''
+    }));
 
     try {
       const response = await fetch('/api/revision-review', {
@@ -78,7 +116,8 @@ export default function ProRevisionReviewPanel({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          conversationId
+          conversationId,
+          reviewType
         })
       });
 
@@ -89,31 +128,35 @@ export default function ProRevisionReviewPanel({
 
       if (!response.ok || !data.review) {
         setStatusKind('error');
-        setStatus(data.error || 'Revision Mode could not generate a review.');
+        setStatus(data.error || `${getReviewLabel(reviewType)} could not generate a review.`);
         return;
       }
 
-      setReview(data.review);
+      setReviews((current) => ({
+        ...current,
+        [reviewType]: data.review || ''
+      }));
+
       setStatusKind('success');
-      setStatus('Revision review created.');
+      setStatus(`${getReviewLabel(reviewType)} created.`);
     } catch {
       setStatusKind('error');
-      setStatus('Revision Mode could not generate a review right now.');
+      setStatus(getFailureMessage(reviewType));
     } finally {
-      setLoading(false);
+      setLoadingReviewType(null);
     }
   }
 
   if (planLoading) {
     return (
-      <section className="card questionSurface proRevisionCard">
+      <section className="card questionSurface proStudyToolsCard">
         <p className="small" style={{ margin: 0 }}>
-          Checking Pro Revision Mode access...
+          Checking Pro Study Tools access...
         </p>
 
         <style>
           {`
-            .proRevisionCard {
+            .proStudyToolsCard {
               display: grid;
               gap: 12px;
               padding: 16px;
@@ -127,15 +170,38 @@ export default function ProRevisionReviewPanel({
 
   if (!hasProAccess) {
     return (
-      <section className="card questionSurface proRevisionCard">
+      <section className="card questionSurface proStudyToolsCard">
         <div style={{ display: 'grid', gap: 8 }}>
-          <span className="badge">Pro Revision Mode</span>
+          <span className="badge">Pro Study Tools</span>
 
           <div style={{ display: 'grid', gap: 6 }}>
-            <h3 style={{ margin: 0 }}>Turn this session into a revision review.</h3>
+            <h3 style={{ margin: 0 }}>Turn saved sessions into deeper study support.</h3>
             <p className="small" style={{ margin: 0 }}>
-              TutoVera Pro can convert saved sessions into study notes, weak-area review, practice
-              questions, answer keys, and next-step revision guidance.
+              TutoVera Pro can convert saved sessions into revision reviews, mistake reviews,
+              study notes, weak-area checks, targeted practice, answer keys, and next-step guidance.
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="proStudyToolPreviewGrid"
+          aria-label="Pro study tool previews"
+        >
+          <div className="card innerFeatureCard proStudyToolPreview">
+            <p className="small" style={{ margin: 0 }}>
+              <strong>Revision Review</strong>
+            </p>
+            <p className="small" style={{ margin: 0 }}>
+              Summaries, key concepts, clean notes, practice questions, and review next steps.
+            </p>
+          </div>
+
+          <div className="card innerFeatureCard proStudyToolPreview">
+            <p className="small" style={{ margin: 0 }}>
+              <strong>Mistake Review</strong>
+            </p>
+            <p className="small" style={{ margin: 0 }}>
+              Confirmed mistakes, likely weak areas, corrected reasoning, and targeted drills.
             </p>
           </div>
         </div>
@@ -151,7 +217,7 @@ export default function ProRevisionReviewPanel({
 
         <style>
           {`
-            .proRevisionCard {
+            .proStudyToolsCard {
               display: grid;
               gap: 14px;
               padding: 16px;
@@ -160,6 +226,18 @@ export default function ProRevisionReviewPanel({
                 linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 94%, transparent), var(--surface-soft)),
                 radial-gradient(circle at top left, var(--accent-soft), transparent 36%);
             }
+
+            .proStudyToolPreviewGrid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+              gap: 12px;
+            }
+
+            .proStudyToolPreview {
+              display: grid;
+              gap: 6px;
+              padding: 14px;
+            }
           `}
         </style>
       </section>
@@ -167,23 +245,67 @@ export default function ProRevisionReviewPanel({
   }
 
   return (
-    <section className="card questionSurface proRevisionCard">
+    <section className="card questionSurface proStudyToolsCard">
       <div style={{ display: 'grid', gap: 8 }}>
-        <span className="badge">Pro Revision Mode</span>
+        <span className="badge">Pro Study Tools</span>
 
         <div style={{ display: 'grid', gap: 6 }}>
-          <h3 style={{ margin: 0 }}>Create a revision review from this session.</h3>
+          <h3 style={{ margin: 0 }}>Create deeper reviews from this saved session.</h3>
           <p className="small" style={{ margin: 0 }}>
-            Revision Mode turns this saved thread into study notes, weak-area review, practice
-            questions, an answer key, and recommended next steps.
+            Use Revision Review for broad study notes, or Mistake Review for a focused weak-area
+            and corrected-reasoning breakdown.
           </p>
         </div>
       </div>
 
-      <div className="buttonRow">
-        <button type="button" onClick={generateRevisionReview} disabled={loading}>
-          {loading ? 'Creating Revision Review...' : review ? 'Regenerate Revision Review' : 'Create Revision Review'}
-        </button>
+      <div className="proStudyToolGrid">
+        <div className="card innerFeatureCard proStudyToolCard">
+          <div style={{ display: 'grid', gap: 6 }}>
+            <p className="small" style={{ margin: 0 }}>
+              <strong>Revision Review</strong>
+            </p>
+            <p className="small" style={{ margin: 0 }}>
+              Create a full study review with summary, key concepts, clean notes, practice
+              questions, answer key, and next steps.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void generateReview('revision')}
+            disabled={Boolean(loadingReviewType)}
+          >
+            {loadingReviewType === 'revision'
+              ? 'Creating Revision Review...'
+              : reviews.revision
+                ? 'Regenerate Revision Review'
+                : 'Create Revision Review'}
+          </button>
+        </div>
+
+        <div className="card innerFeatureCard proStudyToolCard">
+          <div style={{ display: 'grid', gap: 6 }}>
+            <p className="small" style={{ margin: 0 }}>
+              <strong>Mistake Review</strong>
+            </p>
+            <p className="small" style={{ margin: 0 }}>
+              Create a targeted review of confirmed mistakes, possible weak areas, corrected
+              reasoning, and practice drills.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void generateReview('mistake')}
+            disabled={Boolean(loadingReviewType)}
+          >
+            {loadingReviewType === 'mistake'
+              ? 'Creating Mistake Review...'
+              : reviews.mistake
+                ? 'Regenerate Mistake Review'
+                : 'Create Mistake Review'}
+          </button>
+        </div>
       </div>
 
       {status ? (
@@ -203,7 +325,33 @@ export default function ProRevisionReviewPanel({
         </p>
       ) : null}
 
-      {review ? (
+      {(reviews.revision || reviews.mistake) ? (
+        <div className="proStudyToolTabs" role="tablist" aria-label="Generated Pro study reviews">
+          <button
+            type="button"
+            className={`secondary proStudyToolTab ${
+              activeReviewType === 'revision' ? 'active' : ''
+            }`}
+            onClick={() => setActiveReviewType('revision')}
+            disabled={!reviews.revision}
+          >
+            Revision Review
+          </button>
+
+          <button
+            type="button"
+            className={`secondary proStudyToolTab ${
+              activeReviewType === 'mistake' ? 'active' : ''
+            }`}
+            onClick={() => setActiveReviewType('mistake')}
+            disabled={!reviews.mistake}
+          >
+            Mistake Review
+          </button>
+        </div>
+      ) : null}
+
+      {activeReview ? (
         <div
           className="answerSurface"
           style={{
@@ -214,13 +362,13 @@ export default function ProRevisionReviewPanel({
             border: '1px solid var(--border)'
           }}
         >
-          <AnswerDisplay text={review} />
+          <AnswerDisplay text={activeReview} />
         </div>
       ) : null}
 
       <style>
         {`
-          .proRevisionCard {
+          .proStudyToolsCard {
             display: grid;
             gap: 14px;
             padding: 16px;
@@ -228,6 +376,36 @@ export default function ProRevisionReviewPanel({
             background:
               linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 94%, transparent), var(--surface-soft)),
               radial-gradient(circle at top left, var(--accent-soft), transparent 36%);
+          }
+
+          .proStudyToolGrid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+          }
+
+          .proStudyToolCard {
+            display: grid;
+            gap: 12px;
+            padding: 14px;
+            align-content: space-between;
+          }
+
+          .proStudyToolTabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+          }
+
+          .proStudyToolTab.active {
+            border-color: var(--accent-border);
+            color: var(--text);
+          }
+
+          @media (max-width: 760px) {
+            .proStudyToolGrid {
+              grid-template-columns: 1fr;
+            }
           }
         `}
       </style>
