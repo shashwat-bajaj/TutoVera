@@ -26,10 +26,10 @@ function getReviewLabel(reviewType: ReviewType) {
 
 function getLoadingMessage(reviewType: ReviewType) {
   if (reviewType === 'mistake') {
-    return 'Creating a Pro mistake review from this saved session...';
+    return 'Creating a mistake review from this saved session...';
   }
 
-  return 'Creating a Pro revision review from this saved session...';
+  return 'Creating a revision review from this saved session...';
 }
 
 function getFailureMessage(reviewType: ReviewType) {
@@ -37,7 +37,7 @@ function getFailureMessage(reviewType: ReviewType) {
     return 'Mistake Review could not generate a review right now.';
   }
 
-  return 'Revision Mode could not generate a review right now.';
+  return 'Revision Review could not generate a review right now.';
 }
 
 export default function ProRevisionReviewPanel({
@@ -150,14 +150,14 @@ export default function ProRevisionReviewPanel({
 
   if (planLoading) {
     return (
-      <section className="card questionSurface proStudyToolsCard">
+      <section className="card questionSurface studyToolsCard">
         <p className="small" style={{ margin: 0 }}>
-          Checking Pro Study Tools access...
+          Checking Study Tools access...
         </p>
 
         <style>
           {`
-            .proStudyToolsCard {
+            .studyToolsCard {
               display: grid;
               gap: 12px;
               padding: 16px;
@@ -171,21 +171,22 @@ export default function ProRevisionReviewPanel({
 
   if (!hasProAccess) {
     return (
-      <section className="card questionSurface proStudyToolsCard">
+      <section className="card questionSurface studyToolsCard">
         <div style={{ display: 'grid', gap: 8 }}>
-          <span className="badge">Pro Study Tools</span>
+          <span className="badge">Study Tools</span>
 
           <div style={{ display: 'grid', gap: 6 }}>
             <h3 style={{ margin: 0 }}>Turn saved sessions into deeper study support.</h3>
             <p className="small" style={{ margin: 0 }}>
-              TutoVera Pro can convert saved sessions into revision reviews, mistake reviews,
-              study notes, weak-area checks, targeted practice, answer keys, and next-step guidance.
+              TutoVera Study Tools can convert saved sessions into revision reviews, mistake
+              reviews, study notes, weak-area checks, targeted practice, answer keys, and next-step
+              guidance. Revision Review and Mistake Review are included with Pro.
             </p>
           </div>
         </div>
 
-        <div className="proStudyToolPreviewGrid" aria-label="Pro study tool previews">
-          <div className="card innerFeatureCard proStudyToolPreview">
+        <div className="studyToolPreviewGrid" aria-label="Study tool previews">
+          <div className="card innerFeatureCard studyToolPreview">
             <p className="small" style={{ margin: 0 }}>
               <strong>Revision Review</strong>
             </p>
@@ -194,7 +195,7 @@ export default function ProRevisionReviewPanel({
             </p>
           </div>
 
-          <div className="card innerFeatureCard proStudyToolPreview">
+          <div className="card innerFeatureCard studyToolPreview">
             <p className="small" style={{ margin: 0 }}>
               <strong>Mistake Review</strong>
             </p>
@@ -206,7 +207,7 @@ export default function ProRevisionReviewPanel({
 
         <div className="buttonRow">
           <a className="btn" href="/pricing">
-            View Pro Plan
+            View Plans
           </a>
           <a className="btn secondary" href="/contact">
             Ask About Pro
@@ -215,7 +216,7 @@ export default function ProRevisionReviewPanel({
 
         <style>
           {`
-            .proStudyToolsCard {
+            .studyToolsCard {
               display: grid;
               gap: 14px;
               padding: 16px;
@@ -225,13 +226,13 @@ export default function ProRevisionReviewPanel({
                 radial-gradient(circle at top left, var(--accent-soft), transparent 36%);
             }
 
-            .proStudyToolPreviewGrid {
+            .studyToolPreviewGrid {
               display: grid;
               grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
               gap: 12px;
             }
 
-            .proStudyToolPreview {
+            .studyToolPreview {
               display: grid;
               gap: 6px;
               padding: 14px;
@@ -243,9 +244,9 @@ export default function ProRevisionReviewPanel({
   }
 
   return (
-    <section className="card questionSurface proStudyToolsCard">
+    <section className="card questionSurface studyToolsCard">
       <div style={{ display: 'grid', gap: 8 }}>
-        <span className="badge">Pro Study Tools</span>
+        <span className="badge">Study Tools</span>
 
         <div style={{ display: 'grid', gap: 6 }}>
           <h3 style={{ margin: 0 }}>Create deeper reviews from this saved session.</h3>
@@ -269,14 +270,14 @@ export default function ProRevisionReviewPanel({
             <strong>Ask TutoVera at least once first.</strong>
           </p>
           <p className="small" style={{ margin: 0 }}>
-            Once this workspace has a saved session, Pro Study Tools can generate a Revision Review
-            or Mistake Review from the conversation.
+            Once this workspace has a saved session, Study Tools can generate a Revision Review or
+            Mistake Review from the conversation.
           </p>
         </div>
       ) : null}
 
-      <div className="proStudyToolGrid">
-        <div className="card innerFeatureCard proStudyToolCard">
+      <div className="studyToolGrid">
+        <div className="card innerFeatureCard studyToolCard">
           <div style={{ display: 'grid', gap: 6 }}>
             <p className="small" style={{ margin: 0 }}>
               <strong>Revision Review</strong>
@@ -300,7 +301,7 @@ export default function ProRevisionReviewPanel({
           </button>
         </div>
 
-        <div className="card innerFeatureCard proStudyToolCard">
+        <div className="card innerFeatureCard studyToolCard">
           <div style={{ display: 'grid', gap: 6 }}>
             <p className="small" style={{ margin: 0 }}>
               <strong>Mistake Review</strong>
@@ -343,10 +344,10 @@ export default function ProRevisionReviewPanel({
       ) : null}
 
       {(reviews.revision || reviews.mistake) ? (
-        <div className="proStudyToolTabs" role="tablist" aria-label="Generated Pro study reviews">
+        <div className="studyToolTabs" role="tablist" aria-label="Generated study reviews">
           <button
             type="button"
-            className={`secondary proStudyToolTab ${
+            className={`secondary studyToolTab ${
               activeReviewType === 'revision' ? 'active' : ''
             }`}
             onClick={() => setActiveReviewType('revision')}
@@ -357,7 +358,7 @@ export default function ProRevisionReviewPanel({
 
           <button
             type="button"
-            className={`secondary proStudyToolTab ${
+            className={`secondary studyToolTab ${
               activeReviewType === 'mistake' ? 'active' : ''
             }`}
             onClick={() => setActiveReviewType('mistake')}
@@ -385,7 +386,7 @@ export default function ProRevisionReviewPanel({
 
       <style>
         {`
-          .proStudyToolsCard {
+          .studyToolsCard {
             display: grid;
             gap: 14px;
             padding: 16px;
@@ -395,32 +396,32 @@ export default function ProRevisionReviewPanel({
               radial-gradient(circle at top left, var(--accent-soft), transparent 36%);
           }
 
-          .proStudyToolGrid {
+          .studyToolGrid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
           }
 
-          .proStudyToolCard {
+          .studyToolCard {
             display: grid;
             gap: 12px;
             padding: 14px;
             align-content: space-between;
           }
 
-          .proStudyToolTabs {
+          .studyToolTabs {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
           }
 
-          .proStudyToolTab.active {
+          .studyToolTab.active {
             border-color: var(--accent-border);
             color: var(--text);
           }
 
           @media (max-width: 760px) {
-            .proStudyToolGrid {
+            .studyToolGrid {
               grid-template-columns: 1fr;
             }
           }

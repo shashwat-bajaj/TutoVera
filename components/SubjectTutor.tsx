@@ -949,7 +949,7 @@ export default function SubjectTutor({
         </details>
 
         <details className="tutorLaterDetails">
-          <summary>Pro study tools</summary>
+          <summary>Study tools</summary>
 
           <div style={{ display: 'grid', gap: 14, paddingTop: 14 }}>
             <ProRevisionReviewPanel conversationId={conversationId} />
