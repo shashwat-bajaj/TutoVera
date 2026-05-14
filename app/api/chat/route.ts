@@ -10,6 +10,7 @@ import { getUserPlanAccess } from '@/lib/subscriptions';
 import {
   buildLearningProfileContext,
   getLearningProfileForTutor,
+  shouldUpdateLearningProfile,
   updateLearningProfileFromTurn
 } from '@/lib/learning-profile';
 
@@ -845,13 +846,14 @@ export async function POST(request: NextRequest) {
 
     let answer = '';
 
-    if (
+    const handledByLocalGraphOnly =
       subjectConfig.features.graphing &&
       graphOnlyBypass &&
       !imagePayload &&
       audience === 'student' &&
-      normalizedGraphExpression
-    ) {
+      normalizedGraphExpression;
+
+    if (handledByLocalGraphOnly) {
       answer = buildLocalGraphOnlyAnswer(normalizedGraphExpression);
     } else {
       const conversationContext = buildConversationContext(existingTurns);
@@ -942,12 +944,24 @@ ${buildImageInstruction({
       console.error('SUPABASE SAVE ERROR:', dbError);
     }
 
-    if (user?.id && normalizedEmail) {
+    const shouldRefreshLearningProfile =
+      user?.id &&
+      normalizedEmail &&
+      shouldUpdateLearningProfile({
+        turnIndex,
+        existingProfile: learningProfile,
+        isGraphOnlyBypass: Boolean(handledByLocalGraphOnly)
+      });
+
+    if (shouldRefreshLearningProfile && user?.id && normalizedEmail) {
       try {
         await updateLearningProfileFromTurn({
           supabase,
           ai,
-          model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
+          model:
+            process.env.GEMINI_PROFILE_MODEL ||
+            process.env.GEMINI_MODEL ||
+            'gemini-3.1-flash-lite',
           userId: user.id,
           email: normalizedEmail,
           subject: activeSubject,

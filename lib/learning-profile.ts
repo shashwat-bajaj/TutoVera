@@ -48,10 +48,21 @@ const LEARNING_PROFILE_SELECT = [
   'updated_at'
 ].join(', ');
 
+function stripMathDelimiters(value: string) {
+  return value
+    .replace(/\$\$([\s\S]*?)\$\$/g, '$1')
+    .replace(/\$([^$]+)\$/g, '$1')
+    .replace(/\\\(([\s\S]*?)\\\)/g, '$1')
+    .replace(/\\\[([\s\S]*?)\\\]/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function cleanProfileText(value: unknown, maxLength = 700) {
   if (typeof value !== 'string') return null;
 
-  const cleaned = value.replace(/\s+/g, ' ').trim();
+  const cleaned = stripMathDelimiters(value);
   if (!cleaned) return null;
 
   return cleaned.length > maxLength ? `${cleaned.slice(0, maxLength).trim()}...` : cleaned;
@@ -93,7 +104,7 @@ function getFallbackDraft({
 }): ProfileDraft {
   return {
     profile_summary: `Recent ${subject} ${audience} session at ${gradeLevel} level.`,
-    last_observation: truncateForPrompt(question, 260)
+    last_observation: truncateForPrompt(stripMathDelimiters(question), 260)
   };
 }
 
@@ -124,6 +135,13 @@ Do not include the full conversation.
 Do not invent diagnoses, disabilities, medical claims, or sensitive personal attributes.
 Keep each field concise and useful.
 
+Important formatting rules:
+- Return plain text only inside JSON values.
+- Do not use LaTeX.
+- Do not use $...$ or $$...$$ math delimiters.
+- Do not use markdown tables.
+- If math notation is needed, write it plainly, for example: x = -a, not $x = -a$.
+
 Return JSON only with these keys:
 {
   "profile_summary": "1-2 sentence summary of learning context",
@@ -150,6 +168,25 @@ ${truncateForPrompt(question, 2200)}
 Latest tutor response:
 ${truncateForPrompt(answer, 3200)}
 `;
+}
+
+export function shouldUpdateLearningProfile({
+  turnIndex,
+  existingProfile,
+  isGraphOnlyBypass
+}: {
+  turnIndex: number;
+  existingProfile: LearningProfileRecord | null;
+  isGraphOnlyBypass: boolean;
+}) {
+  if (isGraphOnlyBypass) return false;
+  if (!Number.isFinite(turnIndex) || turnIndex <= 0) return false;
+
+  // Avoid slowing down the very first message of a fresh session.
+  if (!existingProfile && turnIndex < 2) return false;
+
+  // Create/update on turn 2, then refresh every 3 turns: 2, 5, 8, 11...
+  return turnIndex === 2 || (turnIndex > 2 && (turnIndex - 2) % 3 === 0);
 }
 
 export function buildLearningProfileContext(profile: LearningProfileRecord | null) {
