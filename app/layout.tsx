@@ -42,9 +42,6 @@ export const metadata: Metadata = {
     'guided learning'
   ],
   category: 'education',
-  alternates: {
-    canonical: '/'
-  },
   icons: {
     icon: [
       {
