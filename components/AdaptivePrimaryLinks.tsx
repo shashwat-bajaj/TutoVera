@@ -13,7 +13,6 @@ const tutoveraLinks = [
   { href: '/subjects', label: 'Subjects' },
   { href: '/tutor', label: 'Students' },
   { href: '/parents', label: 'Parents' },
-  { href: '/learning-tools', label: 'Learning Tools' },
   { href: '/history', label: 'History' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/about', label: 'About' },
@@ -62,7 +61,6 @@ function getSubjectProductLinks(subject: ActiveSubjectNav) {
     { href: subject.basePath, label: subject.label },
     { href: `${subject.basePath}/tutor`, label: 'Students' },
     { href: `${subject.basePath}/parents`, label: 'Parents' },
-    { href: '/learning-tools', label: 'Learning Tools' },
     { href: `${subject.basePath}/history`, label: 'History' },
     { href: `${subject.basePath}/about`, label: 'About' },
     { href: '/pricing', label: 'Pricing' }
