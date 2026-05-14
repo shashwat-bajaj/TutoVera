@@ -1,29 +1,132 @@
 import './globals.css';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import AuthNav from '@/components/AuthNav';
 import ThemeToggle from '@/components/ThemeToggle';
 import BrandMark from '@/components/BrandMark';
 import RouteShell from '@/components/RouteShell';
 import SiteBackdrop from '@/components/SiteBackdrop';
+import AdaptivePrimaryLinks from '@/components/AdaptivePrimaryLinks';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/next';
 
-export const metadata = {
-  title: 'MathSupport AI',
-  description: 'AI math support for students and parents.'
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://tutovera.com').replace(/\/$/, '');
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'TutoVera',
+    template: '%s | TutoVera'
+  },
+  description:
+    'Solve. Understand. Improve. TutoVera is a calm AI learning platform for Math, Physics, Chemistry, and Biology, with student and parent workspaces, saved history, and guided learning support.',
+  applicationName: 'TutoVera',
+  authors: [{ name: 'TutoVera' }],
+  creator: 'TutoVera',
+  publisher: 'TutoVera',
+  keywords: [
+    'TutoVera',
+    'Solve Understand Improve',
+    'AI tutor',
+    'AI learning platform',
+    'math tutor',
+    'physics tutor',
+    'chemistry tutor',
+    'biology tutor',
+    'parent learning support',
+    'student workspace',
+    'homework help',
+    'worksheet help',
+    'revision review',
+    'mistake review',
+    'guided learning'
+  ],
+  category: 'education',
+  alternates: {
+    canonical: '/'
+  },
+  icons: {
+    icon: [
+      {
+        url: '/brand/exact/tutovera-app-icon.png?v=7',
+        type: 'image/png',
+        sizes: '512x512'
+      },
+      {
+        url: '/brand/exact/tutovera-app-icon.png?v=7',
+        type: 'image/png',
+        sizes: '512x512',
+        media: '(prefers-color-scheme: light)'
+      },
+      {
+        url: '/brand/dark-mode/tutovera-app-icon-dark-mode.png?v=7',
+        type: 'image/png',
+        sizes: '512x512',
+        media: '(prefers-color-scheme: dark)'
+      },
+      {
+        url: '/brand/exact/tutovera-app-icon.svg?v=7',
+        type: 'image/svg+xml',
+        media: '(prefers-color-scheme: light)'
+      },
+      {
+        url: '/brand/dark-mode/tutovera-app-icon-dark-mode.svg?v=7',
+        type: 'image/svg+xml',
+        media: '(prefers-color-scheme: dark)'
+      }
+    ],
+    shortcut: [
+      {
+        url: '/brand/exact/tutovera-app-icon.png?v=7',
+        type: 'image/png'
+      }
+    ],
+    apple: [
+      {
+        url: '/brand/exact/tutovera-app-icon.png?v=7',
+        type: 'image/png',
+        sizes: '512x512'
+      }
+    ]
+  },
+  manifest: '/manifest.webmanifest',
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: 'TutoVera',
+    title: 'TutoVera — Solve. Understand. Improve.',
+    description:
+      'A calm AI learning platform for Math, Physics, Chemistry, and Biology, built around student and parent workspaces.',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'TutoVera — Solve. Understand. Improve.'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TutoVera — Solve. Understand. Improve.',
+    description: 'A calm AI learning platform for Math, Physics, Chemistry, and Biology.',
+    images: ['/twitter-image']
+  }
 };
 
-const primaryLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/tutor', label: 'Students' },
-  { href: '/parents', label: 'Parents' },
-  { href: '/history', label: 'History' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' }
-];
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  colorScheme: 'dark light',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F2F8FF' },
+    { media: '(prefers-color-scheme: dark)', color: '#0B1D3A' }
+  ]
+};
 
 const footerLinks = [
   { href: '/about', label: 'About' },
+  { href: '/subjects', label: 'Subjects' },
   { href: '/contact', label: 'Contact' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/settings', label: 'Settings' },
@@ -34,7 +137,7 @@ const footerLinks = [
 const themeBootstrapScript = `
 (function () {
   try {
-    var saved = localStorage.getItem('mathsupport-theme') || 'system';
+    var saved = localStorage.getItem('tutovera-theme') || 'system';
     var resolved =
       saved === 'system'
         ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
@@ -55,6 +158,36 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/brand/exact/tutovera-app-icon.png?v=7" type="image/png" />
+        <link rel="shortcut icon" href="/brand/exact/tutovera-app-icon.png?v=7" />
+
+        <link
+          rel="icon"
+          href="/brand/exact/tutovera-app-icon.svg?v=7"
+          type="image/svg+xml"
+          media="(prefers-color-scheme: light)"
+        />
+        <link
+          rel="icon"
+          href="/brand/dark-mode/tutovera-app-icon-dark-mode.svg?v=7"
+          type="image/svg+xml"
+          media="(prefers-color-scheme: dark)"
+        />
+        <link
+          rel="icon"
+          href="/brand/exact/tutovera-app-icon.png?v=7"
+          type="image/png"
+          sizes="512x512"
+          media="(prefers-color-scheme: light)"
+        />
+        <link
+          rel="icon"
+          href="/brand/dark-mode/tutovera-app-icon-dark-mode.png?v=7"
+          type="image/png"
+          sizes="512x512"
+          media="(prefers-color-scheme: dark)"
+        />
+        <link rel="apple-touch-icon" href="/brand/exact/tutovera-app-icon.png?v=7" />
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
 
@@ -95,11 +228,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                       maxWidth: '100%'
                     }}
                   >
-                    {primaryLinks.map((link) => (
-                      <a key={link.href} href={link.href}>
-                        {link.label}
-                      </a>
-                    ))}
+                    <AdaptivePrimaryLinks />
                     <AuthNav />
                   </nav>
                 </div>
@@ -143,12 +272,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               >
                 <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
                   <p className="small" style={{ margin: 0 }}>
-                    <strong>MathSupport AI</strong> is being shaped into a calmer learning workspace
-                    for students and parents.
+                    <strong>TutoVera</strong> is a calmer AI learning platform across Math,
+                    Physics, Chemistry, and Biology.
                   </p>
                   <p className="small" style={{ margin: 0, maxWidth: 720 }}>
-                    The focus is better explanation, graph support, stronger follow-up flow, and a
-                    cleaner product experience across the whole site.
+                    Each subject branch has its own learning workspace while sharing the same
+                    account, settings, history foundation, deployment, and backend structure.
                   </p>
                 </div>
 
@@ -173,7 +302,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </div>
 
                 <p className="small" style={{ margin: 0 }}>
-                  Free beta
+                  Since 2026 · Solve. Understand. Improve.
                 </p>
               </div>
             </div>

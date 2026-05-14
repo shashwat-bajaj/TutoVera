@@ -1,192 +1,251 @@
-'use client';
-
-import { motion } from 'motion/react';
-import BetaSignup from '@/components/BetaSignup';
+import Link from 'next/link';
 import Reveal from '@/components/Reveal';
+import BetaSignup from '@/components/BetaSignup';
+import { subjects } from '@/lib/subjects';
 
 export default function HomePage() {
+  const subjectList = Object.values(subjects);
+  const activeSubjects = subjectList.filter((subject) => subject.status === 'active');
+
   return (
     <div className="grid" style={{ gap: 34 }}>
       <section className="homeLead">
-        <div className="homeLeadGrid">
-          <motion.div
-            className="homeLeadCopy"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.56, ease: 'easeOut' }}
-          >
-            <motion.span
-              className="badge"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.04, duration: 0.28, ease: 'easeOut' }}
-            >
-              Free beta now live
-            </motion.span>
+        <div className="homeLeadGrid" style={{ alignItems: 'center' }}>
+          <div className="homeLeadCopy">
+            <span className="badge">TutoVera</span>
 
-            <motion.h1
-              className="homeLeadTitle"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.4, ease: 'easeOut' }}
-            >
-              Math help that stays clear after the first answer.
-            </motion.h1>
+            <h1 className="homeLeadTitle">
+              Solve. Understand. <span>Improve.</span>
+            </h1>
 
-            <motion.p
-              className="homeLeadSubtext"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.18, duration: 0.4, ease: 'easeOut' }}
-            >
-              For students and parents who want explanation, graphing, and follow-up flow in one
-              calmer workspace.
-            </motion.p>
+            <p className="homeLeadSubtext">
+              A calm AI learning platform for students and parents. Ask questions, understand the
+              reasoning, and improve through practice, saved sessions, and review.
+            </p>
 
-            <motion.div
-              className="buttonRow"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.24, duration: 0.38, ease: 'easeOut' }}
-            >
-              <a className="btn" href="/tutor">
-                Open Student Workspace
-              </a>
-              <a className="btn secondary" href="/parents">
-                Open Parent Workspace
-              </a>
-            </motion.div>
+            <div className="buttonRow">
+              <Link className="btn" href="/tutor">
+                Start Learning →
+              </Link>
+              <Link className="btn secondary" href="/subjects">
+                Explore Subjects
+              </Link>
+            </div>
 
-            <motion.div
-              className="homeLeadProof"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.36, ease: 'easeOut' }}
-            >
-              <div className="homeLeadProofItem">
-                <strong>Graph-aware</strong>
-                <p className="small" style={{ margin: 0 }}>
-                  Explain, graph, and continue.
-                </p>
-              </div>
+            <p className="small" style={{ margin: 0, maxWidth: 680 }}>
+              Start free with text tutoring. Upgrade when you need worksheet images, higher limits,
+              or deeper revision tools.
+            </p>
+          </div>
 
-              <div className="homeLeadProofItem">
-                <strong>Session continuity</strong>
-                <p className="small" style={{ margin: 0 }}>
-                  Return without starting over.
-                </p>
-              </div>
-
-              <div className="homeLeadProofItem">
-                <strong>Parent support</strong>
-                <p className="small" style={{ margin: 0 }}>
-                  Simpler help for guided learning.
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-
-          <motion.div
-            className="homeLeadPreviewWrap"
-            initial={{ opacity: 0, y: 10, scale: 0.995 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ delay: 0.18, duration: 0.56, ease: 'easeOut' }}
-          >
+          <div className="homeLeadPreviewWrap">
             <div className="homePreviewWindow">
-              <div className="homePreviewBar">
-                <div className="homePreviewDots">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <span className="small">Tutor preview</span>
-              </div>
+              <div
+                className="homePreviewDashboard"
+                style={{
+                  gridTemplateColumns: '1fr',
+                  minHeight: 'auto'
+                }}
+              >
+                <div className="homePreviewMain" style={{ padding: 20, gap: 14 }}>
+                  <div className="homePreviewHeader">
+                    <div>
+                      <h2>Ask TutoVera</h2>
+                      <p>One workspace for questions, explanations, and follow-ups.</p>
+                    </div>
 
-              <div className="homePreviewStack">
-                <div className="homePreviewPanel homePreviewChat">
-                  <div className="homePreviewPrompt">
-                    <p className="small" style={{ margin: 0 }}>
-                      Solve x² − 5x + 6, graph it, and show one common mistake.
-                    </p>
+                    <div
+                      className="homePreviewHours"
+                      style={{ gridTemplateColumns: '1fr', justifyItems: 'end' }}
+                    >
+                      <span>Workspaces</span>
+                      <strong>Student · Parent</strong>
+                    </div>
                   </div>
 
-                  <div className="homePreviewResponse">
-                    <p className="small" style={{ margin: 0 }}>
-                      The same workspace can explain the method, render the graph, diagnose the
-                      mistake, and keep the next question connected.
-                    </p>
-                  </div>
-                </div>
+                  <div className="homeProgressCard">
+                    <div className="homeProgressLabel">
+                      <span>Example question</span>
+                      <strong>“Can you explain this step by step?”</strong>
+                    </div>
 
-                <div className="homePreviewGrid">
-                  <div className="homePreviewGraph">
-                    <div className="homePreviewAxisX" />
-                    <div className="homePreviewAxisY" />
-                    <div className="homePreviewLine" />
-                    <div className="homePreviewDot one" />
-                    <div className="homePreviewDot two" />
-                    <div className="homePreviewDot three" />
+                    <div style={{ display: 'grid', gap: 12 }}>
+                      <div
+                        style={{
+                          border: '1px solid var(--accent-secondary-border)',
+                          borderRadius: 18,
+                          background:
+                            'color-mix(in srgb, var(--accent-secondary-soft) 56%, var(--surface))',
+                          padding: 14
+                        }}
+                      >
+                        <p className="small" style={{ margin: 0 }}>
+                          TutoVera helps solve the question, explain the reasoning, and keep the
+                          session ready for follow-ups.
+                        </p>
+                      </div>
+
+                      <div
+                        style={{
+                          border: '1px solid var(--border)',
+                          borderRadius: 18,
+                          background: 'color-mix(in srgb, var(--surface) 92%, transparent)',
+                          padding: 14
+                        }}
+                      >
+                        <p className="small" style={{ margin: 0 }}>
+                          Plus adds worksheet and image help. Pro adds revision and mistake review
+                          from saved sessions.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="homePreviewMiniCard">
-                    <span className="badge">Session tools</span>
-                    <p className="small" style={{ margin: 0 }}>
-                      Graphing, follow-ups, saved sessions, read aloud, and translation.
-                    </p>
+                  <div className="buttonRow">
+                    <Link className="btn secondary" href="/parents">
+                      Parent Workspace
+                    </Link>
+                    <Link className="btn secondary" href="/pricing">
+                      View Plans
+                    </Link>
                   </div>
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       <Reveal delay={0.04}>
-        <section className="card spotlightCard" style={{ display: 'grid', gap: 22 }}>
-          <div style={{ display: 'grid', gap: 8 }}>
-            <span className="badge">How it’s used</span>
-            <h2 style={{ margin: 0 }}>One system, two ways in.</h2>
-            <p className="small" style={{ margin: 0, maxWidth: 1120 }}>
-              Students can solve, graph, diagnose, and continue the same thread. Parents can get
-              simpler explanations, examples, and guided support without jumping straight to the
-              final answer.
+        <section className="grid cols-3">
+          <div className="card featureCard">
+            <span className="badge">1</span>
+            <h2 style={{ margin: 0 }}>Ask</h2>
+            <p className="small" style={{ margin: 0 }}>
+              Type a question, paste your work, choose a subject, or use the parent workspace to
+              help a child without just giving away the answer.
             </p>
           </div>
 
-          <div className="sectionSplit">
-            <div className="sectionCell">
-              <span className="badge">Students</span>
-              <h3 style={{ margin: 0 }}>Work through the math, then keep going.</h3>
-              <p className="small" style={{ margin: 0, maxWidth: 640 }}>
-                Best for direct solving, understanding the method, graphing functions, diagnosing
-                mistakes, and asking the next question without restarting the whole flow.
-              </p>
-              <div className="buttonRow">
-                <a className="btn" href="/tutor">
-                  Go to Students
-                </a>
-              </div>
-            </div>
+          <div className="card featureCard">
+            <span className="badge">2</span>
+            <h2 style={{ margin: 0 }}>Understand</h2>
+            <p className="small" style={{ margin: 0 }}>
+              Get clear explanations, follow-up guidance, hints, mistake checks, and step-by-step
+              reasoning that stays connected to the session.
+            </p>
+          </div>
 
-            <div className="sectionCell">
-              <span className="badge">Parents</span>
-              <h3 style={{ margin: 0 }}>Support a child more clearly.</h3>
-              <p className="small" style={{ margin: 0, maxWidth: 640 }}>
-                Best for simpler explanations, parent talking points, child-friendly examples, and
-                guided help that supports learning instead of replacing it.
-              </p>
-              <div className="buttonRow">
-                <a className="btn secondary" href="/parents">
-                  Go to Parents
-                </a>
-              </div>
-            </div>
+          <div className="card featureCard">
+            <span className="badge">3</span>
+            <h2 style={{ margin: 0 }}>Improve</h2>
+            <p className="small" style={{ margin: 0 }}>
+              Save sessions, return to earlier work, upload worksheets on paid plans, and use review
+              tools when you need deeper practice.
+            </p>
           </div>
         </section>
       </Reveal>
 
       <Reveal delay={0.08}>
-        <BetaSignup />
+        <section className="card spotlightCard" style={{ display: 'grid', gap: 22 }}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span className="badge">Subjects</span>
+            <h2 style={{ margin: 0 }}>Choose a subject and start learning.</h2>
+            <p className="small" style={{ margin: 0, maxWidth: 900 }}>
+              TutoVera supports student and parent workspaces across active subject branches, all
+              connected through one account and shared history.
+            </p>
+          </div>
+
+          <div className="grid cols-3">
+            {subjectList.map((subject) => (
+              <Link
+                key={subject.key}
+                href={subject.path}
+                className="card featureCard"
+                style={{
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  borderColor:
+                    subject.status === 'active' ? 'var(--accent-border)' : 'var(--border)'
+                }}
+              >
+                <h3 style={{ margin: 0 }}>{subject.name}</h3>
+
+                <p className="small" style={{ margin: 0 }}>
+                  {subject.description}
+                </p>
+
+                <p className="small" style={{ margin: '14px 0 0' }}>
+                  <strong>Open {subject.name} →</strong>
+                </p>
+              </Link>
+            ))}
+          </div>
+
+          <div className="buttonRow">
+            {activeSubjects.map((subject) => (
+              <Link key={subject.key} className="btn secondary" href={subject.path}>
+                {subject.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      </Reveal>
+
+      <Reveal delay={0.12}>
+        <section className="card" style={{ display: 'grid', gap: 18 }}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span className="badge">Plans</span>
+            <h2 style={{ margin: 0 }}>Simple plans that unlock naturally.</h2>
+            <p className="small" style={{ margin: 0, maxWidth: 900 }}>
+              TutoVera keeps the workspace simple. Your plan quietly changes what you can do inside
+              the tutor, history, and review flow.
+            </p>
+          </div>
+
+          <div className="grid cols-3">
+            <div className="card innerFeatureCard">
+              <h3 style={{ marginTop: 0 }}>Free</h3>
+              <p className="small" style={{ marginBottom: 0 }}>
+                Text tutoring, student and parent workspaces, math graphing, and basic saved
+                history.
+              </p>
+            </div>
+
+            <div className="card innerFeatureCard">
+              <h3 style={{ marginTop: 0 }}>Plus</h3>
+              <p className="small" style={{ marginBottom: 0 }}>
+                Everything in Free, plus worksheet photos, screenshots, higher limits, and extended
+                history.
+              </p>
+            </div>
+
+            <div className="card innerFeatureCard">
+              <h3 style={{ marginTop: 0 }}>Pro</h3>
+              <p className="small" style={{ marginBottom: 0 }}>
+                Everything in Plus, plus Revision Review, Mistake Review, highest limits, and deeper
+                study support.
+              </p>
+            </div>
+          </div>
+
+          <div className="buttonRow">
+            <Link className="btn" href="/pricing">
+              Compare Plans
+            </Link>
+            <Link className="btn secondary" href="/tutor">
+              Try Free
+            </Link>
+          </div>
+        </section>
+      </Reveal>
+
+      <Reveal delay={0.16}>
+        <section id="updates">
+          <BetaSignup />
+        </section>
       </Reveal>
     </div>
   );

@@ -15,6 +15,10 @@ type TranslationLanguage =
   | 'Russian';
 type GradeLevel = 'elementary' | 'middle-school' | 'high-school' | 'college';
 type TutorMode = 'auto' | 'teach' | 'hint' | 'diagnose' | 'quiz';
+type AccountRole = 'student' | 'parent' | 'student-parent';
+
+const STORAGE_KEY = 'tutovera-theme';
+const THEME_EVENT = 'tutovera-theme-change';
 
 function resolveTheme(theme: ThemePreference) {
   if (typeof window === 'undefined') return theme === 'light' ? 'light' : 'dark';
@@ -26,13 +30,34 @@ function resolveTheme(theme: ThemePreference) {
   return theme;
 }
 
+function normalizeRole(value: string): AccountRole {
+  if (value === 'parent') return 'parent';
+  if (value === 'student-parent') return 'student-parent';
+  return 'student';
+}
+
+function cleanUsername(value: string) {
+  return value.trim().replace(/\s+/g, '').toLowerCase();
+}
+
+function isValidUsername(value: string) {
+  if (!value) return true;
+  return /^[a-z0-9._-]{3,32}$/.test(value);
+}
+
 export default function SettingsForm({
+  initialFullName,
+  initialUsername,
+  initialRole,
   initialThemePreference,
   initialTranslationLanguage,
   initialStudentGradeLevel,
   initialStudentTutorMode,
   initialParentGradeLevel
 }: {
+  initialFullName: string;
+  initialUsername: string;
+  initialRole: string;
   initialThemePreference: ThemePreference;
   initialTranslationLanguage: TranslationLanguage;
   initialStudentGradeLevel: GradeLevel;
@@ -40,6 +65,10 @@ export default function SettingsForm({
   initialParentGradeLevel: GradeLevel;
 }) {
   const supabase = createClient();
+
+  const [fullName, setFullName] = useState(initialFullName);
+  const [username, setUsername] = useState(initialUsername);
+  const [accountRole, setAccountRole] = useState<AccountRole>(normalizeRole(initialRole));
 
   const [themePreference, setThemePreference] =
     useState<ThemePreference>(initialThemePreference);
@@ -60,6 +89,19 @@ export default function SettingsForm({
   async function saveSettings() {
     if (loading) return;
 
+    const trimmedFullName = fullName.trim();
+    const normalizedUsername = cleanUsername(username);
+
+    if (!trimmedFullName) {
+      setStatus('Please enter your full name.');
+      return;
+    }
+
+    if (!isValidUsername(normalizedUsername)) {
+      setStatus('Display names can use 3–32 letters, numbers, dots, underscores, or hyphens.');
+      return;
+    }
+
     setStatus('Saving settings...');
     setLoading(true);
 
@@ -67,14 +109,21 @@ export default function SettingsForm({
       data: { user }
     } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (!user?.id || !user.email) {
       setStatus('You must be logged in.');
       setLoading(false);
       return;
     }
 
+    const normalizedEmail = user.email.toLowerCase();
+
     const nextMetadata = {
       ...(user.user_metadata || {}),
+      full_name: trimmedFullName,
+      name: trimmedFullName,
+      username: normalizedUsername || null,
+      display_name: normalizedUsername || trimmedFullName,
+      tutovera_role: accountRole,
       preferences: {
         ...(user.user_metadata?.preferences || {}),
         themePreference,
@@ -89,19 +138,41 @@ export default function SettingsForm({
       }
     };
 
-    const { error } = await supabase.auth.updateUser({
+    const { error: authUpdateError } = await supabase.auth.updateUser({
       data: nextMetadata
     });
 
-    if (error) {
-      setStatus(error.message);
+    if (authUpdateError) {
+      setStatus(authUpdateError.message);
       setLoading(false);
       return;
     }
 
-    window.localStorage.setItem('mathsupport-theme', themePreference);
-    document.documentElement.setAttribute('data-theme', resolveTheme(themePreference));
+    const { error: profileError } = await supabase.from('profiles').upsert(
+      {
+        user_id: user.id,
+        email: normalizedEmail,
+        full_name: trimmedFullName,
+        username: normalizedUsername || null,
+        role: accountRole,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'user_id' }
+    );
 
+    if (profileError) {
+      setStatus(profileError.message);
+      setLoading(false);
+      return;
+    }
+
+    window.localStorage.setItem(STORAGE_KEY, themePreference);
+    document.documentElement.setAttribute('data-theme', resolveTheme(themePreference));
+    document.documentElement.style.colorScheme = resolveTheme(themePreference);
+    document.body?.setAttribute('data-theme', resolveTheme(themePreference));
+    window.dispatchEvent(new Event(THEME_EVENT));
+
+    setUsername(normalizedUsername);
     setStatus('Settings saved.');
     setLoading(false);
   }
@@ -117,10 +188,72 @@ export default function SettingsForm({
         }}
       >
         <div style={{ display: 'grid', gap: 8 }}>
+          <h3 style={{ margin: 0 }}>Profile details</h3>
+          <p className="small" style={{ margin: 0 }}>
+            Save the name TutoVera should use across your account. Phone and address are not needed
+            for the tutoring experience right now.
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 16
+          }}
+        >
+          <div>
+            <label>Full name</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Your full name"
+              autoComplete="name"
+            />
+          </div>
+
+          <div>
+            <label>Display name, optional</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(cleanUsername(e.target.value))}
+              placeholder="learner123"
+              autoComplete="username"
+            />
+            <p className="small" style={{ margin: '6px 0 0' }}>
+              Use 3–32 letters, numbers, dots, underscores, or hyphens.
+            </p>
+          </div>
+
+          <div>
+            <label>I use TutoVera as</label>
+            <select
+              value={accountRole}
+              onChange={(e) => setAccountRole(e.target.value as AccountRole)}
+            >
+              <option value="student">Student / learner</option>
+              <option value="parent">Parent / guardian</option>
+              <option value="student-parent">Both student and parent</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section
+        style={{
+          display: 'grid',
+          gap: 16,
+          paddingBottom: 18,
+          borderBottom: '1px solid var(--border)'
+        }}
+      >
+        <div style={{ display: 'grid', gap: 8 }}>
           <h3 style={{ margin: 0 }}>Display and language</h3>
           <p className="small" style={{ margin: 0 }}>
-            Choose how the product looks by default and what translation language should be ready
-            when you need it.
+            Choose how TutoVera looks by default and what translation language should be ready when
+            you need it.
           </p>
         </div>
 
@@ -175,8 +308,8 @@ export default function SettingsForm({
         <div style={{ display: 'grid', gap: 8 }}>
           <h3 style={{ margin: 0 }}>Student tutor defaults</h3>
           <p className="small" style={{ margin: 0 }}>
-            Auto mode follows the wording of the question more naturally, while the other modes
-            push the tutor toward a more specific teaching style.
+            Auto mode follows the wording of the question more naturally, while the other modes push
+            the tutor toward a more specific teaching style.
           </p>
         </div>
 
@@ -225,8 +358,8 @@ export default function SettingsForm({
         <div style={{ display: 'grid', gap: 8 }}>
           <h3 style={{ margin: 0 }}>Parent tutor defaults</h3>
           <p className="small" style={{ margin: 0 }}>
-            Parent Tutor stays in guided hint mode by design, but you can choose the default
-            learner level here.
+            Parent workspaces stay guided by design, but you can choose the default learner level
+            here.
           </p>
         </div>
 
@@ -272,7 +405,8 @@ export default function SettingsForm({
           </p>
         ) : (
           <p className="small" style={{ margin: 0 }}>
-            Saved changes affect your default experience, but you can still adjust things inside a session.
+            Saved changes affect your default experience, but you can still adjust things inside a
+            session.
           </p>
         )}
       </div>

@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 type ThemePreference = 'system' | 'light' | 'dark';
 type ResolvedTheme = 'light' | 'dark';
 
-const STORAGE_KEY = 'mathsupport-theme';
-const THEME_EVENT = 'mathsupport-theme-change';
+const STORAGE_KEY = 'tutovera-theme';
+const THEME_EVENT = 'tutovera-theme-change';
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === 'undefined') return 'dark';

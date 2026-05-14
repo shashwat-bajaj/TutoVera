@@ -1,6 +1,7 @@
 import AnswerDisplay from '@/components/AnswerDisplay';
 import DeleteTurnButton from '@/components/DeleteTurnButton';
 import FunctionGraph from '@/components/FunctionGraph';
+import ProRevisionReviewPanel from '@/components/ProRevisionReviewPanel';
 import {
   extractRememberedGraphExpression,
   isGraphReferenceRequest
@@ -40,6 +41,18 @@ function formatTurnLabel(index: number) {
   return index === 0 ? 'Initial Question' : `Follow-up ${index}`;
 }
 
+function getConversationIdFromRedirectHref(redirectHref?: string) {
+  if (!redirectHref || !redirectHref.includes('?')) return '';
+
+  try {
+    const query = redirectHref.split('?')[1] || '';
+    const params = new URLSearchParams(query);
+    return params.get('conversation') || '';
+  } catch {
+    return '';
+  }
+}
+
 export default function ConversationThread({
   title,
   audience,
@@ -47,7 +60,8 @@ export default function ConversationThread({
   updatedAt,
   turns,
   showDeleteTurnControls = false,
-  redirectHref
+  redirectHref,
+  graphingEnabled = false
 }: {
   title: string | null;
   audience: string;
@@ -55,6 +69,7 @@ export default function ConversationThread({
   updatedAt: string;
   turns: Array<{
     id: string;
+    conversation_id?: string | null;
     turn_index: number | null;
     mode: string;
     level: string;
@@ -64,8 +79,13 @@ export default function ConversationThread({
   }>;
   showDeleteTurnControls?: boolean;
   redirectHref?: string;
+  graphingEnabled?: boolean;
 }) {
   let lastKnownGraphExpression = '';
+
+  const conversationIdForRevision =
+    turns.find((turn) => turn.conversation_id)?.conversation_id ||
+    getConversationIdFromRedirectHref(redirectHref);
 
   return (
     <div className="grid" style={{ gap: 22 }}>
@@ -113,22 +133,29 @@ export default function ConversationThread({
             <p style={{ margin: 0 }}>{formatDate(updatedAt)}</p>
           </div>
         </div>
+
+        {conversationIdForRevision ? (
+          <ProRevisionReviewPanel conversationId={conversationIdForRevision} />
+        ) : null}
       </section>
 
       <div className="threadTurns" style={{ gap: 22 }}>
         {turns.map((turn, index) => {
-          const rememberedCandidate =
-            audience === 'student' ? extractRememberedGraphExpression(turn.prompt) : '';
+          const canRenderGraph = graphingEnabled && audience === 'student';
+
+          const rememberedCandidate = canRenderGraph
+            ? extractRememberedGraphExpression(turn.prompt)
+            : '';
 
           if (rememberedCandidate) {
             lastKnownGraphExpression = rememberedCandidate;
           }
 
           const requestedGraphContext =
-            audience === 'student' && isGraphReferenceRequest(turn.prompt);
+            canRenderGraph && isGraphReferenceRequest(turn.prompt);
 
           const graphExpression =
-            audience === 'student' && requestedGraphContext
+            canRenderGraph && requestedGraphContext
               ? rememberedCandidate || lastKnownGraphExpression
               : '';
 

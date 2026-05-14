@@ -1,5 +1,5 @@
 {
-  "name": "mathsupport-ai",
+  "name": "tutovera",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -18,14 +18,13 @@
     "katex": "^0.16.42",
     "motion": "^12.38.0",
     "next": "latest",
-    "openai": "latest",
     "react": "latest",
     "react-dom": "latest",
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",
     "remark-breaks": "^4.0.0",
+    "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
-    "stripe": "latest",
     "three": "^0.184.0"
   },
   "devDependencies": {

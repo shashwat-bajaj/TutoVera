@@ -1,48 +1,76 @@
+import Link from 'next/link';
 import Reveal from '@/components/Reveal';
+import { subjects } from '@/lib/subjects';
 
 export default function AboutPage() {
+  const subjectList = Object.values(subjects);
+
   return (
     <div className="grid" style={{ gap: 24 }}>
       <Reveal delay={0.02}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
-          <span className="badge">About the product</span>
+          <span className="badge">About TutoVera</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
-            <h1 style={{ margin: 0 }}>Built to make math feel clearer, calmer, and easier to continue.</h1>
-            <p className="small" style={{ margin: 0, maxWidth: 820 }}>
-              MathSupport AI is being built as a learning-first math workspace for students and
-              parents. The goal is not just to produce answers, but to help users understand what is
-              happening, ask better follow-up questions, and return to earlier work without losing the
-              thread.
+            <h1 style={{ margin: 0 }}>Learning support built to feel clearer and more continuous.</h1>
+            <p className="small" style={{ margin: 0, maxWidth: 880 }}>
+              TutoVera is a calm AI learning platform for Math, Physics, Chemistry, and Biology. It
+              gives each subject its own workspace while keeping one shared account, history,
+              settings, and product foundation.
             </p>
+          </div>
+
+          <div className="buttonRow">
+            <Link className="btn" href="/subjects">
+              Explore Subjects
+            </Link>
+            <Link className="btn secondary" href="/tutor">
+              Open Student Workspaces
+            </Link>
+            <Link className="btn secondary" href="/parents">
+              Open Parent Workspaces
+            </Link>
           </div>
         </section>
       </Reveal>
 
       <Reveal delay={0.08}>
-        <section className="grid cols-3">
-          <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Learning over answer dumping</h3>
-            <p className="small" style={{ marginBottom: 0 }}>
-              The product is designed around explanation, guided support, diagnosis, and practice
-              rather than one-click answer output.
+        <section className="card" style={{ display: 'grid', gap: 18 }}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span className="badge">The name</span>
+            <h2 style={{ margin: 0 }}>Why TutoVera?</h2>
+            <p className="small" style={{ margin: 0, maxWidth: 900 }}>
+              TutoVera combines <strong>“Tuto,”</strong> from tutor, with{' '}
+              <strong>“Vera,”</strong> a word associated with truth, faith, belief, and trust. The
+              name reflects the kind of learning support this platform is meant to provide: clear,
+              steady, and trustworthy guidance for students and parents.
             </p>
           </div>
 
-          <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Built for real follow-ups</h3>
-            <p className="small" style={{ marginBottom: 0 }}>
-              Sessions are meant to continue naturally, so users can ask the next question without
-              starting from zero each time.
-            </p>
-          </div>
+          <div className="grid cols-3">
+            <div className="card innerFeatureCard">
+              <h3 style={{ marginTop: 0 }}>Guided learning</h3>
+              <p className="small" style={{ marginBottom: 0 }}>
+                TutoVera is designed to help learners understand the reasoning behind an answer, not
+                just copy a result.
+              </p>
+            </div>
 
-          <div className="card innerFeatureCard">
-            <h3 style={{ marginTop: 0 }}>Accessible by design</h3>
-            <p className="small" style={{ marginBottom: 0 }}>
-              Read aloud, translation, cleaner structure, and graph support are being added to make
-              the experience easier to use across different learning styles.
-            </p>
+            <div className="card innerFeatureCard">
+              <h3 style={{ marginTop: 0 }}>Shared continuity</h3>
+              <p className="small" style={{ marginBottom: 0 }}>
+                Sessions, settings, account access, and subject history stay connected instead of
+                being split across separate apps.
+              </p>
+            </div>
+
+            <div className="card innerFeatureCard">
+              <h3 style={{ marginTop: 0 }}>Parent support</h3>
+              <p className="small" style={{ marginBottom: 0 }}>
+                Parent workspaces help adults guide a learner with clearer explanations, likely
+                mistakes, and calmer study support.
+              </p>
+            </div>
           </div>
         </section>
       </Reveal>
@@ -50,38 +78,46 @@ export default function AboutPage() {
       <Reveal delay={0.14}>
         <section className="card" style={{ display: 'grid', gap: 18 }}>
           <div style={{ display: 'grid', gap: 8 }}>
-            <h2 style={{ margin: 0 }}>What the product is trying to become</h2>
-            <p className="small" style={{ margin: 0, maxWidth: 820 }}>
-              The long-term vision is a math support system that feels less like a generic chatbot and
-              more like a structured study environment — something that can teach, graph, diagnose,
-              adapt, and remember context in a way that is actually useful for learning.
+            <span className="badge">Subject branches</span>
+            <h2 style={{ margin: 0 }}>One platform, subject-specific workspaces.</h2>
+            <p className="small" style={{ margin: 0, maxWidth: 880 }}>
+              Each branch adapts the examples, tutor behavior, and learning flow for its subject
+              while staying connected to the broader TutoVera experience.
             </p>
           </div>
 
           <div className="grid cols-3">
-            <div className="card featureCard">
-              <h3 style={{ marginTop: 0 }}>For students</h3>
-              <p className="small" style={{ marginBottom: 0 }}>
-                A workspace for solving problems, understanding steps, checking mistakes, practicing
-                similar questions, and revisiting saved sessions later.
-              </p>
-            </div>
+            {subjectList.map((subject) => (
+              <Link
+                key={subject.key}
+                href={subject.path}
+                className="card featureCard"
+                style={{
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  borderColor:
+                    subject.status === 'active' ? 'var(--accent-border)' : 'var(--border)'
+                }}
+              >
+                <span className="badge">
+                  {subject.status === 'active'
+                    ? 'Active'
+                    : subject.status === 'beta'
+                      ? 'In progress'
+                      : 'Planned'}
+                </span>
 
-            <div className="card featureCard">
-              <h3 style={{ marginTop: 0 }}>For parents</h3>
-              <p className="small" style={{ marginBottom: 0 }}>
-                A more guided support flow for adults helping a child learn, with simpler phrasing,
-                examples, talking points, and parent-friendly explanation.
-              </p>
-            </div>
+                <h3 style={{ marginBottom: 8 }}>{subject.name}</h3>
 
-            <div className="card featureCard">
-              <h3 style={{ marginTop: 0 }}>For the product itself</h3>
-              <p className="small" style={{ marginBottom: 0 }}>
-                A calmer interface, better continuity, stronger visual support, and more intentional
-                interaction design than a typical homework-help tool.
-              </p>
-            </div>
+                <p className="small" style={{ margin: 0 }}>
+                  {subject.description}
+                </p>
+
+                <p className="small" style={{ margin: '14px 0 0' }}>
+                  <strong>Open {subject.name} →</strong>
+                </p>
+              </Link>
+            ))}
           </div>
         </section>
       </Reveal>
@@ -89,21 +125,21 @@ export default function AboutPage() {
       <Reveal delay={0.2}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 16 }}>
           <div style={{ display: 'grid', gap: 8 }}>
-            <h2 style={{ margin: 0 }}>Current beta focus</h2>
-            <p className="small" style={{ margin: 0, maxWidth: 820 }}>
-              Right now the beta is focused on strengthening the core tutor experience: cleaner
-              responses, better follow-up flow, graph support, session history, parent guidance, and a
-              more polished overall interface.
+            <h2 style={{ margin: 0 }}>What TutoVera focuses on</h2>
+            <p className="small" style={{ margin: 0, maxWidth: 880 }}>
+              TutoVera focuses on clearer tutor flow, saved continuity, parent support,
+              subject-specific learning, accessible design, and a calmer experience for students and
+              families.
             </p>
           </div>
 
           <div className="buttonRow">
-            <a className="btn" href="/tutor">
-              Open Student Workspace
-            </a>
-            <a className="btn secondary" href="/parents">
-              Open Parent Workspace
-            </a>
+            <Link className="btn" href="/pricing">
+              View Plans
+            </Link>
+            <Link className="btn secondary" href="/contact">
+              Contact / Feedback
+            </Link>
           </div>
         </section>
       </Reveal>

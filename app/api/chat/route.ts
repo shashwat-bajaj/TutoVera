@@ -4,8 +4,19 @@ import { buildTutorPrompt } from '@/lib/prompts';
 import { normalizeGraphExpression } from '@/lib/graphing';
 import { createAdminSupabase } from '@/lib/supabase-admin';
 import { createClient as createAuthClient } from '@/lib/supabase/server';
+import { planAllowsImageProcessing } from '@/lib/plans';
+import { getSubjectConfig, type SubjectConfig } from '@/lib/subjects';
+import { getUserPlanAccess } from '@/lib/subscriptions';
+import {
+  buildLearningProfileContext,
+  getLearningProfileForTutor,
+  shouldUpdateLearningProfile,
+  updateLearningProfileFromTurn
+} from '@/lib/learning-profile';
 
-const DAILY_FREE_LIMIT = 20;
+const FALLBACK_DAILY_FREE_LIMIT = 10;
+const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+const SUPPORTED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type ParentHelpStyle =
   | 'explain-simply'
@@ -14,24 +25,12 @@ type ParentHelpStyle =
   | 'practice-questions'
   | 'likely-mistake';
 
-async function getSymbolicCheck(question: string) {
-  const checkerUrl = process.env.MATH_CHECKER_URL;
-  if (!checkerUrl || !question.trim()) return '';
-
-  try {
-    const res = await fetch(`${checkerUrl}/analyze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: question })
-    });
-
-    if (!res.ok) return '';
-    const data = await res.json();
-    return JSON.stringify(data, null, 2);
-  } catch {
-    return '';
-  }
-}
+type ImageRequestPayload = {
+  data: string;
+  mimeType: string;
+  sizeBytes: number;
+  originalName: string | null;
+};
 
 function getClientIp(request: NextRequest) {
   const forwardedFor = request.headers.get('x-forwarded-for');
@@ -77,10 +76,7 @@ function getConfiguredList(value?: string) {
     .filter(Boolean);
 }
 
-function isAdminUser(args: {
-  userId: string | null;
-  email: string | null;
-}) {
+function isAdminUser(args: { userId: string | null; email: string | null }) {
   const adminUserIds = new Set(getConfiguredList(process.env.ADMIN_USER_IDS));
   const adminEmails = new Set(
     getConfiguredList(process.env.ADMIN_EMAILS).map((email) => email.toLowerCase())
@@ -95,6 +91,13 @@ function isAdminUser(args: {
   }
 
   return false;
+}
+
+function getRequestedSubject(value: unknown) {
+  const subjectKey =
+    typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : 'math';
+
+  return getSubjectConfig(subjectKey);
 }
 
 function getParentStyleInstruction(style: ParentHelpStyle) {
@@ -118,9 +121,9 @@ function getParentLevelInstruction(gradeLevel: string) {
     case 'elementary':
       return `Use very simple language, short sentences, concrete examples, and child-friendly analogies. Avoid heavy jargon.`;
     case 'middle-school':
-      return `Use clear everyday language, but begin connecting ideas to proper math vocabulary in a gentle way.`;
+      return `Use clear everyday language, but begin connecting ideas to proper subject vocabulary in a gentle way.`;
     case 'high-school':
-      return `Use accurate math terms, but keep the explanation parent-friendly and easy to say aloud.`;
+      return `Use accurate subject terms, but keep the explanation parent-friendly and easy to say aloud.`;
     case 'college':
     default:
       return `You may use more formal vocabulary, but still keep the response practical and parent-friendly.`;
@@ -188,13 +191,15 @@ function buildParentQuestion({
   gradeLevel,
   topic,
   stuckPoint,
-  helpStyle
+  helpStyle,
+  subject
 }: {
   question: string;
   gradeLevel: string;
   topic?: string;
   stuckPoint?: string;
   helpStyle: ParentHelpStyle;
+  subject: SubjectConfig;
 }) {
   const topicLine = topic?.trim() ? `Topic: ${topic.trim()}` : 'Topic: not specified';
   const stuckLine = stuckPoint?.trim()
@@ -202,7 +207,7 @@ function buildParentQuestion({
     : 'Where the child is stuck: not specified';
 
   return `
-You are helping a parent support a child with math learning.
+You are helping a parent support a child with ${subject.name} learning.
 
 Child level: ${gradeLevel}
 ${topicLine}
@@ -234,8 +239,10 @@ function looksLikeBareMathInput(question: string) {
   if (trimmed.length > 40) return false;
   if (/\n/.test(trimmed)) return false;
 
-  return /^[a-zA-Z0-9\s()+\-*/^.=]+$/.test(trimmed) &&
-    (/[0-9]/.test(trimmed) || containsStandaloneX(trimmed));
+  return (
+    /^[a-zA-Z0-9\s()+\-*/^.=]+$/.test(trimmed) &&
+    (/[0-9]/.test(trimmed) || containsStandaloneX(trimmed))
+  );
 }
 
 function hasExplicitMathIntent(question: string) {
@@ -260,12 +267,30 @@ function isGraphOnlyRequest(question: string) {
 }
 
 function isGraphExplanationRequest(question: string) {
-  return /\b(graph|grpah|plot|curve)\b/i.test(question) &&
-    /\b(explain|describe|what does|how does|why does)\b/i.test(question);
+  return (
+    /\b(graph|grpah|plot|curve)\b/i.test(question) &&
+    /\b(explain|describe|what does|how does|why does)\b/i.test(question)
+  );
 }
 
-function buildStudentQuestion(question: string, mode: string) {
+function buildStudentQuestion(question: string, mode: string, subject: SubjectConfig) {
   let enhanced = question;
+
+  if (subject.key !== 'math') {
+    if (mode === 'diagnose') {
+      enhanced = `${enhanced}
+
+If the user did not actually provide their work or steps, say that you cannot diagnose an exact mistake yet, and then show what they should check first.`;
+    }
+
+    if (mode === 'hint') {
+      enhanced = `${enhanced}
+
+Stay in hint mode unless a full answer is absolutely necessary.`;
+    }
+
+    return enhanced.trim();
+  }
 
   if (mode === 'auto') {
     if (isAmbiguousStandaloneMathInput(question)) {
@@ -337,11 +362,7 @@ Stay in hint mode unless a full solution is absolutely necessary.`;
 function isRetryableTutorError(error: any) {
   const message = String(error?.message || '');
   const status =
-    error?.status ||
-    error?.code ||
-    error?.error?.code ||
-    error?.cause?.status ||
-    null;
+    error?.status || error?.code || error?.error?.code || error?.cause?.status || null;
 
   return (
     status === 503 ||
@@ -360,11 +381,7 @@ function isRetryableTutorError(error: any) {
 function getUserFacingTutorError(error: any) {
   const message = String(error?.message || '');
   const status =
-    error?.status ||
-    error?.code ||
-    error?.error?.code ||
-    error?.cause?.status ||
-    null;
+    error?.status || error?.code || error?.error?.code || error?.cause?.status || null;
 
   if (
     status === 503 ||
@@ -410,11 +427,118 @@ Showing the graph for $y = ${expression}$.
 Ask to explain the graph, identify intercepts, describe the vertex, or compare it to another function.`;
 }
 
+function estimateBase64SizeBytes(base64: string) {
+  const cleaned = base64.replace(/\s/g, '');
+  if (!cleaned) return 0;
+
+  const padding = cleaned.endsWith('==') ? 2 : cleaned.endsWith('=') ? 1 : 0;
+  return Math.max(0, Math.floor((cleaned.length * 3) / 4) - padding);
+}
+
+function sanitizeImagePayload(value: unknown): {
+  image: ImageRequestPayload | null;
+  error?: string;
+} {
+  if (!value) {
+    return { image: null };
+  }
+
+  if (typeof value !== 'object') {
+    return { image: null, error: 'Invalid image payload.' };
+  }
+
+  const raw = value as Record<string, unknown>;
+  const mimeType = typeof raw.mimeType === 'string' ? raw.mimeType.trim().toLowerCase() : '';
+  const originalName =
+    typeof raw.originalName === 'string' && raw.originalName.trim()
+      ? raw.originalName.trim().slice(0, 180)
+      : null;
+
+  let data = typeof raw.data === 'string' ? raw.data.trim() : '';
+
+  if (data.startsWith('data:')) {
+    data = data.replace(/^data:[^;]+;base64,/, '');
+  }
+
+  data = data.replace(/\s/g, '');
+
+  if (!data) {
+    return { image: null, error: 'Image data was missing.' };
+  }
+
+  if (!SUPPORTED_IMAGE_MIME_TYPES.has(mimeType)) {
+    return {
+      image: null,
+      error: 'Unsupported image type. Please use PNG, JPG, JPEG, or WebP.'
+    };
+  }
+
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data)) {
+    return {
+      image: null,
+      error: 'The uploaded image could not be read. Please try another file.'
+    };
+  }
+
+  const estimatedSize = estimateBase64SizeBytes(data);
+  const providedSize =
+    typeof raw.sizeBytes === 'number' && Number.isFinite(raw.sizeBytes)
+      ? Math.max(0, Math.floor(raw.sizeBytes))
+      : 0;
+
+  const sizeBytes = Math.max(estimatedSize, providedSize);
+
+  if (sizeBytes > MAX_IMAGE_SIZE_BYTES) {
+    return {
+      image: null,
+      error: 'Image is too large. Please upload an image under 8 MB.'
+    };
+  }
+
+  return {
+    image: {
+      data,
+      mimeType,
+      sizeBytes,
+      originalName
+    }
+  };
+}
+
+function getCurrentMonthStartIso() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
+
+function buildImageInstruction({
+  audience,
+  subject
+}: {
+  audience: string;
+  subject: SubjectConfig;
+}) {
+  if (audience === 'parent') {
+    return `
+The user attached an image related to the child’s ${subject.name} work.
+Use the image as evidence when helpful.
+If the image is unclear, say what you can and cannot read.
+Focus on helping the parent understand the child’s work and guide the child without simply doing everything for them.
+`;
+  }
+
+  return `
+The user attached an image related to this ${subject.name} question.
+Use the image as evidence when helpful.
+If the image is unclear, say what you can and cannot read.
+Explain the reasoning step by step and connect your answer to the visible work in the image.
+`;
+}
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-async function generateTutorAnswerWithRetry(prompt: string) {
+async function generateTutorAnswerWithRetry(prompt: string, image?: ImageRequestPayload | null) {
   const retryDelays = [0, 900];
 
   let lastError: any = null;
@@ -425,9 +549,21 @@ async function generateTutorAnswerWithRetry(prompt: string) {
     }
 
     try {
+      const contents = image
+        ? ([
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: image.mimeType,
+                data: image.data
+              }
+            }
+          ] as any)
+        : prompt;
+
       const response = await ai.models.generateContent({
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-        contents: prompt
+        model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
+        contents
       });
 
       const answer = response.text?.trim() || '';
@@ -450,6 +586,8 @@ async function generateTutorAnswerWithRetry(prompt: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+
     const {
       question,
       gradeLevel = 'high-school',
@@ -461,8 +599,33 @@ export async function POST(request: NextRequest) {
       topic = '',
       stuckPoint = '',
       graphOnlyBypass = false,
-      graphExpression = null
-    } = await request.json();
+      graphExpression = null,
+      subject = 'math',
+      image = null
+    } = body;
+
+    const { image: imagePayload, error: imagePayloadError } = sanitizeImagePayload(image);
+
+    if (imagePayloadError) {
+      return NextResponse.json({ error: imagePayloadError }, { status: 400 });
+    }
+
+    const subjectConfig = getRequestedSubject(subject);
+
+    if (!subjectConfig) {
+      return NextResponse.json({ error: 'Invalid subject.' }, { status: 400 });
+    }
+
+    if (subjectConfig.status !== 'active') {
+      return NextResponse.json(
+        {
+          error: `${subjectConfig.name} support is not currently available. Please choose an active TutoVera subject branch.`
+        },
+        { status: 501 }
+      );
+    }
+
+    const activeSubject = subjectConfig.key;
 
     const questionText = typeof question === 'string' ? question.trim() : '';
     const normalizedGraphExpression =
@@ -474,7 +637,7 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY is missing in .env.local' },
+        { error: 'GEMINI_API_KEY is missing in environment variables.' },
         { status: 500 }
       );
     }
@@ -495,6 +658,81 @@ export async function POST(request: NextRequest) {
       userId: user?.id || null,
       email: normalizedEmail
     });
+
+    const planAccess = user?.id
+      ? await getUserPlanAccess({
+          supabase,
+          userId: user.id,
+          email: normalizedEmail
+        })
+      : null;
+
+    const learningProfile = user?.id
+      ? await getLearningProfileForTutor({
+          supabase,
+          userId: user.id,
+          subject: activeSubject,
+          audience
+        })
+      : null;
+
+    if (imagePayload) {
+      if (!user?.id || !planAccess?.hasActivePaidAccess) {
+        return NextResponse.json(
+          {
+            error:
+              'Image and worksheet support is included with Plus and Pro. Please sign in with an active paid plan to upload images.'
+          },
+          { status: 403 }
+        );
+      }
+
+      if (!planAllowsImageProcessing(planAccess.plan)) {
+        return NextResponse.json(
+          {
+            error:
+              'Your current plan does not include image and worksheet support. Upgrade to Plus or Pro to upload images.'
+          },
+          { status: 403 }
+        );
+      }
+
+      const monthlyImageLimit = planAccess.imageUploadsPerMonth || 0;
+
+      if (!bypassDailyLimit) {
+        const since = getCurrentMonthStartIso();
+
+        let imageCountQuery = supabase
+          .from('learner_sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('has_image', true)
+          .gte('created_at', since);
+
+        if (user.id) {
+          imageCountQuery = imageCountQuery.eq('user_id', user.id);
+        } else if (normalizedEmail) {
+          imageCountQuery = imageCountQuery.eq('email', normalizedEmail);
+        }
+
+        const { count: imageCount, error: imageCountError } = await imageCountQuery;
+
+        if (imageCountError) {
+          console.error('SUPABASE IMAGE COUNT ERROR:', imageCountError);
+          return NextResponse.json({ error: 'Could not verify image limit.' }, { status: 500 });
+        }
+
+        if ((imageCount || 0) >= monthlyImageLimit) {
+          return NextResponse.json(
+            {
+              error: `Monthly image limit reached for your ${planAccess.plan} plan. You can upload up to ${monthlyImageLimit} images per month.`
+            },
+            { status: 429 }
+          );
+        }
+      }
+    }
+
+    const dailyTutorLimit = planAccess?.dailyTutorLimit || FALLBACK_DAILY_FREE_LIMIT;
 
     if (!bypassDailyLimit) {
       const ipAddress = getClientIp(request);
@@ -517,16 +755,15 @@ export async function POST(request: NextRequest) {
 
       if (countError) {
         console.error('SUPABASE COUNT ERROR:', countError);
-        return NextResponse.json(
-          { error: 'Could not verify daily limit.' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Could not verify daily limit.' }, { status: 500 });
       }
 
-      if ((count || 0) >= DAILY_FREE_LIMIT) {
+      if ((count || 0) >= dailyTutorLimit) {
         return NextResponse.json(
           {
-            error: `Free beta limit reached. You can send up to ${DAILY_FREE_LIMIT} tutor requests in a 24-hour period. Please try again later.`
+            error: planAccess?.isPaidPlan
+              ? `Daily tutor limit reached for your ${planAccess.plan} plan. You can send up to ${dailyTutorLimit} tutor requests in a 24-hour period. Please try again later.`
+              : `Free plan limit reached. You can send up to ${dailyTutorLimit} tutor requests in a 24-hour period. Upgrade to Plus or Pro for higher limits.`
           },
           { status: 429 }
         );
@@ -541,10 +778,56 @@ export async function POST(request: NextRequest) {
     }> = [];
 
     if (activeConversationId) {
+      const { data: activeConversation, error: conversationLookupError } = await supabase
+        .from('learner_conversations')
+        .select('id, subject, user_id, email')
+        .eq('id', activeConversationId)
+        .eq('subject', activeSubject)
+        .maybeSingle();
+
+      if (conversationLookupError) {
+        console.error('SUPABASE CONVERSATION LOOKUP ERROR:', conversationLookupError);
+        return NextResponse.json(
+          { error: 'Could not verify the selected conversation.' },
+          { status: 500 }
+        );
+      }
+
+      if (!activeConversation) {
+        return NextResponse.json(
+          { error: 'Conversation was not found for this subject.' },
+          { status: 404 }
+        );
+      }
+
+      const conversationUserId =
+        typeof activeConversation.user_id === 'string' ? activeConversation.user_id : null;
+
+      const conversationEmail =
+        typeof activeConversation.email === 'string'
+          ? activeConversation.email.trim().toLowerCase()
+          : '';
+
+      const canUseConversation = user?.id
+        ? conversationUserId === user.id
+        : conversationUserId
+          ? false
+          : conversationEmail
+            ? Boolean(normalizedEmail && conversationEmail === normalizedEmail)
+            : true;
+
+      if (!canUseConversation) {
+        return NextResponse.json(
+          { error: 'Not authorized to continue this conversation.' },
+          { status: 403 }
+        );
+      }
+
       const { data: previousTurns, error: turnsError } = await supabase
         .from('learner_sessions')
         .select('prompt, response, turn_index, created_at')
         .eq('conversation_id', activeConversationId)
+        .eq('subject', activeSubject)
         .order('turn_index', { ascending: true })
         .order('created_at', { ascending: true });
 
@@ -563,34 +846,57 @@ export async function POST(request: NextRequest) {
 
     let answer = '';
 
-    if (graphOnlyBypass && audience === 'student' && normalizedGraphExpression) {
+    const handledByLocalGraphOnly =
+      subjectConfig.features.graphing &&
+      graphOnlyBypass &&
+      !imagePayload &&
+      audience === 'student' &&
+      normalizedGraphExpression;
+
+    if (handledByLocalGraphOnly) {
       answer = buildLocalGraphOnlyAnswer(normalizedGraphExpression);
     } else {
-      const symbolicCheck = await getSymbolicCheck(questionText);
       const conversationContext = buildConversationContext(existingTurns);
+      const learningProfileContext = buildLearningProfileContext(learningProfile);
 
-      const effectiveQuestion =
+      const baseEffectiveQuestion =
         audience === 'parent'
           ? buildParentQuestion({
               question: questionText,
               gradeLevel,
               topic,
               stuckPoint,
-              helpStyle: parentHelpStyle as ParentHelpStyle
+              helpStyle: parentHelpStyle as ParentHelpStyle,
+              subject: subjectConfig
             })
-          : buildStudentQuestion(questionText, mode);
+          : buildStudentQuestion(questionText, mode, subjectConfig);
+
+      const effectiveQuestion = imagePayload
+        ? `${baseEffectiveQuestion}
+
+${buildImageInstruction({
+  audience,
+  subject: subjectConfig
+})}`
+        : baseEffectiveQuestion;
+
+      const tutorContext = [
+        learningProfileContext,
+        conversationContext ? `Conversation context:\n${conversationContext}` : ''
+      ]
+        .filter(Boolean)
+        .join('\n\n');
 
       const prompt = buildTutorPrompt({
-        question: conversationContext
-          ? `${effectiveQuestion}\n\nConversation context:\n${conversationContext}`
-          : effectiveQuestion,
+        question: tutorContext ? `${effectiveQuestion}\n\n${tutorContext}` : effectiveQuestion,
         gradeLevel,
         mode,
-        symbolicCheck,
-        audience
+        symbolicCheck: '',
+        audience,
+        subject: subjectConfig
       });
 
-      answer = await generateTutorAnswerWithRetry(prompt);
+      answer = await generateTutorAnswerWithRetry(prompt, imagePayload);
     }
 
     if (!activeConversationId) {
@@ -599,6 +905,7 @@ export async function POST(request: NextRequest) {
         .insert({
           user_id: user?.id || null,
           email: normalizedEmail,
+          subject: activeSubject,
           audience,
           title: makeConversationTitle(conversationSeed)
         })
@@ -607,17 +914,13 @@ export async function POST(request: NextRequest) {
 
       if (conversationError || !conversation) {
         console.error('SUPABASE CREATE CONVERSATION ERROR:', conversationError);
-        return NextResponse.json(
-          { error: 'Could not create conversation.' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Could not create conversation.' }, { status: 500 });
       }
 
       activeConversationId = conversation.id;
     }
 
-    const turnIndex =
-      existingTurns.reduce((max, turn) => Math.max(max, turn.turn_index || 0), 0) + 1;
+    const turnIndex = existingTurns.reduce((max, turn) => Math.max(max, turn.turn_index || 0), 0) + 1;
 
     try {
       await supabase.from('learner_sessions').insert({
@@ -626,27 +929,65 @@ export async function POST(request: NextRequest) {
         turn_index: turnIndex,
         email: normalizedEmail,
         ip_address: getClientIp(request),
+        subject: activeSubject,
         mode,
         level: gradeLevel,
         prompt: questionText,
-        response: answer
+        response: answer,
+        has_image: Boolean(imagePayload),
+        image_mime_type: imagePayload?.mimeType || null,
+        image_size_bytes: imagePayload?.sizeBytes || null,
+        image_original_name: imagePayload?.originalName || null,
+        image_plan: imagePayload ? planAccess?.plan || 'free' : null
       });
     } catch (dbError) {
       console.error('SUPABASE SAVE ERROR:', dbError);
     }
 
+    const shouldRefreshLearningProfile =
+      user?.id &&
+      normalizedEmail &&
+      shouldUpdateLearningProfile({
+        turnIndex,
+        existingProfile: learningProfile,
+        isGraphOnlyBypass: Boolean(handledByLocalGraphOnly)
+      });
+
+    if (shouldRefreshLearningProfile && user?.id && normalizedEmail) {
+      try {
+        await updateLearningProfileFromTurn({
+          supabase,
+          ai,
+          model:
+            process.env.GEMINI_PROFILE_MODEL ||
+            process.env.GEMINI_MODEL ||
+            'gemini-3.1-flash-lite',
+          userId: user.id,
+          email: normalizedEmail,
+          subject: activeSubject,
+          audience,
+          gradeLevel,
+          mode,
+          question: questionText,
+          answer,
+          existingProfile: learningProfile
+        });
+      } catch (profileError) {
+        console.error('LEARNING PROFILE UPDATE ERROR:', profileError);
+      }
+    }
+
     return NextResponse.json({
       answer,
-      conversationId: activeConversationId
+      conversationId: activeConversationId,
+      subject: activeSubject,
+      imageUsed: Boolean(imagePayload)
     });
   } catch (error: any) {
     console.error('CHAT API ERROR:', error);
 
     const userFacing = getUserFacingTutorError(error);
 
-    return NextResponse.json(
-      { error: userFacing.message },
-      { status: userFacing.status }
-    );
+    return NextResponse.json({ error: userFacing.message }, { status: userFacing.status });
   }
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
+const MAX_TRANSLATION_LENGTH = 12000;
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
@@ -67,6 +69,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Text is required.' }, { status: 400 });
     }
 
+    if (sourceText.length > MAX_TRANSLATION_LENGTH) {
+      return NextResponse.json(
+        {
+          error: `Text is too long to translate at once. Please keep it under ${MAX_TRANSLATION_LENGTH} characters.`
+        },
+        { status: 400 }
+      );
+    }
+
     if (!targetLanguage || !ALLOWED_LANGUAGES.has(targetLanguage)) {
       return NextResponse.json({ error: 'Invalid language selection.' }, { status: 400 });
     }
@@ -79,17 +90,17 @@ export async function POST(request: NextRequest) {
     }
 
     const prompt = `
-You are translating a math explanation into ${targetLanguage}.
+You are translating a TutoVera learning explanation into ${targetLanguage}.
 
 Rules:
 - Translate the natural-language explanation into ${targetLanguage}.
 - Preserve markdown structure exactly where possible.
 - Preserve headings, bullets, numbering, and spacing.
-- Do NOT translate mathematical equations.
+- Do NOT translate mathematical equations, chemical equations, formulas, variables, units, symbols, or code.
 - Do NOT alter LaTeX expressions.
 - Do NOT alter content inside $...$ or $$...$$.
 - Do NOT alter code blocks or inline code.
-- Keep math notation, symbols, variables, and expressions unchanged.
+- Keep scientific notation, symbols, variables, formulas, and expressions unchanged.
 - Keep the meaning accurate, natural, and clear in ${targetLanguage}.
 - Return only the translated content and nothing else.
 
@@ -100,7 +111,7 @@ ${sourceText}
 `;
 
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
       contents: prompt
     });
 

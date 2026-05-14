@@ -1,46 +1,71 @@
+'use client';
+
+import Link from 'next/link';
+
 export default function BrandMark() {
   return (
-    <a href="/" className="brandLink" aria-label="MathSupport AI home">
+    <Link href="/" className="brandLink" aria-label="TutoVera home">
       <span
         className="brandBadge"
+        aria-hidden="true"
         style={{
-          position: 'relative',
-          overflow: 'hidden'
+          width: 58,
+          height: 58,
+          borderRadius: 0,
+          background: 'transparent',
+          border: 0,
+          boxShadow: 'none',
+          overflow: 'visible'
         }}
       >
-        <span
+        <img
+          src="/brand/exact/tutovera-app-icon.png"
+          alt=""
+          className="brandIconAsset brandAssetLight"
           style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(circle at 30% 28%, rgba(255,255,255,0.22), transparent 36%), linear-gradient(135deg, rgba(255,255,255,0.16), transparent 58%)',
-            pointerEvents: 'none'
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            borderRadius: 0
           }}
         />
-        <span
+        <img
+          src="/brand/dark-mode/tutovera-app-icon-dark-mode.png"
+          alt=""
+          className="brandIconAsset brandAssetDark"
           style={{
-            position: 'absolute',
-            inset: 7,
-            borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.14)',
-            pointerEvents: 'none'
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            borderRadius: 0
           }}
         />
-        <span
-          style={{
-            position: 'relative',
-            fontSize: '1rem',
-            letterSpacing: '-0.02em'
-          }}
-        >
-          ∑
-        </span>
       </span>
 
       <span className="brandText">
-        <span className="brandTitle">MathSupport AI</span>
-        <span className="brandSubtitle">Clearer math, step by step</span>
+        <span className="brandTitle">
+          <img
+            src="/brand/transparent/tutovera-primary-logo-transparent.svg"
+            alt="TutoVera"
+            className="brandWordmarkAsset brandAssetLight"
+            style={{
+              height: 46,
+              width: 'auto',
+              maxWidth: 'min(300px, 64vw)'
+            }}
+          />
+          <img
+            src="/brand/transparent/tutovera-primary-logo-dark-mode-transparent.svg"
+            alt="TutoVera"
+            className="brandWordmarkAsset brandAssetDark"
+            style={{
+              height: 46,
+              width: 'auto',
+              maxWidth: 'min(300px, 64vw)'
+            }}
+          />
+        </span>
       </span>
-    </a>
+    </Link>
   );
 }
