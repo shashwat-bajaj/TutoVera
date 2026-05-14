@@ -32,9 +32,9 @@ export const plans: Plan[] = [
     annualPrice: '$0',
     annualNote: 'Free access',
     description:
-      'A simple way to try TutoVera across all subject branches with text-based tutoring and basic saved history.',
-    audience: 'Best for light use, testing the platform, and occasional study support.',
-    positioning: 'Try the tutor and see how the learning flow works.',
+      'Start with simple text-based tutoring across subjects, student and parent workspaces, and basic saved history.',
+    audience: 'Best for trying TutoVera, light questions, and occasional study support.',
+    positioning: 'Text tutoring for getting started.',
     highlighted: false,
     ctaLabel: 'Start Free',
     ctaHref: '/tutor',
@@ -44,27 +44,22 @@ export const plans: Plan[] = [
       savedConversations: 'Basic history'
     },
     features: [
-      'All subject branches',
-      'Student workspaces',
-      'Parent workspaces',
       'Text-based tutoring',
-      'Basic saved history',
-      'Basic personalized tutor memory for signed-in users',
-      'Basic read aloud access',
-      'Basic translation access',
+      'Student workspace',
+      'Parent workspace',
+      'All subject branches',
       'Math graphing',
-      'Tables and math formatting',
-      'No worksheet or image upload support'
+      'Basic saved history'
     ],
     paidValue: [
-      'Good for trying the platform',
-      'Helpful for occasional text questions',
-      'Basic signed-in continuity through saved sessions and tutor memory'
+      'Ask text questions across subjects',
+      'Use student and parent workspaces',
+      'Try TutoVera before upgrading'
     ],
     futureTools: [
-      'Upgrade for worksheet and image support',
-      'Upgrade for Revision Review and Mistake Review',
-      'Upgrade for higher usage and longer saved history'
+      'Upgrade for worksheet/image uploads',
+      'Upgrade for higher request limits',
+      'Upgrade for deeper review tools'
     ]
   },
   {
@@ -75,9 +70,9 @@ export const plans: Plan[] = [
     annualPrice: '$99.99/year',
     annualNote: 'Annual plan saves about 2 months',
     description:
-      'For regular students and parents who want worksheet and image support, higher usage, guided practice, and longer saved history.',
-    audience: 'Best for students, parents, and families using TutoVera regularly.',
-    positioning: 'The main study plan for regular homework, worksheets, images, and guided practice.',
+      'Add worksheet and image support for regular homework, screenshots, and guided practice with higher limits.',
+    audience: 'Best for regular students, parents, homework support, and worksheet help.',
+    positioning: 'Worksheet and image support for regular study.',
     highlighted: true,
     ctaLabel: 'Subscribe with PayPal',
     ctaHref: '/pricing',
@@ -88,28 +83,21 @@ export const plans: Plan[] = [
     },
     features: [
       'Everything in Free',
+      'Worksheet and image uploads',
+      'Screenshot help',
       'Higher tutor request limits',
-      'Image uploads with monthly cap',
-      'Worksheet and screenshot help',
       'Extended saved history',
-      'Personalized tutor memory for signed-in study continuity',
-      'Mistake diagnosis in tutor responses',
-      'Practice generation',
-      'Parent support across all subjects',
-      'Higher read aloud and translation access',
-      'Better fit for regular study routines'
+      'Practice generation'
     ],
     paidValue: [
       'Upload worksheet photos and screenshots',
-      'Turn mistakes into guided explanations',
-      'Generate practice from the topic or question',
-      'Keep more study history across subjects'
+      'Get help from visible work',
+      'Use TutoVera regularly without hitting Free limits'
     ],
     futureTools: [
-      'Worksheet and image support',
-      'Practice set generation',
-      'Mistake-focused follow-up prompts',
-      'Stronger parent support workflows'
+      'Worksheet and screenshot support',
+      'Guided practice from uploaded work',
+      'Stronger study continuity'
     ]
   },
   {
@@ -120,9 +108,9 @@ export const plans: Plan[] = [
     annualPrice: '$199.99/year',
     annualNote: 'Annual plan saves about 2 months',
     description:
-      'For heavier study, larger worksheet and image usage, deeper revision workflows, Mistake Review, Revision Review, and stronger access to advanced subject tools.',
-    audience: 'Best for serious users, heavier study periods, and advanced learning workflows.',
-    positioning: 'The deeper study system for revision, mistake patterns, and advanced tools.',
+      'Unlock deeper review tools for saved sessions, heavier usage, larger worksheet support, and advanced study workflows.',
+    audience: 'Best for heavier study periods, deeper review, and high-usage learners.',
+    positioning: 'Revision and mistake review for deeper study.',
     highlighted: false,
     ctaLabel: 'Subscribe with PayPal',
     ctaHref: '/pricing',
@@ -133,28 +121,22 @@ export const plans: Plan[] = [
     },
     features: [
       'Everything in Plus',
-      'Highest tutor request limits',
-      'Larger worksheet and image cap',
-      'Advanced worksheet and image help',
-      'Longer session continuity',
       'Revision Review from saved sessions',
       'Mistake Review from saved sessions',
-      'Advanced subject tools as available',
-      'Advanced access to diagrams and simulators as added',
-      'Generous high-usage limits'
+      'Highest tutor request limits',
+      'Larger image upload allowance',
+      'Highest saved-history allowance'
     ],
     paidValue: [
-      'Build revision reviews from saved sessions',
-      'Create mistake reviews with corrected reasoning and targeted drills',
-      'Generate deeper practice and review flows',
-      'Use the highest access tier for advanced tools'
+      'Turn saved sessions into revision reviews',
+      'Review mistakes with corrected reasoning',
+      'Use the highest limits for heavier study'
     ],
     futureTools: [
       'Revision Review',
       'Mistake Review',
-      'Exam Prep Mode',
-      'Advanced diagrams and simulators',
-      'Deeper subject-specific toolkits'
+      'Exam prep workflows',
+      'Advanced subject tools'
     ]
   }
 ];

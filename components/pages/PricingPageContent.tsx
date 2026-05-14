@@ -7,80 +7,66 @@ import { formatPlanName, getPlanSummarySentence, getUserPlanAccess } from '@/lib
 
 const comparisonRows = [
   {
-    group: 'Core learning access',
+    group: 'Simple difference',
     rows: [
-      { label: 'All subject branches', free: 'Included', plus: 'Included', pro: 'Included' },
-      { label: 'Student workspaces', free: 'Included', plus: 'Included', pro: 'Included' },
-      { label: 'Parent workspaces', free: 'Included', plus: 'Included', pro: 'Included' },
-      { label: 'Text-based tutoring', free: 'Included', plus: 'Included', pro: 'Included' },
-      { label: 'Math graphing', free: 'Included', plus: 'Included', pro: 'Included' },
-      { label: 'Tables and math formatting', free: 'Included', plus: 'Included', pro: 'Included' }
+      {
+        label: 'Main purpose',
+        free: 'Text tutoring',
+        plus: 'Worksheet/image help',
+        pro: 'Deep review'
+      },
+      {
+        label: 'Best for',
+        free: 'Trying TutoVera',
+        plus: 'Regular homework',
+        pro: 'Heavier study'
+      }
     ]
   },
   {
-    group: 'Usage and continuity',
+    group: 'Usage',
     rows: [
       { label: 'Tutor requests', free: '10/day', plus: '100/day', pro: '300/day' },
-      { label: 'Saved history', free: 'Basic', plus: 'Extended', pro: 'Highest allowance' },
-      {
-        label: 'Read aloud and translation',
-        free: 'Basic access',
-        plus: 'Higher access',
-        pro: 'Highest access'
-      }
-    ]
-  },
-  {
-    group: 'Worksheet and image support',
-    rows: [
       { label: 'Image uploads', free: 'Not included', plus: '100/month', pro: '500/month' },
-      {
-        label: 'Worksheet and screenshot help',
-        free: 'Not included',
-        plus: 'Included',
-        pro: 'Advanced'
-      },
-      { label: 'Mistake diagnosis', free: 'Not included', plus: 'Guided', pro: 'Advanced' },
-      { label: 'Practice generation', free: 'Basic prompts', plus: 'Included', pro: 'Advanced' }
+      { label: 'Saved history', free: 'Basic', plus: 'Extended', pro: 'Highest allowance' }
     ]
   },
   {
-    group: 'Advanced study support',
+    group: 'Tools',
     rows: [
-      {
-        label: 'Revision workflows',
-        free: 'Not included',
-        plus: 'Guided practice',
-        pro: 'Deeper revision support'
-      },
-      { label: 'Mistake pattern tools', free: 'Not included', plus: 'Basic', pro: 'Advanced' },
-      {
-        label: 'Advanced subject tools',
-        free: 'Not included',
-        plus: 'Selected access',
-        pro: 'Highest access'
-      },
-      {
-        label: 'Diagrams and simulators as added',
-        free: 'Not included',
-        plus: 'Selected access',
-        pro: 'Highest access'
-      }
+      { label: 'Student workspace', free: 'Included', plus: 'Included', pro: 'Included' },
+      { label: 'Parent workspace', free: 'Included', plus: 'Included', pro: 'Included' },
+      { label: 'Math graphing', free: 'Included', plus: 'Included', pro: 'Included' },
+      { label: 'Worksheet screenshots', free: 'Not included', plus: 'Included', pro: 'Advanced' },
+      { label: 'Revision Review', free: 'Not included', plus: 'Not included', pro: 'Included' },
+      { label: 'Mistake Review', free: 'Not included', plus: 'Not included', pro: 'Included' }
     ]
   }
 ];
 
 function getPlanHeadline(planKey: string) {
-  if (planKey === 'free') return 'Start with text-based tutoring';
-  if (planKey === 'plus') return 'Best for regular homework and worksheet help';
-  return 'Best for heavier study and deeper review';
+  if (planKey === 'free') return 'Text tutoring';
+  if (planKey === 'plus') return 'Worksheet and image help';
+  return 'Revision and mistake review';
+}
+
+function getPlanOneLine(planKey: string) {
+  if (planKey === 'free') {
+    return 'Ask text questions, use student and parent workspaces, and save basic history.';
+  }
+
+  if (planKey === 'plus') {
+    return 'Upload worksheet photos or screenshots and get higher limits for regular study.';
+  }
+
+  return 'Turn saved sessions into revision reviews and mistake-focused study.';
 }
 
 function getPlanKeyPoints(planKey: string) {
   if (planKey === 'free') {
     return [
       '10 tutor requests per day',
-      'Text-based tutoring across subjects',
+      'Text tutoring across subjects',
       'Student and parent workspaces',
       'Basic saved history'
     ];
@@ -98,21 +84,9 @@ function getPlanKeyPoints(planKey: string) {
   return [
     '300 tutor requests per day',
     '500 image uploads per month',
-    'Advanced worksheet and image help',
-    'Highest saved history allowance'
+    'Revision Review and Mistake Review',
+    'Highest saved-history allowance'
   ];
-}
-
-function getPlanShortDescription(planKey: string) {
-  if (planKey === 'free') {
-    return 'A simple way to try TutoVera with text-based tutoring, parent support, and basic saved history.';
-  }
-
-  if (planKey === 'plus') {
-    return 'The main study plan for students and families who use TutoVera regularly for homework, images, and guided practice.';
-  }
-
-  return 'A deeper plan for heavier study periods, larger worksheet use, advanced review, and stronger continuity.';
 }
 
 function getPlanChangeMessage(currentPlan: PlanKey) {
@@ -125,6 +99,12 @@ function getPlanChangeMessage(currentPlan: PlanKey) {
   }
 
   return 'Plan changes are handled through support for now.';
+}
+
+function getPlanActionLabel(planKey: PlanKey, isSignedIn: boolean) {
+  if (planKey === 'free') return isSignedIn ? 'Open Tutor' : 'Start Free';
+  if (planKey === 'plus') return 'Choose Plus';
+  return 'Choose Pro';
 }
 
 export default async function PricingPageContent() {
@@ -150,25 +130,25 @@ export default async function PricingPageContent() {
       <section className="card spotlightCard pricingHero">
         <div style={{ display: 'grid', gap: 10 }}>
           <span className="badge">Pricing</span>
-          <h1 style={{ margin: 0 }}>Choose the TutoVera plan that fits how you learn.</h1>
-          <p className="small" style={{ margin: 0, maxWidth: 920 }}>
-            Start with free text tutoring, then upgrade when you want higher usage, worksheet and
-            image support, longer saved history, and deeper study workflows.
+          <h1 style={{ margin: 0 }}>Start simple. Upgrade when you need more.</h1>
+          <p className="small" style={{ margin: 0, maxWidth: 900 }}>
+            Free is for text tutoring. Plus adds worksheet and image support. Pro adds deeper
+            review tools for saved sessions and the highest limits.
           </p>
         </div>
 
-        <div className="pricingHeroNotes" aria-label="Pricing highlights">
+        <div className="pricingHeroNotes" aria-label="Pricing summary">
           <div>
-            <strong>One account</strong>
-            <span>Your plan, settings, and history stay connected across subjects.</span>
+            <strong>Free</strong>
+            <span>Text tutoring, student and parent workspaces, and basic history.</span>
           </div>
           <div>
-            <strong>Worksheet and image help</strong>
-            <span>Plus and Pro include image uploads for worksheet photos and screenshots.</span>
+            <strong>Plus</strong>
+            <span>Worksheet photos, screenshots, higher limits, and extended history.</span>
           </div>
           <div>
-            <strong>Recurring access</strong>
-            <span>Paid plans renew automatically unless you cancel future renewals.</span>
+            <strong>Pro</strong>
+            <span>Revision Review, Mistake Review, highest limits, and deeper study.</span>
           </div>
         </div>
 
@@ -191,7 +171,7 @@ export default async function PricingPageContent() {
               </a>
             ) : (
               <a className="btn secondary" href="/login?next=/pricing">
-                Log in
+                Log In
               </a>
             )}
           </div>
@@ -226,7 +206,7 @@ export default async function PricingPageContent() {
                     <p className="small" style={{ margin: 0 }}>
                       <strong>{getPlanHeadline(plan.key)}</strong>
                     </p>
-                    <p className="small pricingDescription">{getPlanShortDescription(plan.key)}</p>
+                    <p className="small pricingDescription">{getPlanOneLine(plan.key)}</p>
                   </div>
 
                   <div className="pricingPriceBlock">
@@ -243,38 +223,9 @@ export default async function PricingPageContent() {
                   </div>
                 </div>
 
-                <div className="pricingMiniStats pricingCardSection">
-                  <div className="card questionSurface pricingMiniStat">
-                    <p className="small" style={{ margin: '0 0 4px' }}>
-                      <strong>Tutor requests</strong>
-                    </p>
-                    <p className="small" style={{ margin: 0 }}>
-                      {plan.limits.tutorRequestsPerDay}
-                    </p>
-                  </div>
-
-                  <div className="card questionSurface pricingMiniStat">
-                    <p className="small" style={{ margin: '0 0 4px' }}>
-                      <strong>Image uploads</strong>
-                    </p>
-                    <p className="small" style={{ margin: 0 }}>
-                      {plan.limits.imageUploadsPerMonth}
-                    </p>
-                  </div>
-
-                  <div className="card questionSurface pricingMiniStat">
-                    <p className="small" style={{ margin: '0 0 4px' }}>
-                      <strong>Saved history</strong>
-                    </p>
-                    <p className="small" style={{ margin: 0 }}>
-                      {plan.limits.savedConversations}
-                    </p>
-                  </div>
-                </div>
-
                 <div className="pricingFeatureBlock pricingCardSection">
                   <p className="small" style={{ margin: 0 }}>
-                    <strong>What you get</strong>
+                    <strong>Includes</strong>
                   </p>
 
                   <ul className="list pricingFeatureList">
@@ -300,7 +251,7 @@ export default async function PricingPageContent() {
                     </a>
                   ) : plan.key === 'free' ? (
                     <a className="btn secondary" href={plan.ctaHref}>
-                      {isSignedIn ? 'Open Free Tutor' : plan.ctaLabel}
+                      {getPlanActionLabel(plan.key, isSignedIn)}
                     </a>
                   ) : blockPlanChange ? (
                     <div className="card questionSurface pricingPlanChangeNotice">
@@ -327,17 +278,17 @@ export default async function PricingPageContent() {
         <details className="pricingCompareDetails">
           <summary className="pricingCompareSummary">
             <span>
-              <strong>Compare plans</strong>
+              <strong>Compare details</strong>
             </span>
-            <span className="pricingCompareSummaryText">Open full feature comparison</span>
+            <span className="pricingCompareSummaryText">Open full comparison</span>
           </summary>
 
           <div className="pricingComparePanel">
             <div style={{ display: 'grid', gap: 8 }}>
               <h2 style={{ margin: 0 }}>What changes when you upgrade?</h2>
               <p className="small" style={{ margin: 0, maxWidth: 880 }}>
-                Free covers light text-based use. Plus adds regular study support with worksheet and
-                image uploads. Pro is meant for heavier study, higher limits, and deeper review.
+                Free keeps tutoring simple. Plus is for regular homework with images and worksheets.
+                Pro is for deeper review after saved sessions.
               </p>
             </div>
 
@@ -378,10 +329,10 @@ export default async function PricingPageContent() {
 
       <section className="card spotlightCard" style={{ display: 'grid', gap: 16 }}>
         <div style={{ display: 'grid', gap: 8 }}>
-          <h2 style={{ margin: 0 }}>Not sure which plan fits?</h2>
+          <h2 style={{ margin: 0 }}>Which plan should I choose?</h2>
           <p className="small" style={{ margin: 0, maxWidth: 880 }}>
-            Start free for text-based tutoring. Choose Plus when worksheets, screenshots, and regular
-            study support matter. Choose Pro when you need higher limits and deeper review support.
+            Use Free to try TutoVera. Choose Plus when you want worksheet or screenshot help. Choose
+            Pro when you want saved sessions turned into review and mistake-focused study.
           </p>
         </div>
 
@@ -456,7 +407,7 @@ export default async function PricingPageContent() {
           .pricingCards {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            grid-template-rows: repeat(5, auto);
+            grid-template-rows: repeat(4, auto);
             gap: 18px;
             align-items: stretch;
             width: 100%;
@@ -468,7 +419,7 @@ export default async function PricingPageContent() {
           .pricingPlanCard {
             display: grid;
             grid-template-rows: subgrid;
-            grid-row: span 5;
+            grid-row: span 4;
             gap: 0;
             min-width: 0;
             height: 100%;
@@ -526,21 +477,6 @@ export default async function PricingPageContent() {
             margin: 0;
           }
 
-          .pricingMiniStats {
-            grid-template-columns: 1fr;
-            gap: 10px;
-            padding-top: 16px;
-            padding-bottom: 16px;
-            border-top: 1px solid var(--border);
-          }
-
-          .pricingMiniStat {
-            display: grid;
-            align-content: center;
-            padding: 14px;
-            min-height: 70px;
-          }
-
           .pricingFeatureBlock,
           .pricingBestFitBlock {
             gap: 10px;
@@ -551,10 +487,6 @@ export default async function PricingPageContent() {
 
           .pricingFeatureList {
             margin-top: 0;
-          }
-
-          .pricingBestFitBlock {
-            align-content: start;
           }
 
           .pricingButtonRow {
@@ -580,24 +512,20 @@ export default async function PricingPageContent() {
             }
 
             .pricingPlanCard {
-              grid-template-rows: auto auto auto auto auto;
+              grid-template-rows: auto auto auto auto;
               grid-row: auto;
             }
 
             .pricingCardTop {
-              min-height: 330px;
-            }
-
-            .pricingMiniStats {
-              min-height: 270px;
+              min-height: 300px;
             }
 
             .pricingFeatureBlock {
-              min-height: 210px;
+              min-height: 190px;
             }
 
             .pricingBestFitBlock {
-              min-height: 130px;
+              min-height: 125px;
             }
           }
 
@@ -700,7 +628,6 @@ export default async function PricingPageContent() {
             }
 
             .pricingCardTop,
-            .pricingMiniStats,
             .pricingFeatureBlock,
             .pricingBestFitBlock,
             .pricingButtonRow {
@@ -709,7 +636,6 @@ export default async function PricingPageContent() {
               padding-bottom: 0;
             }
 
-            .pricingMiniStats,
             .pricingFeatureBlock,
             .pricingBestFitBlock,
             .pricingButtonRow {
