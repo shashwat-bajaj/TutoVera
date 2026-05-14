@@ -49,6 +49,7 @@ export const plans: Plan[] = [
       'Parent workspaces',
       'Text-based tutoring',
       'Basic saved history',
+      'Basic personalized tutor memory for signed-in users',
       'Basic read aloud access',
       'Basic translation access',
       'Math graphing',
@@ -58,11 +59,11 @@ export const plans: Plan[] = [
     paidValue: [
       'Good for trying the platform',
       'Helpful for occasional text questions',
-      'Limited enough that regular users have a reason to upgrade'
+      'Basic signed-in continuity through saved sessions and tutor memory'
     ],
     futureTools: [
       'Upgrade for worksheet and image support',
-      'Upgrade for deeper revision workflows',
+      'Upgrade for Revision Review and Mistake Review',
       'Upgrade for higher usage and longer saved history'
     ]
   },
@@ -91,7 +92,8 @@ export const plans: Plan[] = [
       'Image uploads with monthly cap',
       'Worksheet and screenshot help',
       'Extended saved history',
-      'Mistake diagnosis',
+      'Personalized tutor memory for signed-in study continuity',
+      'Mistake diagnosis in tutor responses',
       'Practice generation',
       'Parent support across all subjects',
       'Higher read aloud and translation access',
@@ -118,7 +120,7 @@ export const plans: Plan[] = [
     annualPrice: '$199.99/year',
     annualNote: 'Annual plan saves about 2 months',
     description:
-      'For heavier study, larger worksheet and image usage, deeper revision workflows, and stronger access to advanced subject tools.',
+      'For heavier study, larger worksheet and image usage, deeper revision workflows, Mistake Review, Revision Review, and stronger access to advanced subject tools.',
     audience: 'Best for serious users, heavier study periods, and advanced learning workflows.',
     positioning: 'The deeper study system for revision, mistake patterns, and advanced tools.',
     highlighted: false,
@@ -135,21 +137,21 @@ export const plans: Plan[] = [
       'Larger worksheet and image cap',
       'Advanced worksheet and image help',
       'Longer session continuity',
+      'Revision Review from saved sessions',
+      'Mistake Review from saved sessions',
       'Advanced subject tools as available',
-      'Deeper revision workflows',
       'Advanced access to diagrams and simulators as added',
-      'Best access for advanced study tools',
       'Generous high-usage limits'
     ],
     paidValue: [
-      'Build revision from saved sessions',
-      'Track repeated mistake patterns over time',
+      'Build revision reviews from saved sessions',
+      'Create mistake reviews with corrected reasoning and targeted drills',
       'Generate deeper practice and review flows',
       'Use the highest access tier for advanced tools'
     ],
     futureTools: [
-      'Mistake Map',
-      'Revision Mode',
+      'Revision Review',
+      'Mistake Review',
       'Exam Prep Mode',
       'Advanced diagrams and simulators',
       'Deeper subject-specific toolkits'

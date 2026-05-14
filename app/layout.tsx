@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: '%s | TutoVera'
   },
   description:
-    'Solve. Understand. Improve. TutoVera is a calm AI learning platform for Math, Physics, Chemistry, and Biology, with student and parent workspaces, saved history, and guided learning support.',
+    'Solve. Understand. Improve. TutoVera is a calm AI learning platform for Math, Physics, Chemistry, and Biology, with student and parent workspaces, saved history, personalized learning tools, and guided study support.',
   applicationName: 'TutoVera',
   authors: [{ name: 'TutoVera' }],
   creator: 'TutoVera',
@@ -36,6 +36,10 @@ export const metadata: Metadata = {
     'parent learning support',
     'student workspace',
     'homework help',
+    'worksheet help',
+    'AI study tools',
+    'revision review',
+    'mistake review',
     'guided learning'
   ],
   category: 'education',
@@ -93,7 +97,7 @@ export const metadata: Metadata = {
     siteName: 'TutoVera',
     title: 'TutoVera — Solve. Understand. Improve.',
     description:
-      'A calm AI learning platform for Math, Physics, Chemistry, and Biology, built around student and parent workspaces.',
+      'A calm AI learning platform for Math, Physics, Chemistry, and Biology, built around student workspaces, parent support, saved history, and learning tools.',
     images: [
       {
         url: '/opengraph-image',
@@ -106,7 +110,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'TutoVera — Solve. Understand. Improve.',
-    description: 'A calm AI learning platform for Math, Physics, Chemistry, and Biology.',
+    description:
+      'A calm AI learning platform for Math, Physics, Chemistry, and Biology, with guided study tools.',
     images: ['/twitter-image']
   }
 };
@@ -124,6 +129,7 @@ export const viewport: Viewport = {
 const footerLinks = [
   { href: '/about', label: 'About' },
   { href: '/subjects', label: 'Subjects' },
+  { href: '/learning-tools', label: 'Learning Tools' },
   { href: '/contact', label: 'Contact' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/settings', label: 'Settings' },
@@ -269,12 +275,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               >
                 <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
                   <p className="small" style={{ margin: 0 }}>
-                    <strong>TutoVera</strong> is a calmer AI learning platform across Math, 
+                    <strong>TutoVera</strong> is a calmer AI learning platform across Math,
                     Physics, Chemistry, and Biology.
                   </p>
                   <p className="small" style={{ margin: 0, maxWidth: 720 }}>
                     Each subject branch has its own learning workspace while sharing the same
-                    account, settings, history foundation, deployment, and backend structure.
+                    account, settings, history foundation, learning tools, deployment, and backend
+                    structure.
                   </p>
                 </div>
 

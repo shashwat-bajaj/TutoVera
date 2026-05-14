@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     '/tutor',
     '/parents',
+    '/learning-tools',
 
     '/math',
     '/math/tutor',
