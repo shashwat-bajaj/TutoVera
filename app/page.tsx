@@ -10,74 +10,48 @@ export default function HomePage() {
   return (
     <div className="grid" style={{ gap: 34 }}>
       <section className="homeLead">
-        <div className="homeLeadGrid" style={{ alignItems: 'start' }}>
+        <div className="homeLeadGrid" style={{ alignItems: 'center' }}>
           <div className="homeLeadCopy">
+            <span className="badge">TutoVera</span>
+
             <h1 className="homeLeadTitle">
               Solve. Understand. <span>Improve.</span>
             </h1>
 
             <p className="homeLeadSubtext">
-              TutoVera is a calm AI learning platform for Math, Physics, Chemistry, and Biology.
-              It helps students work through real questions, understand the reasoning, and continue
-              learning through saved sessions, follow-ups, and practice.
+              A calm AI learning platform for students and parents. Ask questions, understand the
+              reasoning, and improve through practice, saved sessions, and review.
             </p>
 
             <div className="buttonRow">
-              <Link className="btn" href="/subjects">
-                Explore Subjects →
+              <Link className="btn" href="/tutor">
+                Start Learning →
               </Link>
-              <Link className="btn secondary" href="#updates">
-                Join Updates
+              <Link className="btn secondary" href="/subjects">
+                Explore Subjects
               </Link>
             </div>
 
-            <div className="homeLeadProof">
-              <div className="homeLeadProofItem">
-                <span className="homeLeadProofIcon">✦</span>
-                <div>
-                  <strong>Solve real questions</strong>
-                  <p className="small" style={{ margin: 0 }}>
-                    Start with the exact homework problem, topic, example, or study question in
-                    front of you.
-                  </p>
-                </div>
-              </div>
-
-              <div className="homeLeadProofItem">
-                <span className="homeLeadProofIcon">↗</span>
-                <div>
-                  <strong>Understand each step</strong>
-                  <p className="small" style={{ margin: 0 }}>
-                    Follow the reasoning behind the answer, ask follow-ups, and clear up the parts
-                    that feel confusing.
-                  </p>
-                </div>
-              </div>
-
-              <div className="homeLeadProofItem">
-                <span className="homeLeadProofIcon">◎</span>
-                <div>
-                  <strong>Improve over time</strong>
-                  <p className="small" style={{ margin: 0 }}>
-                    Save sessions, return to earlier explanations, and turn questions into stronger
-                    study habits.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <p className="small" style={{ margin: 0, maxWidth: 680 }}>
+              Start free with text tutoring. Upgrade when you need worksheet images, higher limits,
+              or deeper revision tools.
+            </p>
           </div>
 
           <div className="homeLeadPreviewWrap">
             <div className="homePreviewWindow">
               <div
                 className="homePreviewDashboard"
-                style={{ gridTemplateColumns: '1fr', minHeight: 'auto' }}
+                style={{
+                  gridTemplateColumns: '1fr',
+                  minHeight: 'auto'
+                }}
               >
-                <div className="homePreviewMain" style={{ padding: 20, gap: 12 }}>
+                <div className="homePreviewMain" style={{ padding: 20, gap: 14 }}>
                   <div className="homePreviewHeader">
                     <div>
-                      <h2>TutoVera workspace</h2>
-                      <p>Choose a subject, ask clearly, and keep learning from there.</p>
+                      <h2>Ask TutoVera</h2>
+                      <p>One workspace for questions, explanations, and follow-ups.</p>
                     </div>
 
                     <div
@@ -91,8 +65,8 @@ export default function HomePage() {
 
                   <div className="homeProgressCard">
                     <div className="homeProgressLabel">
-                      <span>Student workspace</span>
-                      <strong>Ask a question, then understand the reasoning.</strong>
+                      <span>Example question</span>
+                      <strong>“Can you explain this step by step?”</strong>
                     </div>
 
                     <div style={{ display: 'grid', gap: 12 }}>
@@ -106,7 +80,8 @@ export default function HomePage() {
                         }}
                       >
                         <p className="small" style={{ margin: 0 }}>
-                          “Can you help me solve this step by step, but explain why each step works?”
+                          TutoVera helps solve the question, explain the reasoning, and keep the
+                          session ready for follow-ups.
                         </p>
                       </div>
 
@@ -119,38 +94,20 @@ export default function HomePage() {
                         }}
                       >
                         <p className="small" style={{ margin: 0 }}>
-                          TutoVera guides the solution, explains the reasoning, and keeps the thread
-                          ready for follow-up questions.
+                          Plus adds worksheet and image help. Pro adds revision and mistake review
+                          from saved sessions.
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="homeRecommendedCard">
-                    <span>What TutoVera helps you do</span>
-
-                    <div className="homeRecommendedList">
-                      <div
-                        className="homeRecommendedItem"
-                        style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}
-                      >
-                        <i aria-hidden="true">✣</i>
-                        <strong>Open a subject branch</strong>
-                      </div>
-
-                      <div
-                        className="homeRecommendedItem"
-                        style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}
-                      >
-                        <i aria-hidden="true">✣</i>
-                        <strong>Continue a saved session</strong>
-                      </div>
-                    </div>
-
-                    <p className="small" style={{ margin: 0 }}>
-                      Start with Math, Physics, Chemistry, or Biology, then continue the learning
-                      thread when you need to ask a follow-up or review earlier work.
-                    </p>
+                  <div className="buttonRow">
+                    <Link className="btn secondary" href="/parents">
+                      Parent Workspace
+                    </Link>
+                    <Link className="btn secondary" href="/pricing">
+                      View Plans
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -160,14 +117,44 @@ export default function HomePage() {
       </section>
 
       <Reveal delay={0.04}>
+        <section className="grid cols-3">
+          <div className="card featureCard">
+            <span className="badge">1</span>
+            <h2 style={{ margin: 0 }}>Ask</h2>
+            <p className="small" style={{ margin: 0 }}>
+              Type a question, paste your work, choose a subject, or use the parent workspace to
+              help a child without just giving away the answer.
+            </p>
+          </div>
+
+          <div className="card featureCard">
+            <span className="badge">2</span>
+            <h2 style={{ margin: 0 }}>Understand</h2>
+            <p className="small" style={{ margin: 0 }}>
+              Get clear explanations, follow-up guidance, hints, mistake checks, and step-by-step
+              reasoning that stays connected to the session.
+            </p>
+          </div>
+
+          <div className="card featureCard">
+            <span className="badge">3</span>
+            <h2 style={{ margin: 0 }}>Improve</h2>
+            <p className="small" style={{ margin: 0 }}>
+              Save sessions, return to earlier work, upload worksheets on paid plans, and use review
+              tools when you need deeper practice.
+            </p>
+          </div>
+        </section>
+      </Reveal>
+
+      <Reveal delay={0.08}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 22 }}>
           <div style={{ display: 'grid', gap: 8 }}>
             <span className="badge">Subjects</span>
-            <h2 style={{ margin: 0 }}>Choose a TutoVera branch.</h2>
-            <p className="small" style={{ margin: 0, maxWidth: 1120 }}>
-              Each subject branch has its own homepage, examples, tutor behavior, and visual identity
-              while sharing the same core account, history, settings, deployment, and backend
-              structure.
+            <h2 style={{ margin: 0 }}>Choose a subject and start learning.</h2>
+            <p className="small" style={{ margin: 0, maxWidth: 900 }}>
+              TutoVera supports student and parent workspaces across active subject branches, all
+              connected through one account and shared history.
             </p>
           </div>
 
@@ -196,19 +183,6 @@ export default function HomePage() {
               </Link>
             ))}
           </div>
-        </section>
-      </Reveal>
-
-      <Reveal delay={0.08}>
-        <section className="card" style={{ display: 'grid', gap: 16 }}>
-          <div style={{ display: 'grid', gap: 8 }}>
-            <span className="badge">Learning foundation</span>
-            <h2 style={{ margin: 0 }}>A consistent experience across every active branch.</h2>
-            <p className="small" style={{ margin: 0, maxWidth: 920 }}>
-              TutoVera is built around clear explanations, saved continuity, parent support, and
-              subject-specific workspaces that stay connected through one account.
-            </p>
-          </div>
 
           <div className="buttonRow">
             {activeSubjects.map((subject) => (
@@ -221,6 +195,54 @@ export default function HomePage() {
       </Reveal>
 
       <Reveal delay={0.12}>
+        <section className="card" style={{ display: 'grid', gap: 18 }}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span className="badge">Plans</span>
+            <h2 style={{ margin: 0 }}>Simple plans that unlock naturally.</h2>
+            <p className="small" style={{ margin: 0, maxWidth: 900 }}>
+              TutoVera keeps the workspace simple. Your plan quietly changes what you can do inside
+              the tutor, history, and review flow.
+            </p>
+          </div>
+
+          <div className="grid cols-3">
+            <div className="card innerFeatureCard">
+              <h3 style={{ marginTop: 0 }}>Free</h3>
+              <p className="small" style={{ marginBottom: 0 }}>
+                Text tutoring, student and parent workspaces, math graphing, and basic saved
+                history.
+              </p>
+            </div>
+
+            <div className="card innerFeatureCard">
+              <h3 style={{ marginTop: 0 }}>Plus</h3>
+              <p className="small" style={{ marginBottom: 0 }}>
+                Everything in Free, plus worksheet photos, screenshots, higher limits, and extended
+                history.
+              </p>
+            </div>
+
+            <div className="card innerFeatureCard">
+              <h3 style={{ marginTop: 0 }}>Pro</h3>
+              <p className="small" style={{ marginBottom: 0 }}>
+                Everything in Plus, plus Revision Review, Mistake Review, highest limits, and deeper
+                study support.
+              </p>
+            </div>
+          </div>
+
+          <div className="buttonRow">
+            <Link className="btn" href="/pricing">
+              Compare Plans
+            </Link>
+            <Link className="btn secondary" href="/tutor">
+              Try Free
+            </Link>
+          </div>
+        </section>
+      </Reveal>
+
+      <Reveal delay={0.16}>
         <section id="updates">
           <BetaSignup />
         </section>
