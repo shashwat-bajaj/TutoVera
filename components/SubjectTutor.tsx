@@ -768,6 +768,14 @@ export default function SubjectTutor({
   const tutorUsageWarningText = getTutorUsageWarningText(planAccess);
   const showTutorUsageWarning = Boolean(answer && !loading && tutorUsageWarningText);
 
+  const showSessionReviewTools =
+    !loading &&
+    !!answer &&
+    !isErrorLikeMessage(answer) &&
+    !!conversationId &&
+    planAccess.plan === 'pro' &&
+    planAccess.hasActivePaidAccess;
+
   return (
     <div className="grid tutorSurface" style={{ gap: 18 }}>
       {(title || description) && (
@@ -862,9 +870,10 @@ export default function SubjectTutor({
                     className="small"
                     style={{
                       margin: 0,
-                      color: planAccess.imageUploadLimitWarning || planAccess.imageUploadLimitReached
-                        ? 'var(--accent-warm)'
-                        : 'var(--text-soft)'
+                      color:
+                        planAccess.imageUploadLimitWarning || planAccess.imageUploadLimitReached
+                          ? 'var(--accent-warm)'
+                          : 'var(--text-soft)'
                     }}
                   >
                     {getImageUsageText(planAccess)}
@@ -945,14 +954,6 @@ export default function SubjectTutor({
             ) : (
               <PaidImageUploadPlaceholder compact context={audience} />
             )}
-          </div>
-        </details>
-
-        <details className="tutorLaterDetails">
-          <summary>Study tools</summary>
-
-          <div style={{ display: 'grid', gap: 14, paddingTop: 14 }}>
-            <ProRevisionReviewPanel conversationId={conversationId} />
           </div>
         </details>
 
@@ -1163,6 +1164,16 @@ export default function SubjectTutor({
 
         {graphingEnabled && audience === 'student' && showGraphForCurrentTurn && activeGraphExpression ? (
           <FunctionGraph expression={activeGraphExpression} />
+        ) : null}
+
+        {showSessionReviewTools ? (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <SectionTitle
+              title="Review this session"
+              description="Use Pro reviews after TutoVera has answered to turn this session into revision or mistake-focused study."
+            />
+            <ProRevisionReviewPanel conversationId={conversationId} />
+          </div>
         ) : null}
       </section>
 
