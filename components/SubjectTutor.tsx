@@ -598,12 +598,6 @@ export default function SubjectTutor({
   }
 
   function startNewSession() {
-    if (newSessionHref) {
-      router.push(newSessionHref);
-      router.refresh();
-      return;
-    }
-
     setConversationId(null);
     setAnswer('');
     setQuestion(defaultQuestion);
@@ -616,6 +610,19 @@ export default function SubjectTutor({
     setLastRequestPayload(null);
     setHasTutorInteraction(false);
     clearSelectedImage();
+
+    window.setTimeout(() => {
+      questionRef.current?.focus();
+      questionRef.current?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth'
+      });
+    }, 80);
+
+    if (newSessionHref) {
+      router.push(newSessionHref);
+      router.refresh();
+    }
   }
 
   function buildPayload(overridePayload?: TutorRequestPayload): TutorRequestPayload | null {
