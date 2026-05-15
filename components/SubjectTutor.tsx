@@ -419,6 +419,7 @@ export default function SubjectTutor({
   const router = useRouter();
   const questionRef = useRef<HTMLTextAreaElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const responseCardRef = useRef<HTMLElement | null>(null);
 
   const subjectConfig = useMemo(() => getSubjectConfig(subject) || subjects.math, [subject]);
   const graphingEnabled = subjectConfig.features.graphing;
@@ -447,6 +448,7 @@ export default function SubjectTutor({
   const [lastRequestPayload, setLastRequestPayload] = useState<TutorRequestPayload | null>(null);
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(null);
   const [imageStatus, setImageStatus] = useState('');
+  const [hasTutorInteraction, setHasTutorInteraction] = useState(false);
 
   const [parentHelpStyle, setParentHelpStyle] =
     useState<ParentHelpStyle>('explain-simply');
@@ -516,6 +518,7 @@ export default function SubjectTutor({
     setRememberedGraphExpression('');
     setShowGraphForCurrentTurn(false);
     setLastRequestPayload(null);
+    setHasTutorInteraction(false);
 
     if (!initialConversationId) {
       setParentTopic('');
@@ -524,6 +527,19 @@ export default function SubjectTutor({
       clearSelectedImage();
     }
   }, [initialConversationId, defaultQuestion]);
+
+  useEffect(() => {
+    if (!hasTutorInteraction) return;
+
+    const timer = window.setTimeout(() => {
+      responseCardRef.current?.scrollIntoView({
+        block: 'start',
+        behavior: 'smooth'
+      });
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [hasTutorInteraction, loading, answer]);
 
   function clearSelectedImage() {
     setSelectedImage(null);
@@ -598,6 +614,7 @@ export default function SubjectTutor({
     setRememberedGraphExpression('');
     setShowGraphForCurrentTurn(false);
     setLastRequestPayload(null);
+    setHasTutorInteraction(false);
     clearSelectedImage();
   }
 
@@ -657,6 +674,7 @@ export default function SubjectTutor({
           }
         : basePayload;
 
+    setHasTutorInteraction(true);
     setLoading(true);
     setAnswer('');
     setLastRequestPayload(payload);
@@ -776,8 +794,443 @@ export default function SubjectTutor({
     planAccess.plan === 'pro' &&
     planAccess.hasActivePaidAccess;
 
+  const responseFirstLayout = hasTutorInteraction;
+
+  const askCard = (
+    <section className="card tutorAskCard" style={{ display: 'grid', gap: 14 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          gap: 14,
+          alignItems: 'start'
+        }}
+      >
+        <div style={{ display: 'grid', gap: 6 }}>
+          <p className="small" style={{ margin: 0 }}>
+            {accountEmail ? (
+              <>
+                Signed in as <strong>{accountEmail}</strong>.{' '}
+              </>
+            ) : null}
+            {conversationId
+              ? 'Ask a follow-up in this session.'
+              : 'Ask a question to start a new session.'}
+          </p>
+
+          {!accountEmail ? (
+            <div style={{ maxWidth: 420 }}>
+              <label>Email (optional for history)</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+          ) : null}
+        </div>
+
+        <button className="secondary" type="button" onClick={startNewSession}>
+          New Session
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gap: 10 }}>
+        <label>
+          {audience === 'parent'
+            ? 'What is the child stuck on?'
+            : conversationId
+              ? 'Ask a follow-up'
+              : 'What would you like help with?'}
+        </label>
+
+        <textarea
+          ref={questionRef}
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={handleQuestionKeyDown}
+          placeholder={questionPlaceholder}
+          style={{ minHeight: responseFirstLayout ? 118 : 150 }}
+        />
+      </div>
+
+      <details className="tutorLaterDetails">
+        <summary>Image and worksheet support</summary>
+
+        <div style={{ display: 'grid', gap: 14, paddingTop: 14 }}>
+          {planAccessLoading ? (
+            <p className="small" style={{ margin: 0 }}>
+              Checking image support for your account...
+            </p>
+          ) : planAccess.canUseImages ? (
+            <div className="card questionSurface" style={{ display: 'grid', gap: 14, padding: 16 }}>
+              <div style={{ display: 'grid', gap: 6 }}>
+                <p className="small" style={{ margin: 0 }}>
+                  <strong>{getPlanLabel(planAccess.plan)} image support</strong>
+                </p>
+                <p className="small" style={{ margin: 0 }}>
+                  Attach one worksheet photo, screenshot, or image-based question.
+                </p>
+                <p
+                  className="small"
+                  style={{
+                    margin: 0,
+                    color:
+                      planAccess.imageUploadLimitWarning || planAccess.imageUploadLimitReached
+                        ? 'var(--accent-warm)'
+                        : 'var(--text-soft)'
+                  }}
+                >
+                  {getImageUsageText(planAccess)}
+                </p>
+              </div>
+
+              <div>
+                <label>Attach image (optional)</label>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={loading || planAccess.imageUploadLimitReached}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null;
+                    void handleImageChange(file);
+                  }}
+                />
+              </div>
+
+              {selectedImage ? (
+                <div
+                  className="card innerFeatureCard"
+                  style={{
+                    display: 'grid',
+                    gap: 12,
+                    padding: 14
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '96px minmax(0, 1fr)',
+                      gap: 12,
+                      alignItems: 'center'
+                    }}
+                  >
+                    <img
+                      src={`data:${selectedImage.mimeType};base64,${selectedImage.data}`}
+                      alt="Selected worksheet or question image"
+                      style={{
+                        width: 96,
+                        height: 96,
+                        objectFit: 'cover',
+                        borderRadius: 16,
+                        border: '1px solid var(--border)'
+                      }}
+                    />
+
+                    <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+                      <p className="small" style={{ margin: 0 }}>
+                        <strong>{selectedImage.originalName}</strong>
+                      </p>
+                      <p className="small" style={{ margin: 0 }}>
+                        {selectedImage.mimeType} · {formatFileSize(selectedImage.sizeBytes)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="buttonRow">
+                    <button type="button" className="secondary" onClick={clearSelectedImage}>
+                      Remove Image
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {imageStatus ? (
+                <p className="small" style={{ margin: 0 }}>
+                  {imageStatus}
+                </p>
+              ) : (
+                <p className="small" style={{ margin: 0 }}>
+                  Supported formats: PNG, JPG, JPEG, and WebP. Maximum size: 8 MB.
+                </p>
+              )}
+            </div>
+          ) : (
+            <PaidImageUploadPlaceholder compact context={audience} />
+          )}
+        </div>
+      </details>
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 14,
+          flexWrap: 'wrap'
+        }}
+      >
+        <details className="tutorCustomizeDetails">
+          <summary>Customize guidance</summary>
+
+          <div className="tutorCustomizePanel">
+            <SectionTitle
+              title="Response settings"
+              description="These are optional. Most questions can be sent without changing anything here."
+            />
+
+            {audience === 'parent' ? (
+              <>
+                <div style={splitFieldStyle}>
+                  <div>
+                    <label>Mode</label>
+                    <ReadOnlyField value="Guided hints only" />
+                  </div>
+
+                  <div>
+                    <label>Level</label>
+                    <select
+                      value={gradeLevel}
+                      onChange={(e) => setGradeLevel(e.target.value as GradeLevel)}
+                    >
+                      <option value="elementary">Elementary</option>
+                      <option value="middle-school">Middle school</option>
+                      <option value="high-school">High school</option>
+                      <option value="college">College</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={splitFieldStyle}>
+                  <div>
+                    <label>Support style</label>
+                    <select
+                      value={parentHelpStyle}
+                      onChange={(e) => setParentHelpStyle(e.target.value as ParentHelpStyle)}
+                    >
+                      <option value="explain-simply">Explain it simply</option>
+                      <option value="talking-points">Give me parent talking points</option>
+                      <option value="simple-example">Show a simple example</option>
+                      <option value="practice-questions">Create practice questions</option>
+                      <option value="likely-mistake">
+                        What mistake is my child likely making?
+                      </option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label>Topic (optional)</label>
+                    <input
+                      type="text"
+                      value={parentTopic}
+                      onChange={(e) => setParentTopic(e.target.value)}
+                      placeholder={`Example: ${subjectConfig.name.toLowerCase()} topic, concept, or skill`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label>Where the child is stuck (optional)</label>
+                  <input
+                    type="text"
+                    value={parentStuckPoint}
+                    onChange={(e) => setParentStuckPoint(e.target.value)}
+                    placeholder="Example: comparing ideas, setting up the first step, or remembering key terms"
+                  />
+                </div>
+              </>
+            ) : (
+              <div style={splitFieldStyle}>
+                {!lockedMode ? (
+                  <div>
+                    <label>Study mode</label>
+                    <select value={mode} onChange={(e) => setMode(e.target.value as TutorMode)}>
+                      <option value="auto">Auto (follow my request)</option>
+                      <option value="teach">Teach me step by step</option>
+                      <option value="hint">Give hints only</option>
+                      <option value="diagnose">Diagnose my mistake</option>
+                      <option value="quiz">Turn this into practice questions</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label>Mode</label>
+                    <ReadOnlyField value={getModeLabel(lockedMode)} />
+                  </div>
+                )}
+
+                <div>
+                  <label>Level</label>
+                  <select
+                    value={gradeLevel}
+                    onChange={(e) => setGradeLevel(e.target.value as GradeLevel)}
+                  >
+                    <option value="elementary">Elementary</option>
+                    <option value="middle-school">Middle school</option>
+                    <option value="high-school">High school</option>
+                    <option value="college">College</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
+
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'start',
+            gap: 12,
+            flexWrap: 'wrap',
+            marginLeft: 'auto'
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gap: 5,
+              justifyItems: 'center',
+              maxWidth: 320
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => void submitQuestion()}
+              disabled={loading || !question.trim()}
+            >
+              {loading ? 'Thinking...' : conversationId ? 'Send Follow-up' : 'Ask TutoVera'}
+            </button>
+
+            <p
+              className="small"
+              title="Press Command + Enter on Mac or Control + Enter on Windows/Linux to submit."
+              style={{
+                margin: 0,
+                textAlign: 'center',
+                lineHeight: 1.2
+              }}
+            >
+              Cmd/Ctrl + Enter
+            </p>
+          </div>
+
+          {showRetryButton ? (
+            <button type="button" className="secondary" onClick={retryLastRequest}>
+              Retry Last Request
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+
+  const responseCard = (
+    <section
+      ref={responseCardRef}
+      className="card tutorResponseCard"
+      style={{ display: 'grid', gap: 14 }}
+    >
+      <SectionTitle
+        title="Tutor response"
+        description={
+          responseFirstLayout
+            ? 'Read the response, then ask your follow-up right below it.'
+            : 'The answer and suggested next steps stay connected here.'
+        }
+      />
+
+      <div className="responseBox">
+        {loading ? (
+          <p>TutoVera is thinking...</p>
+        ) : answer ? (
+          <AnswerDisplay text={answer} />
+        ) : (
+          <p>Your tutor response will appear here.</p>
+        )}
+      </div>
+
+      {showTutorUsageWarning ? (
+        <div
+          className="card questionSurface"
+          style={{
+            display: 'grid',
+            gap: 8,
+            padding: 14,
+            borderColor: 'var(--accent-warm-border)'
+          }}
+        >
+          <p
+            className="small"
+            style={{
+              margin: 0,
+              color: 'var(--accent-warm)'
+            }}
+          >
+            <strong>Usage note:</strong> {tutorUsageWarningText}
+          </p>
+          <div className="buttonRow">
+            <a className="btn secondary" href="/account">
+              View Usage
+            </a>
+            {!planAccess.isPaidPlan ? (
+              <a className="btn secondary" href="/pricing">
+                View Plans
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {graphingEnabled && audience === 'student' && showGraphForCurrentTurn && activeGraphExpression ? (
+        <FunctionGraph expression={activeGraphExpression} />
+      ) : null}
+
+      {showSessionReviewTools ? (
+        <div style={{ display: 'grid', gap: 10 }}>
+          <SectionTitle
+            title="Review this session"
+            description="Use Pro reviews after TutoVera has answered to turn this session into revision or mistake-focused study."
+          />
+          <ProRevisionReviewPanel conversationId={conversationId} />
+        </div>
+      ) : null}
+    </section>
+  );
+
+  const suggestionsCard = showFollowUpSuggestions ? (
+    <section className="card suggestionCard" style={{ display: 'grid', gap: 10 }}>
+      <div>
+        <p className="small" style={{ margin: 0 }}>
+          <strong>Suggested next step</strong>
+        </p>
+        <p className="small" style={{ margin: '6px 0 0' }}>
+          Tap one to place it into the follow-up box, or type your own follow-up.
+        </p>
+      </div>
+
+      <div className="suggestionChips">
+        {followUpSuggestions.map((suggestion) => (
+          <button
+            key={suggestion}
+            type="button"
+            className="secondary suggestionChip"
+            onClick={() => applySuggestionChip(suggestion)}
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
+    </section>
+  ) : null;
+
   return (
-    <div className="grid tutorSurface" style={{ gap: 18 }}>
+    <div
+      className={`grid tutorSurface ${responseFirstLayout ? 'tutorSurfaceResponseFirst' : ''}`}
+      style={{ gap: 18 }}
+    >
       {(title || description) && (
         <section
           style={{
@@ -795,413 +1248,19 @@ export default function SubjectTutor({
         </section>
       )}
 
-      <section className="card tutorAskCard" style={{ display: 'grid', gap: 14 }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) auto',
-            gap: 14,
-            alignItems: 'start'
-          }}
-        >
-          <div style={{ display: 'grid', gap: 6 }}>
-            <p className="small" style={{ margin: 0 }}>
-              {accountEmail ? (
-                <>
-                  Signed in as <strong>{accountEmail}</strong>.{' '}
-                </>
-              ) : null}
-              {conversationId
-                ? 'Continuing an existing session.'
-                : 'Ask a question to start a new session.'}
-            </p>
-
-            {!accountEmail ? (
-              <div style={{ maxWidth: 420 }}>
-                <label>Email (optional for history)</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                />
-              </div>
-            ) : null}
-          </div>
-
-          <button className="secondary" type="button" onClick={startNewSession}>
-            New Session
-          </button>
-        </div>
-
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            {audience === 'parent' ? 'What is the child stuck on?' : 'What would you like help with?'}
-          </label>
-
-          <textarea
-            ref={questionRef}
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            onKeyDown={handleQuestionKeyDown}
-            placeholder={questionPlaceholder}
-            style={{ minHeight: 150 }}
-          />
-        </div>
-
-        <details className="tutorLaterDetails">
-          <summary>Image and worksheet support</summary>
-
-          <div style={{ display: 'grid', gap: 14, paddingTop: 14 }}>
-            {planAccessLoading ? (
-              <p className="small" style={{ margin: 0 }}>
-                Checking image support for your account...
-              </p>
-            ) : planAccess.canUseImages ? (
-              <div className="card questionSurface" style={{ display: 'grid', gap: 14, padding: 16 }}>
-                <div style={{ display: 'grid', gap: 6 }}>
-                  <p className="small" style={{ margin: 0 }}>
-                    <strong>{getPlanLabel(planAccess.plan)} image support</strong>
-                  </p>
-                  <p className="small" style={{ margin: 0 }}>
-                    Attach one worksheet photo, screenshot, or image-based question.
-                  </p>
-                  <p
-                    className="small"
-                    style={{
-                      margin: 0,
-                      color:
-                        planAccess.imageUploadLimitWarning || planAccess.imageUploadLimitReached
-                          ? 'var(--accent-warm)'
-                          : 'var(--text-soft)'
-                    }}
-                  >
-                    {getImageUsageText(planAccess)}
-                  </p>
-                </div>
-
-                <div>
-                  <label>Attach image (optional)</label>
-                  <input
-                    ref={imageInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    disabled={loading || planAccess.imageUploadLimitReached}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] || null;
-                      void handleImageChange(file);
-                    }}
-                  />
-                </div>
-
-                {selectedImage ? (
-                  <div
-                    className="card innerFeatureCard"
-                    style={{
-                      display: 'grid',
-                      gap: 12,
-                      padding: 14
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '96px minmax(0, 1fr)',
-                        gap: 12,
-                        alignItems: 'center'
-                      }}
-                    >
-                      <img
-                        src={`data:${selectedImage.mimeType};base64,${selectedImage.data}`}
-                        alt="Selected worksheet or question image"
-                        style={{
-                          width: 96,
-                          height: 96,
-                          objectFit: 'cover',
-                          borderRadius: 16,
-                          border: '1px solid var(--border)'
-                        }}
-                      />
-
-                      <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
-                        <p className="small" style={{ margin: 0 }}>
-                          <strong>{selectedImage.originalName}</strong>
-                        </p>
-                        <p className="small" style={{ margin: 0 }}>
-                          {selectedImage.mimeType} · {formatFileSize(selectedImage.sizeBytes)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="buttonRow">
-                      <button type="button" className="secondary" onClick={clearSelectedImage}>
-                        Remove Image
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {imageStatus ? (
-                  <p className="small" style={{ margin: 0 }}>
-                    {imageStatus}
-                  </p>
-                ) : (
-                  <p className="small" style={{ margin: 0 }}>
-                    Supported formats: PNG, JPG, JPEG, and WebP. Maximum size: 8 MB.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <PaidImageUploadPlaceholder compact context={audience} />
-            )}
-          </div>
-        </details>
-
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: 14,
-            flexWrap: 'wrap'
-          }}
-        >
-          <details className="tutorCustomizeDetails">
-            <summary>Customize guidance</summary>
-
-            <div className="tutorCustomizePanel">
-              <SectionTitle
-                title="Response settings"
-                description="These are optional. Most questions can be sent without changing anything here."
-              />
-
-              {audience === 'parent' ? (
-                <>
-                  <div style={splitFieldStyle}>
-                    <div>
-                      <label>Mode</label>
-                      <ReadOnlyField value="Guided hints only" />
-                    </div>
-
-                    <div>
-                      <label>Level</label>
-                      <select
-                        value={gradeLevel}
-                        onChange={(e) => setGradeLevel(e.target.value as GradeLevel)}
-                      >
-                        <option value="elementary">Elementary</option>
-                        <option value="middle-school">Middle school</option>
-                        <option value="high-school">High school</option>
-                        <option value="college">College</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={splitFieldStyle}>
-                    <div>
-                      <label>Support style</label>
-                      <select
-                        value={parentHelpStyle}
-                        onChange={(e) => setParentHelpStyle(e.target.value as ParentHelpStyle)}
-                      >
-                        <option value="explain-simply">Explain it simply</option>
-                        <option value="talking-points">Give me parent talking points</option>
-                        <option value="simple-example">Show a simple example</option>
-                        <option value="practice-questions">Create practice questions</option>
-                        <option value="likely-mistake">
-                          What mistake is my child likely making?
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label>Topic (optional)</label>
-                      <input
-                        type="text"
-                        value={parentTopic}
-                        onChange={(e) => setParentTopic(e.target.value)}
-                        placeholder={`Example: ${subjectConfig.name.toLowerCase()} topic, concept, or skill`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label>Where the child is stuck (optional)</label>
-                    <input
-                      type="text"
-                      value={parentStuckPoint}
-                      onChange={(e) => setParentStuckPoint(e.target.value)}
-                      placeholder="Example: comparing ideas, setting up the first step, or remembering key terms"
-                    />
-                  </div>
-                </>
-              ) : (
-                <div style={splitFieldStyle}>
-                  {!lockedMode ? (
-                    <div>
-                      <label>Study mode</label>
-                      <select value={mode} onChange={(e) => setMode(e.target.value as TutorMode)}>
-                        <option value="auto">Auto (follow my request)</option>
-                        <option value="teach">Teach me step by step</option>
-                        <option value="hint">Give hints only</option>
-                        <option value="diagnose">Diagnose my mistake</option>
-                        <option value="quiz">Turn this into practice questions</option>
-                      </select>
-                    </div>
-                  ) : (
-                    <div>
-                      <label>Mode</label>
-                      <ReadOnlyField value={getModeLabel(lockedMode)} />
-                    </div>
-                  )}
-
-                  <div>
-                    <label>Level</label>
-                    <select
-                      value={gradeLevel}
-                      onChange={(e) => setGradeLevel(e.target.value as GradeLevel)}
-                    >
-                      <option value="elementary">Elementary</option>
-                      <option value="middle-school">Middle school</option>
-                      <option value="high-school">High school</option>
-                      <option value="college">College</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-          </details>
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              alignItems: 'start',
-              gap: 12,
-              flexWrap: 'wrap',
-              marginLeft: 'auto'
-            }}
-          >
-            <div
-              style={{
-                display: 'grid',
-                gap: 5,
-                justifyItems: 'center',
-                maxWidth: 320
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => void submitQuestion()}
-                disabled={loading || !question.trim()}
-              >
-                {loading ? 'Thinking...' : conversationId ? 'Send Follow-up' : 'Ask TutoVera'}
-              </button>
-
-              <p
-                className="small"
-                title="Press Command + Enter on Mac or Control + Enter on Windows/Linux to submit."
-                style={{
-                  margin: 0,
-                  textAlign: 'center',
-                  lineHeight: 1.2
-                }}
-              >
-                Cmd/Ctrl + Enter
-              </p>
-            </div>
-
-            {showRetryButton ? (
-              <button type="button" className="secondary" onClick={retryLastRequest}>
-                Retry Last Request
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </section>
-
-      <section className="card" style={{ display: 'grid', gap: 14 }}>
-        <SectionTitle
-          title="Tutor response"
-          description="The answer and suggested next steps stay connected here."
-        />
-
-        <div className="responseBox">
-          {answer ? <AnswerDisplay text={answer} /> : <p>Your tutor response will appear here.</p>}
-        </div>
-
-        {showTutorUsageWarning ? (
-          <div
-            className="card questionSurface"
-            style={{
-              display: 'grid',
-              gap: 8,
-              padding: 14,
-              borderColor: 'var(--accent-warm-border)'
-            }}
-          >
-            <p
-              className="small"
-              style={{
-                margin: 0,
-                color: 'var(--accent-warm)'
-              }}
-            >
-              <strong>Usage note:</strong> {tutorUsageWarningText}
-            </p>
-            <div className="buttonRow">
-              <a className="btn secondary" href="/account">
-                View Usage
-              </a>
-              {!planAccess.isPaidPlan ? (
-                <a className="btn secondary" href="/pricing">
-                  View Plans
-                </a>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-
-        {graphingEnabled && audience === 'student' && showGraphForCurrentTurn && activeGraphExpression ? (
-          <FunctionGraph expression={activeGraphExpression} />
-        ) : null}
-
-        {showSessionReviewTools ? (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <SectionTitle
-              title="Review this session"
-              description="Use Pro reviews after TutoVera has answered to turn this session into revision or mistake-focused study."
-            />
-            <ProRevisionReviewPanel conversationId={conversationId} />
-          </div>
-        ) : null}
-      </section>
-
-      {showFollowUpSuggestions ? (
-        <section className="card suggestionCard" style={{ display: 'grid', gap: 10 }}>
-          <div>
-            <p className="small" style={{ margin: 0 }}>
-              <strong>Suggested next step</strong>
-            </p>
-            <p className="small" style={{ margin: '6px 0 0' }}>
-              Tap one to place it into the question box, or type your own follow-up below.
-            </p>
-          </div>
-
-          <div className="suggestionChips">
-            {followUpSuggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                className="secondary suggestionChip"
-                onClick={() => applySuggestionChip(suggestion)}
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {responseFirstLayout ? (
+        <>
+          {responseCard}
+          {askCard}
+          {suggestionsCard}
+        </>
+      ) : (
+        <>
+          {askCard}
+          {responseCard}
+          {suggestionsCard}
+        </>
+      )}
 
       <style>
         {`
@@ -1243,9 +1302,25 @@ export default function SubjectTutor({
             max-width: 860px;
           }
 
+          .tutorResponseCard,
+          .tutorAskCard,
+          .suggestionCard {
+            scroll-margin-top: 116px;
+          }
+
+          .tutorSurfaceResponseFirst .tutorAskCard {
+            border-color: var(--accent-border);
+          }
+
           @media (max-width: 760px) {
             .tutorAskCard {
               gap: 16px !important;
+            }
+
+            .tutorResponseCard,
+            .tutorAskCard,
+            .suggestionCard {
+              scroll-margin-top: 98px;
             }
           }
         `}

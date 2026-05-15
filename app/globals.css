@@ -39,7 +39,7 @@ html[data-theme='dark'] {
   --border: rgba(207, 225, 247, 0.13);
   --border-strong: rgba(207, 225, 247, 0.24);
 
-  --topbar: rgba(3, 16, 35, 0.78);
+  --topbar: rgba(3, 16, 35, 0.94);
 
   --shadow-soft: 0 14px 30px rgba(0, 8, 22, 0.18);
   --shadow-panel: 0 24px 58px rgba(0, 8, 24, 0.28);
@@ -90,7 +90,7 @@ html[data-theme='light'] {
   --border: rgba(11, 29, 58, 0.1);
   --border-strong: rgba(11, 29, 58, 0.18);
 
-  --topbar: rgba(255, 255, 255, 0.78);
+  --topbar: rgba(255, 255, 255, 0.94);
 
   --shadow-soft: 0 12px 26px rgba(11, 29, 58, 0.055);
   --shadow-panel: 0 24px 54px rgba(11, 29, 58, 0.08);
@@ -286,19 +286,21 @@ a {
 
 .topbar {
   padding: 18px 24px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-strong);
   position: sticky;
   top: 0;
-  z-index: 50;
-  background: var(--topbar);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 12px 30px rgba(0, 8, 24, 0.11);
+  z-index: 500;
+  background:
+    linear-gradient(180deg, var(--topbar), color-mix(in srgb, var(--topbar) 92%, transparent)),
+    color-mix(in srgb, var(--panel-strong) 88%, transparent);
+  backdrop-filter: blur(30px) saturate(1.25);
+  -webkit-backdrop-filter: blur(30px) saturate(1.25);
+  box-shadow: 0 16px 42px rgba(0, 8, 24, 0.2);
   overflow: visible;
 }
 
 html[data-theme='light'] .topbar {
-  box-shadow: 0 12px 30px rgba(11, 29, 58, 0.05);
+  box-shadow: 0 14px 34px rgba(11, 29, 58, 0.08);
 }
 
 .headerShell {
