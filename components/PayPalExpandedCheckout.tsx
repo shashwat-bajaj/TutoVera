@@ -23,6 +23,31 @@ type PayPalCardFieldsInstance = {
   close?: () => void;
 };
 
+type DataLayerEvent = {
+  event: string;
+  plan?: PaidPlanKey;
+  billing_cycle?: BillingCycle;
+  value?: number;
+  currency?: string;
+  transaction_id?: string;
+  price_label?: string;
+  item_id?: string;
+  item_name?: string;
+  event_source?: string;
+  ecommerce?: {
+    transaction_id?: string;
+    currency: string;
+    value: number;
+    items: Array<{
+      item_id: string;
+      item_name: string;
+      item_category: string;
+      price: number;
+      quantity: number;
+    }>;
+  };
+};
+
 declare global {
   interface Window {
     paypal?: any;
@@ -132,12 +157,77 @@ function getPriceLabel(plan: PaidPlanKey, billingCycle: BillingCycle) {
   return '$199.99/year';
 }
 
+function getCheckoutValue(plan: PaidPlanKey, billingCycle: BillingCycle) {
+  if (plan === 'plus' && billingCycle === 'monthly') return 9.99;
+  if (plan === 'plus' && billingCycle === 'annual') return 99.99;
+  if (plan === 'pro' && billingCycle === 'monthly') return 19.99;
+  return 199.99;
+}
+
+function getCheckoutItemId(plan: PaidPlanKey, billingCycle: BillingCycle) {
+  return `tutovera_${plan}_${billingCycle}`;
+}
+
+function getCheckoutItemName(plan: PaidPlanKey, billingCycle: BillingCycle) {
+  return `TutoVera ${getPlanName(plan)} ${getBillingLabel(billingCycle)}`;
+}
+
 function getPlanDescription(plan: PaidPlanKey) {
   if (plan === 'plus') {
     return 'Higher usage, worksheet and image support, extended history, and guided practice for regular study.';
   }
 
   return 'The highest TutoVera access for heavier study, larger worksheet use, and deeper revision workflows.';
+}
+
+function pushCheckoutEvent({
+  event,
+  plan,
+  billingCycle,
+  transactionId,
+  eventSource
+}: {
+  event: 'begin_checkout' | 'purchase';
+  plan: PaidPlanKey;
+  billingCycle: BillingCycle;
+  transactionId?: string;
+  eventSource: string;
+}) {
+  if (typeof window === 'undefined') return;
+
+  const value = getCheckoutValue(plan, billingCycle);
+  const priceLabel = getPriceLabel(plan, billingCycle);
+  const itemId = getCheckoutItemId(plan, billingCycle);
+  const itemName = getCheckoutItemName(plan, billingCycle);
+
+  window.dataLayer = window.dataLayer || [];
+
+  window.dataLayer.push({
+    event,
+    plan,
+    billing_cycle: billingCycle,
+    value,
+    currency: 'USD',
+    transaction_id: transactionId,
+    price_label: priceLabel,
+    item_id: itemId,
+    item_name: itemName,
+    event_source: eventSource,
+    ecommerce: {
+      ...(transactionId ? { transaction_id: transactionId } : {}),
+      currency: 'USD',
+      value,
+      items: [
+        {
+          item_id: itemId,
+          item_name: itemName,
+          item_category: 'subscription',
+          price: value,
+          quantity: 1
+        }
+      ]
+    }
+  });
 }
 
 export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpandedCheckoutProps) {
@@ -241,6 +331,14 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
         `You're on TutoVera ${planName}. Your access is active while PayPal finishes attaching the saved payment method.`
       );
     }
+
+    pushCheckoutEvent({
+      event: 'purchase',
+      plan,
+      billingCycle,
+      transactionId: orderId,
+      eventSource: 'paypal_expanded_checkout'
+    });
 
     router.refresh();
   }
@@ -404,6 +502,13 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
   }
 
   function openCardCheckout() {
+    pushCheckoutEvent({
+      event: 'begin_checkout',
+      plan,
+      billingCycle,
+      eventSource: 'pricing_card_checkout'
+    });
+
     setShowCardCheckout(true);
     setStatusKind('idle');
     setStatusMessage('');
