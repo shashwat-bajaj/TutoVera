@@ -5,6 +5,36 @@ import Reveal from '@/components/Reveal';
 
 const supportEmail = 'support@tutovera.com';
 
+type ContactLeadEvent = {
+  event: 'generate_lead';
+  form_name: string;
+  lead_type: string;
+  event_source: string;
+  value: number;
+  currency: string;
+};
+
+function pushContactLeadEvent() {
+  if (typeof window === 'undefined') return;
+
+  const windowWithDataLayer = window as Window & {
+    dataLayer?: Array<Record<string, unknown>>;
+  };
+
+  windowWithDataLayer.dataLayer = windowWithDataLayer.dataLayer || [];
+
+  const eventPayload: ContactLeadEvent = {
+    event: 'generate_lead',
+    form_name: 'contact_form',
+    lead_type: 'contact_submit',
+    event_source: 'contact_page',
+    value: 1,
+    currency: 'USD'
+  };
+
+  windowWithDataLayer.dataLayer.push(eventPayload);
+}
+
 export default function ContactPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -31,6 +61,8 @@ export default function ContactPage() {
         setStatus(data.error || 'Could not send message.');
         return;
       }
+
+      pushContactLeadEvent();
 
       setStatus('Your message has been sent. Thank you for helping improve TutoVera.');
       setName('');
