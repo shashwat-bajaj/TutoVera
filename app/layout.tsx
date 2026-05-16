@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import { GoogleTagManager } from '@next/third-parties/google';
 import AuthNav from '@/components/AuthNav';
 import ThemeToggle from '@/components/ThemeToggle';
 import BrandMark from '@/components/BrandMark';
@@ -10,7 +11,10 @@ import AdaptivePrimaryLinks from '@/components/AdaptivePrimaryLinks';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/next';
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://tutovera.com').replace(/\/$/, '');
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.tutovera.com').replace(
+  /\/$/,
+  ''
+);
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -154,6 +158,10 @@ const themeBootstrapScript = `
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
+      {process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID ? (
+        <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID} />
+      ) : null}
+
       <head>
         <link rel="icon" href="/brand/exact/tutovera-app-icon.png?v=7" type="image/png" />
         <link rel="shortcut icon" href="/brand/exact/tutovera-app-icon.png?v=7" />
