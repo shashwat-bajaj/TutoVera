@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 
 export default function BetaSignup() {
   const [name, setName] = useState('');
@@ -9,7 +9,9 @@ export default function BetaSignup() {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function submitSignup() {
+  async function submitSignup(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+
     if (!email.trim() || loading) return;
 
     setLoading(true);
@@ -41,52 +43,31 @@ export default function BetaSignup() {
   }
 
   return (
-    <section
-      className="card"
-      style={{
-        display: 'grid',
-        gap: 24,
-        overflow: 'hidden'
-      }}
-    >
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 0.9fr) minmax(320px, 1.1fr)',
-          gap: 24,
-          alignItems: 'start'
-        }}
-      >
-        <div style={{ display: 'grid', gap: 12 }}>
-          <span className="badge">Join updates</span>
+    <section className="card betaSignupCard">
+      <div className="betaSignupLayout">
+        <div className="betaSignupCopy">
+          <span className="badge betaSignupBadge">Join updates</span>
 
-          <div style={{ display: 'grid', gap: 10 }}>
-            <h2 style={{ margin: 0 }}>Help shape TutoVera as it grows.</h2>
-            <p className="small" style={{ margin: 0, maxWidth: 520 }}>
+          <div className="betaSignupIntro">
+            <h2 className="betaSignupTitle">Help shape TutoVera as it grows.</h2>
+            <p className="small betaSignupText">
               Leave your details if you would like updates and want to share what kind of learning
               support would be most useful for you, your family, or your students.
             </p>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gap: 14,
-              paddingTop: 14,
-              borderTop: '1px solid var(--border)'
-            }}
-          >
-            <div style={{ display: 'grid', gap: 5 }}>
-              <strong style={{ fontSize: '0.98rem' }}>Built for real use</strong>
-              <p className="small" style={{ margin: 0 }}>
+          <div className="betaSignupHighlights">
+            <div className="betaSignupHighlight">
+              <strong>Built for real use</strong>
+              <p className="small">
                 Homework support, revision, parent guidance, subject-specific explanations, and
                 clearer follow-up flow across active TutoVera branches.
               </p>
             </div>
 
-            <div style={{ display: 'grid', gap: 5 }}>
-              <strong style={{ fontSize: '0.98rem' }}>Product focus</strong>
-              <p className="small" style={{ margin: 0 }}>
+            <div className="betaSignupHighlight">
+              <strong>Product focus</strong>
+              <p className="small">
                 Tutor quality, saved sessions, parent support, subject tools, accessibility, and
                 cleaner interaction design.
               </p>
@@ -94,20 +75,12 @@ export default function BetaSignup() {
           </div>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gap: 14,
-            padding: 18,
-            borderRadius: 24,
-            border: '1px solid var(--border)',
-            background: 'color-mix(in srgb, var(--surface-soft) 90%, transparent)'
-          }}
-        >
-          <div style={{ display: 'grid', gap: 12 }}>
+        <form className="betaSignupFormCard" onSubmit={submitSignup}>
+          <div className="betaSignupFields">
             <div>
-              <label>Name (optional)</label>
+              <label htmlFor="beta-signup-name">Name (optional)</label>
               <input
+                id="beta-signup-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
@@ -115,18 +88,21 @@ export default function BetaSignup() {
             </div>
 
             <div>
-              <label>Email</label>
+              <label htmlFor="beta-signup-email">Email</label>
               <input
+                id="beta-signup-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                required
               />
             </div>
 
             <div>
-              <label>What would you like help with? (optional)</label>
+              <label htmlFor="beta-signup-goal">What would you like help with? (optional)</label>
               <textarea
+                id="beta-signup-goal"
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
                 placeholder="Examples: algebra homework, physics formulas, chemistry balancing, biology revision, parent support"
@@ -134,31 +110,22 @@ export default function BetaSignup() {
             </div>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gap: 10,
-              paddingTop: 10,
-              borderTop: '1px solid var(--border)'
-            }}
-          >
-            <div className="buttonRow">
-              <button onClick={submitSignup} disabled={!email.trim() || loading}>
+          <div className="betaSignupFooter">
+            <div className="buttonRow betaSignupButtonRow">
+              <button type="submit" disabled={!email.trim() || loading}>
                 {loading ? 'Saving...' : 'Join Updates'}
               </button>
             </div>
 
             {status ? (
-              <p className="small" style={{ margin: 0 }}>
-                {status}
-              </p>
+              <p className="small betaSignupFootnote">{status}</p>
             ) : (
-              <p className="small" style={{ margin: 0 }}>
+              <p className="small betaSignupFootnote">
                 We only use this to manage product updates and feedback.
               </p>
             )}
           </div>
-        </div>
+        </form>
       </div>
     </section>
   );

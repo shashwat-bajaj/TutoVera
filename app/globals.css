@@ -2004,3 +2004,178 @@ html[data-theme='light'] .turnLabel {
     min-width: 620px;
   }
 }
+
+/* Beta signup / Join Updates */
+.betaSignupCard {
+  display: grid;
+  gap: 24px;
+  overflow: hidden;
+}
+
+.betaSignupLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+  gap: 24px;
+  align-items: start;
+  min-width: 0;
+}
+
+.betaSignupCopy,
+.betaSignupIntro,
+.betaSignupHighlights,
+.betaSignupHighlight,
+.betaSignupFormCard,
+.betaSignupFields,
+.betaSignupFooter {
+  display: grid;
+  min-width: 0;
+}
+
+.betaSignupCopy {
+  gap: 12px;
+}
+
+.betaSignupIntro {
+  gap: 10px;
+}
+
+.betaSignupTitle {
+  margin: 0;
+}
+
+.betaSignupText {
+  margin: 0;
+  max-width: 520px;
+}
+
+.betaSignupHighlights {
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.betaSignupHighlight {
+  gap: 5px;
+}
+
+.betaSignupHighlight strong {
+  font-size: 0.98rem;
+}
+
+.betaSignupHighlight p {
+  margin: 0;
+}
+
+.betaSignupFormCard {
+  gap: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-soft) 90%, transparent);
+}
+
+.betaSignupFields {
+  gap: 12px;
+}
+
+.betaSignupFooter {
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.betaSignupButtonRow {
+  width: 100%;
+}
+
+.betaSignupFootnote {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .betaSignupLayout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .betaSignupCard,
+  .betaSignupLayout,
+  .betaSignupCopy,
+  .betaSignupIntro,
+  .betaSignupHighlights,
+  .betaSignupHighlight,
+  .betaSignupFormCard,
+  .betaSignupFields,
+  .betaSignupFooter {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .betaSignupCard p,
+  .betaSignupCard span,
+  .betaSignupCard small,
+  .betaSignupCard strong,
+  .betaSignupCard label,
+  .betaSignupCard input,
+  .betaSignupCard textarea,
+  .betaSignupCard button {
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .betaSignupFormCard {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .betaSignupFields {
+    gap: 11px;
+  }
+
+  .betaSignupFormCard input,
+  .betaSignupFormCard textarea,
+  .betaSignupFormCard button {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .betaSignupButtonRow {
+    display: grid !important;
+    grid-template-columns: 1fr;
+  }
+
+  .betaSignupButtonRow button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .betaSignupCard {
+    gap: 18px;
+  }
+
+  .betaSignupLayout {
+    gap: 16px;
+  }
+
+  .betaSignupTitle {
+    font-size: 1.35rem;
+    line-height: 1.18;
+  }
+
+  .betaSignupText,
+  .betaSignupHighlight p,
+  .betaSignupFootnote {
+    line-height: 1.58;
+  }
+
+  .betaSignupFormCard {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .betaSignupFormCard textarea {
+    min-height: 118px;
+  }
+}
