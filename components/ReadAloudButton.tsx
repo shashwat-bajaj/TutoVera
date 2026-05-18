@@ -67,15 +67,15 @@ function pickVoice(
   );
   if (exact) return exact;
 
-  const partial = voices.find((voice) =>
+  const startsWith = voices.find((voice) =>
     prefixes.some((prefix) => voice.lang?.toLowerCase().startsWith(prefix))
   );
-  if (partial) return partial;
+  if (startsWith) return startsWith;
 
-  const fallback = voices.find((voice) =>
+  const includes = voices.find((voice) =>
     prefixes.some((prefix) => voice.lang?.toLowerCase().includes(prefix))
   );
-  if (fallback) return fallback;
+  if (includes) return includes;
 
   return null;
 }
@@ -95,6 +95,10 @@ export default function ReadAloudButton({
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const speechText = useMemo(() => stripForSpeech(text), [text]);
+  const selectedVoice = useMemo(() => pickVoice(voices, language), [voices, language]);
+
+  const missingRequestedVoice =
+    language !== 'English' && voices.length > 0 && !selectedVoice;
 
   useEffect(() => {
     const supported =
@@ -108,15 +112,16 @@ export default function ReadAloudButton({
 
     function loadVoices() {
       const nextVoices = window.speechSynthesis.getVoices();
-      if (nextVoices.length > 0) {
-        setVoices(nextVoices);
-      }
+      setVoices(nextVoices);
     }
 
     loadVoices();
     window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
 
+    const fallbackTimer = window.setTimeout(loadVoices, 600);
+
     return () => {
+      window.clearTimeout(fallbackTimer);
       window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
       window.speechSynthesis.cancel();
     };
@@ -126,6 +131,7 @@ export default function ReadAloudButton({
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+
     utteranceRef.current = null;
     setIsSpeaking(false);
   }
@@ -133,15 +139,18 @@ export default function ReadAloudButton({
   function startSpeech() {
     if (!isSupported || !speechText) return;
 
+    if (missingRequestedVoice) {
+      return;
+    }
+
     const utterance = new SpeechSynthesisUtterance(speechText);
     utterance.rate = 1;
     utterance.pitch = 1;
     utterance.lang = getLanguageCode(language);
 
-    const voice = pickVoice(voices, language);
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
     }
 
     utterance.onend = () => {
@@ -161,6 +170,30 @@ export default function ReadAloudButton({
   }
 
   if (!isSupported || !speechText) return null;
+
+  if (missingRequestedVoice) {
+    return (
+      <div style={{ display: 'grid', gap: 6, maxWidth: '100%' }}>
+        <button
+          type="button"
+          className="secondary readAloudButton"
+          disabled
+          title={`${language} speech voice is not available in this browser or device.`}
+          style={{
+            minWidth: 132,
+            justifyContent: 'center'
+          }}
+        >
+          {language} voice unavailable
+        </button>
+
+        <p className="small" style={{ margin: 0 }}>
+          This browser or device does not currently expose a {language} speech voice. The translated
+          text is still available visually.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <button

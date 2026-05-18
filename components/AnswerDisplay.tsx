@@ -18,6 +18,32 @@ const LANGUAGES = [
 
 type Language = (typeof LANGUAGES)[number];
 
+function getLanguageCode(language: Language) {
+  switch (language) {
+    case 'Spanish':
+      return 'es-ES';
+    case 'Hindi':
+      return 'hi-IN';
+    case 'French':
+      return 'fr-FR';
+    case 'Arabic':
+      return 'ar-SA';
+    case 'Portuguese':
+      return 'pt-PT';
+    case 'Chinese':
+      return 'zh-CN';
+    case 'Russian':
+      return 'ru-RU';
+    case 'English':
+    default:
+      return 'en-US';
+  }
+}
+
+function getLanguageDirection(language: Language) {
+  return language === 'Arabic' ? 'rtl' : 'ltr';
+}
+
 export default function AnswerDisplay({ text }: { text: string }) {
   const [displayText, setDisplayText] = useState(text);
   const [currentLanguage, setCurrentLanguage] = useState<Language>('English');
@@ -25,6 +51,10 @@ export default function AnswerDisplay({ text }: { text: string }) {
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const displayDirection = getLanguageDirection(currentLanguage);
+  const displayLanguageCode = getLanguageCode(currentLanguage);
+  const isRtl = displayDirection === 'rtl';
 
   useEffect(() => {
     setDisplayText(text);
@@ -39,10 +69,9 @@ export default function AnswerDisplay({ text }: { text: string }) {
         data: { user }
       } = await supabase.auth.getUser();
 
-      const preferredLanguage =
-        user?.user_metadata?.preferences?.translationLanguage || 'English';
+      const preferredLanguage = user?.user_metadata?.preferences?.translationLanguage || 'English';
 
-      if (LANGUAGES.includes(preferredLanguage)) {
+      if (typeof preferredLanguage === 'string' && LANGUAGES.includes(preferredLanguage as Language)) {
         setSelectedLanguage(preferredLanguage as Language);
       } else {
         setSelectedLanguage('English');
@@ -186,7 +215,15 @@ export default function AnswerDisplay({ text }: { text: string }) {
         ) : null}
       </div>
 
-      <div style={{ display: 'grid', gap: 0 }}>
+      <div
+        dir={displayDirection}
+        lang={displayLanguageCode}
+        style={{
+          display: 'grid',
+          gap: 0,
+          textAlign: isRtl ? 'right' : 'left'
+        }}
+      >
         <RenderedContent content={displayText} />
       </div>
     </div>

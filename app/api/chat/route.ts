@@ -359,6 +359,132 @@ Stay in hint mode unless a full solution is absolutely necessary.`;
   return enhanced.trim();
 }
 
+const SUBJECT_SIGNAL_PATTERNS: Record<SubjectConfig['key'], RegExp[]> = {
+  math: [
+    /\b(algebra|arithmetic|calculus|geometry|trigonometry|statistics|probability)\b/i,
+    /\b(solve|factor|simplify|evaluate|differentiate|integrate|derivative|integral)\b/i,
+    /\b(equation|expression|polynomial|quadratic|linear|slope|intercept|graph|plot)\b/i,
+    /\b(angle|triangle|circle|area|volume|matrix|vector|logarithm|exponent|fraction|percentage)\b/i,
+    /\bf\s*\(\s*x\s*\)/i,
+    /[0-9]\s*[+\-*/^=]\s*[0-9a-z(]/i,
+    /\bx\s*(\^|²|=|\+|-|\*)/i
+  ],
+  physics: [
+    /\b(physics|force|velocity|speed|acceleration|motion|newton|mass|gravity|friction)\b/i,
+    /\b(energy|momentum|impulse|projectile|kinematics|dynamics|torque|pressure)\b/i,
+    /\b(wave|frequency|wavelength|electricity|current|voltage|resistance|circuit)\b/i,
+    /\b(magnetic|magnetism|thermodynamics|heat|temperature|quantum|relativity|unit|units)\b/i,
+    /\b(work-energy|work energy|power)\b/i,
+    /\b(f\s*=\s*m\s*a|v\s*=\s*d\s*\/\s*t|e\s*=\s*m\s*c)\b/i
+  ],
+  chemistry: [
+    /\b(chemistry|atom|molecule|compound|element|periodic table|electron|proton|neutron)\b/i,
+    /\b(mole|moles|molar|molarity|stoichiometry|reaction|reactant|product|chemical equation)\b/i,
+    /\b(balance|balancing|bond|ionic|covalent|acid|base|ph|solution|concentration)\b/i,
+    /\b(oxidation|reduction|redox|enthalpy|organic|hydrocarbon|isotope|ion)\b/i,
+    /\b(h2o|co2|nacl|o2|hcl|naoh|ch4|c6h12o6)\b/i
+  ],
+  biology: [
+    /\b(biology|cell|cells|dna|rna|gene|genes|genetics|chromosome|evolution)\b/i,
+    /\b(mitosis|meiosis|photosynthesis|cellular respiration|respiration|osmosis|diffusion)\b/i,
+    /\b(organism|species|ecosystem|ecology|anatomy|physiology|enzyme|protein)\b/i,
+    /\b(membrane|tissue|organ|heart|lung|brain|nervous|immune|digestive)\b/i,
+    /\b(darwin|natural selection|homeostasis|bacteria|virus|plant|animal)\b/i
+  ]
+};
+
+const OBVIOUS_NON_SUBJECT_PATTERNS = [
+  /\bcapital\s+of\b/i,
+  /\bcurrency\s+of\b/i,
+  /\bpopulation\s+of\b/i,
+  /\bweather\b/i,
+  /\bnews\b/i,
+  /\bstock price\b/i,
+  /\bexchange rate\b/i,
+  /\brecipe\b/i,
+  /\bmovie\b/i,
+  /\bsong\b/i,
+  /\blyrics\b/i,
+  /\bsports?\b/i,
+  /\bfootball\b/i,
+  /\bcricket\b/i,
+  /\belection\b/i,
+  /\bvisa\b/i,
+  /\bhotel\b/i,
+  /\bflight\b/i,
+  /\brestaurant\b/i,
+  /\bprime minister\b/i,
+  /\bpresident\b/i,
+  /\bking\b/i,
+  /\bqueen\b/i,
+  /\bceo\b/i,
+  /\bfounder\b/i
+];
+
+function normalizeSubjectBoundaryText(text: string) {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function hasSubjectSignal(text: string, subject: SubjectConfig) {
+  const normalized = normalizeSubjectBoundaryText(text);
+  return SUBJECT_SIGNAL_PATTERNS[subject.key].some((pattern) => pattern.test(normalized));
+}
+
+function hasOtherSubjectSignal(text: string, subject: SubjectConfig) {
+  const normalized = normalizeSubjectBoundaryText(text);
+
+  return Object.entries(SUBJECT_SIGNAL_PATTERNS).some(([subjectKey, patterns]) => {
+    if (subjectKey === subject.key) return false;
+    return patterns.some((pattern) => pattern.test(normalized));
+  });
+}
+
+function getSubjectBoundaryRefusal({
+  subject,
+  audience
+}: {
+  subject: SubjectConfig;
+  audience: string;
+}) {
+  if (audience === 'parent') {
+    return `Hello! I'm TutoVera ${subject.name}, and this parent workspace is focused on ${subject.name.toLowerCase()} learning support. Share a ${subject.name.toLowerCase()} topic, problem, or step your child is stuck on, and I’ll help you explain it clearly.`;
+  }
+
+  return `Hello! I'm TutoVera ${subject.name}, and I’m focused on ${subject.name.toLowerCase()} learning. Send me a ${subject.name.toLowerCase()} problem, topic, or step you’re stuck on, and I’ll help you work through it clearly.`;
+}
+
+function getObviousSubjectBoundaryRefusal({
+  question,
+  subject,
+  audience,
+  hasImage
+}: {
+  question: string;
+  subject: SubjectConfig;
+  audience: string;
+  hasImage: boolean;
+}) {
+  if (hasImage) return null;
+
+  const normalized = normalizeSubjectBoundaryText(question);
+  if (!normalized) return null;
+
+  if (hasSubjectSignal(normalized, subject)) {
+    return null;
+  }
+
+  const hasAnotherSubject = hasOtherSubjectSignal(normalized, subject);
+  const isObviousGeneralQuestion = OBVIOUS_NON_SUBJECT_PATTERNS.some((pattern) =>
+    pattern.test(normalized)
+  );
+
+  if (hasAnotherSubject || isObviousGeneralQuestion) {
+    return getSubjectBoundaryRefusal({ subject, audience });
+  }
+
+  return null;
+}
+
 function isRetryableTutorError(error: any) {
   const message = String(error?.message || '');
   const status =
@@ -633,6 +759,26 @@ export async function POST(request: NextRequest) {
 
     if (!questionText) {
       return NextResponse.json({ error: 'Question is required.' }, { status: 400 });
+    }
+
+    const subjectBoundaryRefusal = getObviousSubjectBoundaryRefusal({
+      question: questionText,
+      subject: subjectConfig,
+      audience,
+      hasImage: Boolean(imagePayload)
+    });
+
+    if (subjectBoundaryRefusal) {
+      return NextResponse.json({
+        answer: subjectBoundaryRefusal,
+        conversationId:
+          typeof conversationId === 'string' && conversationId.trim()
+            ? conversationId.trim()
+            : null,
+        subject: activeSubject,
+        imageUsed: false,
+        subjectBoundary: true
+      });
     }
 
     if (!process.env.GEMINI_API_KEY) {

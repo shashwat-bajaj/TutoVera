@@ -13,11 +13,42 @@ const LANGUAGES = [
   'Russian'
 ] as const;
 
+type Language = (typeof LANGUAGES)[number];
+
+function getLanguageCode(language: Language) {
+  switch (language) {
+    case 'Spanish':
+      return 'es-ES';
+    case 'Hindi':
+      return 'hi-IN';
+    case 'French':
+      return 'fr-FR';
+    case 'Arabic':
+      return 'ar-SA';
+    case 'Portuguese':
+      return 'pt-PT';
+    case 'Chinese':
+      return 'zh-CN';
+    case 'Russian':
+      return 'ru-RU';
+    default:
+      return 'en-US';
+  }
+}
+
+function getLanguageDirection(language: Language) {
+  return language === 'Arabic' ? 'rtl' : 'ltr';
+}
+
 export default function TranslationPanel({ text }: { text: string }) {
-  const [language, setLanguage] = useState<(typeof LANGUAGES)[number]>('Spanish');
+  const [language, setLanguage] = useState<Language>('Spanish');
   const [translated, setTranslated] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const translatedDirection = getLanguageDirection(language);
+  const translatedLanguageCode = getLanguageCode(language);
+  const isRtl = translatedDirection === 'rtl';
 
   async function translateText() {
     setLoading(true);
@@ -49,10 +80,7 @@ export default function TranslationPanel({ text }: { text: string }) {
   return (
     <div className="translationPanel">
       <div className="translationControls">
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value as (typeof LANGUAGES)[number])}
-        >
+        <select value={language} onChange={(e) => setLanguage(e.target.value as Language)}>
           {LANGUAGES.map((item) => (
             <option key={item} value={item}>
               {item}
@@ -60,12 +88,7 @@ export default function TranslationPanel({ text }: { text: string }) {
           ))}
         </select>
 
-        <button
-          type="button"
-          className="secondary"
-          onClick={translateText}
-          disabled={loading}
-        >
+        <button type="button" className="secondary" onClick={translateText} disabled={loading}>
           {loading ? 'Translating...' : 'Translate'}
         </button>
       </div>
@@ -73,7 +96,14 @@ export default function TranslationPanel({ text }: { text: string }) {
       {error ? <p className="small">{error}</p> : null}
 
       {translated ? (
-        <div className="card translatedSurface">
+        <div
+          className="card translatedSurface"
+          dir={translatedDirection}
+          lang={translatedLanguageCode}
+          style={{
+            textAlign: isRtl ? 'right' : 'left'
+          }}
+        >
           <p className="small">
             <strong>Translated to {language}</strong>
           </p>
