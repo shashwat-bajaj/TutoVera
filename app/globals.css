@@ -1740,7 +1740,8 @@ html[data-theme='light'] .turnLabel {
   .pricingPlanCard,
   .expandedCheckoutCard {
     max-width: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   pre,
@@ -1834,7 +1835,7 @@ html[data-theme='light'] .turnLabel {
 
   .homeLeadTitle {
     word-break: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   .homeLeadPreviewWrap,
@@ -1941,7 +1942,58 @@ html[data-theme='light'] .turnLabel {
 
   .homeLeadSubtext,
   .small {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: manual;
+  }
+
+  #updates,
+  #updates .card,
+  #updates .featureCard,
+  #updates .innerFeatureCard,
+  #updates p,
+  #updates span,
+  #updates small,
+  #updates .small,
+  .betaSignup,
+  .betaSignupCard,
+  .betaSignup p,
+  .betaSignup span,
+  .betaSignup small,
+  .betaSignup .small,
+  .betaSignupCard p,
+  .betaSignupCard span,
+  .betaSignupCard small,
+  .betaSignupCard .small {
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: manual;
+  }
+
+  #updates form,
+  .betaSignup form,
+  .betaSignupCard form {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  #updates input,
+  #updates textarea,
+  #updates select,
+  #updates button,
+  #updates .btn,
+  .betaSignup input,
+  .betaSignup textarea,
+  .betaSignup select,
+  .betaSignup button,
+  .betaSignup .btn,
+  .betaSignupCard input,
+  .betaSignupCard textarea,
+  .betaSignupCard select,
+  .betaSignupCard button,
+  .betaSignupCard .btn {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .responseBox {
