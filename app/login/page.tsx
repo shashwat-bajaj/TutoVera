@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Reveal from '@/components/Reveal';
 import { createClient } from '@/lib/supabase/client';
@@ -80,7 +80,7 @@ function hasRealSupabaseIdentity(user: unknown) {
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const nextPath = getSafeNext(searchParams.get('next'));
   const errorMessage = getFriendlyError(searchParams.get('error'));
@@ -94,16 +94,90 @@ function LoginPageInner() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState(errorMessage);
   const [loading, setLoading] = useState(false);
+  const handledExternalAuthRef = useRef(false);
 
   const baseUrl = useMemo(() => getURL(), []);
 
-  function getAuthCallbackUrl() {
-    return `${baseUrl}auth/callback?next=${encodeURIComponent(nextPath)}`;
+  function getAuthCallbackUrl({ popup = false }: { popup?: boolean } = {}) {
+    const callbackUrl = new URL('/auth/callback', baseUrl);
+
+    callbackUrl.searchParams.set('next', nextPath);
+
+    if (popup) {
+      callbackUrl.searchParams.set('popup', '1');
+    }
+
+    return callbackUrl.toString();
   }
 
   function getConfirmUrl() {
     return `${baseUrl}auth/confirm?next=${encodeURIComponent(nextPath)}`;
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    function finishExternalAuthReturn() {
+      if (handledExternalAuthRef.current) return;
+
+      handledExternalAuthRef.current = true;
+
+      pushAuthAnalyticsEvent('login_success', {
+        method: 'google',
+        auth_flow: 'google_oauth',
+        next_path: nextPath
+      });
+
+      router.push(nextPath);
+      router.refresh();
+    }
+
+    async function checkForSignedInUser() {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!cancelled && user) {
+        finishExternalAuthReturn();
+      }
+    }
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        finishExternalAuthReturn();
+      }
+    });
+
+    function handleFocusOrVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        void checkForSignedInUser();
+      }
+    }
+
+    function handleAuthPopupMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+
+      const data = event.data as { type?: string; success?: boolean };
+
+      if (data?.type === 'tutovera-auth-complete' && data.success) {
+        void checkForSignedInUser();
+      }
+    }
+
+    window.addEventListener('focus', checkForSignedInUser);
+    window.addEventListener('message', handleAuthPopupMessage);
+    document.addEventListener('visibilitychange', handleFocusOrVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+      window.removeEventListener('focus', checkForSignedInUser);
+      window.removeEventListener('message', handleAuthPopupMessage);
+      document.removeEventListener('visibilitychange', handleFocusOrVisibilityChange);
+    };
+  }, [nextPath, router, supabase]);
 
   function switchMode(nextMode: 'login' | 'signup') {
     setMode(nextMode);
@@ -160,6 +234,7 @@ function LoginPageInner() {
       }
 
       pushAuthAnalyticsEvent('login_success', {
+        method: 'email',
         auth_flow: 'email_password',
         next_path: nextPath
       });
@@ -194,6 +269,7 @@ function LoginPageInner() {
 
     if (hasRealSupabaseIdentity(data.user)) {
       pushAuthAnalyticsEvent('signup_started', {
+        method: 'email',
         auth_flow: 'email_password_confirmation_required',
         account_role: accountRole,
         next_path: nextPath
@@ -210,19 +286,42 @@ function LoginPageInner() {
     if (loading) return;
 
     setLoading(true);
-    setStatus('Redirecting to Google...');
+    setStatus('Opening Google sign-in in a new tab...');
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const authWindow = window.open('about:blank', '_blank', 'width=520,height=760');
+
+    if (!authWindow) {
+      setStatus(
+        'Your browser blocked the Google sign-in window. Please allow pop-ups for TutoVera and try again.'
+      );
+      setLoading(false);
+      return;
+    }
+
+    authWindow.document.title = 'Continue with Google';
+    authWindow.document.body.style.fontFamily =
+      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+    authWindow.document.body.style.padding = '24px';
+    authWindow.document.body.innerHTML = '<p>Opening Google sign-in for TutoVera...</p>';
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: getAuthCallbackUrl()
+        redirectTo: getAuthCallbackUrl({ popup: true }),
+        skipBrowserRedirect: true
       }
     });
 
-    if (error) {
-      setStatus(error.message);
+    if (error || !data?.url) {
+      authWindow.close();
+      setStatus(error?.message || 'Could not start Google sign-in. Please try again.');
       setLoading(false);
+      return;
     }
+
+    authWindow.location.href = data.url;
+    setStatus('Complete Google sign-in in the new tab. This page will update once you return.');
+    setLoading(false);
   }
 
   return (
