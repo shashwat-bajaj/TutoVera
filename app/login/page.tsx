@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getURL } from '@/lib/site-url';
 
 type AccountRole = 'student' | 'parent' | 'student-parent';
-type AuthAnalyticsEventName = 'signup_complete' | 'login_success';
+type AuthAnalyticsEventName = 'signup_started' | 'login_success';
 
 type WindowWithDataLayer = Window & {
   dataLayer?: Array<Record<string, unknown>>;
@@ -193,8 +193,8 @@ function LoginPageInner() {
     }
 
     if (hasRealSupabaseIdentity(data.user)) {
-      pushAuthAnalyticsEvent('signup_complete', {
-        auth_flow: 'email_password',
+      pushAuthAnalyticsEvent('signup_started', {
+        auth_flow: 'email_password_confirmation_required',
         account_role: accountRole,
         next_path: nextPath
       });

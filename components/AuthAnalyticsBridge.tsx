@@ -3,14 +3,14 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-type AuthAnalyticsEventName = 'signup_complete' | 'login_success';
+type AuthAnalyticsEventName = 'signup_started' | 'signup_complete' | 'login_success';
 
 type WindowWithDataLayer = Window & {
   dataLayer?: Object[];
 };
 
 function isAuthAnalyticsEvent(value: string | null): value is AuthAnalyticsEventName {
-  return value === 'signup_complete' || value === 'login_success';
+  return value === 'signup_started' || value === 'signup_complete' || value === 'login_success';
 }
 
 function pushAuthAnalyticsEvent({
