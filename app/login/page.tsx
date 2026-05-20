@@ -77,6 +77,17 @@ function hasRealSupabaseIdentity(user: unknown) {
   return maybeUser.identities.length > 0;
 }
 
+function isSafariBrowser() {
+  if (typeof navigator === 'undefined') return false;
+
+  const userAgent = navigator.userAgent;
+
+  return (
+    /Safari/i.test(userAgent) &&
+    !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Android/i.test(userAgent)
+  );
+}
+
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -286,6 +297,25 @@ function LoginPageInner() {
     if (loading) return;
 
     setLoading(true);
+
+    if (isSafariBrowser()) {
+      setStatus('Redirecting to Google...');
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getAuthCallbackUrl()
+        }
+      });
+
+      if (error) {
+        setStatus(error.message);
+        setLoading(false);
+      }
+
+      return;
+    }
+
     setStatus('Opening Google sign-in in a new tab...');
 
     const authWindow = window.open('about:blank', '_blank', 'width=520,height=760');
