@@ -5,16 +5,25 @@ import Reveal from '@/components/Reveal';
 
 const supportEmail = 'support@tutovera.com';
 
-type ContactLeadEvent = {
-  event: 'generate_lead';
+type ContactAnalyticsEvent = {
+  event: 'generate_lead' | 'contact_submit_success';
   form_name: string;
   lead_type: string;
   event_source: string;
   value: number;
   currency: string;
+  page_path?: string;
+  has_name?: boolean;
+  message_length?: number;
 };
 
-function pushContactLeadEvent() {
+function pushContactAnalyticsEvents({
+  hasName,
+  messageLength
+}: {
+  hasName: boolean;
+  messageLength: number;
+}) {
   if (typeof window === 'undefined') return;
 
   const windowWithDataLayer = window as Window & {
@@ -23,16 +32,29 @@ function pushContactLeadEvent() {
 
   windowWithDataLayer.dataLayer = windowWithDataLayer.dataLayer || [];
 
-  const eventPayload: ContactLeadEvent = {
-    event: 'generate_lead',
+  const sharedPayload = {
     form_name: 'contact_form',
     lead_type: 'contact_submit',
     event_source: 'contact_page',
     value: 1,
-    currency: 'USD'
+    currency: 'USD',
+    page_path: window.location.pathname,
+    has_name: hasName,
+    message_length: messageLength
   };
 
-  windowWithDataLayer.dataLayer.push(eventPayload);
+  const generateLeadPayload: ContactAnalyticsEvent = {
+    event: 'generate_lead',
+    ...sharedPayload
+  };
+
+  const contactSubmitSuccessPayload: ContactAnalyticsEvent = {
+    event: 'contact_submit_success',
+    ...sharedPayload
+  };
+
+  windowWithDataLayer.dataLayer.push(generateLeadPayload);
+  windowWithDataLayer.dataLayer.push(contactSubmitSuccessPayload);
 }
 
 export default function ContactPage() {
@@ -43,7 +65,11 @@ export default function ContactPage() {
   const [loading, setLoading] = useState(false);
 
   async function submitContact() {
-    if (loading || !email.trim() || !message.trim()) return;
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedMessage = message.trim();
+
+    if (loading || !trimmedEmail || !trimmedMessage) return;
 
     setLoading(true);
     setStatus('Sending...');
@@ -52,7 +78,11 @@ export default function ContactPage() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, message })
+        body: JSON.stringify({
+          name: trimmedName,
+          email: trimmedEmail,
+          message: trimmedMessage
+        })
       });
 
       const data = await res.json();
@@ -62,7 +92,10 @@ export default function ContactPage() {
         return;
       }
 
-      pushContactLeadEvent();
+      pushContactAnalyticsEvents({
+        hasName: Boolean(trimmedName),
+        messageLength: trimmedMessage.length
+      });
 
       setStatus('Your message has been sent. Thank you for helping improve TutoVera.');
       setName('');

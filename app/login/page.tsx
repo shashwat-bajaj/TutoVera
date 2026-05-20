@@ -7,6 +7,28 @@ import { createClient } from '@/lib/supabase/client';
 import { getURL } from '@/lib/site-url';
 
 type AccountRole = 'student' | 'parent' | 'student-parent';
+type AuthAnalyticsEventName = 'signup_complete' | 'login_success';
+
+type WindowWithDataLayer = Window & {
+  dataLayer?: Array<Record<string, unknown>>;
+};
+
+function pushAuthAnalyticsEvent(
+  eventName: AuthAnalyticsEventName,
+  eventParams: Record<string, unknown> = {}
+) {
+  if (typeof window === 'undefined') return;
+
+  const windowWithDataLayer = window as WindowWithDataLayer;
+  windowWithDataLayer.dataLayer = windowWithDataLayer.dataLayer || [];
+
+  windowWithDataLayer.dataLayer.push({
+    event: eventName,
+    method: 'email',
+    page_path: window.location.pathname,
+    ...eventParams
+  });
+}
 
 function getFriendlyError(value: string | null) {
   if (value === 'auth_callback_failed') {
@@ -36,6 +58,23 @@ function cleanUsername(value: string) {
 function isValidUsername(value: string) {
   if (!value) return true;
   return /^[a-z0-9._-]{3,32}$/.test(value);
+}
+
+function hasRealSupabaseIdentity(user: unknown) {
+  if (!user || typeof user !== 'object') return false;
+
+  const maybeUser = user as {
+    id?: unknown;
+    identities?: unknown;
+  };
+
+  if (typeof maybeUser.id !== 'string' || !maybeUser.id) return false;
+
+  if (!Array.isArray(maybeUser.identities)) {
+    return false;
+  }
+
+  return maybeUser.identities.length > 0;
 }
 
 function LoginPageInner() {
@@ -120,6 +159,11 @@ function LoginPageInner() {
         return;
       }
 
+      pushAuthAnalyticsEvent('login_success', {
+        auth_flow: 'email_password',
+        next_path: nextPath
+      });
+
       router.push(nextPath);
       router.refresh();
       return;
@@ -127,7 +171,7 @@ function LoginPageInner() {
 
     const displayName = normalizedUsername || trimmedFullName;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
@@ -146,6 +190,14 @@ function LoginPageInner() {
       setStatus(error.message);
       setLoading(false);
       return;
+    }
+
+    if (hasRealSupabaseIdentity(data.user)) {
+      pushAuthAnalyticsEvent('signup_complete', {
+        auth_flow: 'email_password',
+        account_role: accountRole,
+        next_path: nextPath
+      });
     }
 
     setStatus(

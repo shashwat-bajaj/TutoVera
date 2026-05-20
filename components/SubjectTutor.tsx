@@ -81,6 +81,10 @@ type AccountPlanAccess = {
   imageUploadLimitReached: boolean;
 };
 
+type WindowWithDataLayer = Window & {
+  dataLayer?: Array<Record<string, unknown>>;
+};
+
 const defaultPlanAccess: AccountPlanAccess = {
   signedIn: false,
   email: null,
@@ -101,6 +105,51 @@ const defaultPlanAccess: AccountPlanAccess = {
   imageUploadLimitWarning: false,
   imageUploadLimitReached: false
 };
+
+function pushTutorPromptSubmittedEvent({
+  subject,
+  mode,
+  audience,
+  isSignedIn,
+  plan,
+  hasImage,
+  gradeLevel,
+  isFollowUp,
+  hasEmailForHistory,
+  graphOnlyBypass
+}: {
+  subject: SubjectKey;
+  mode: TutorMode;
+  audience: 'student' | 'parent';
+  isSignedIn: boolean;
+  plan: string;
+  hasImage: boolean;
+  gradeLevel: GradeLevel;
+  isFollowUp: boolean;
+  hasEmailForHistory: boolean;
+  graphOnlyBypass: boolean;
+}) {
+  if (typeof window === 'undefined') return;
+
+  const windowWithDataLayer = window as WindowWithDataLayer;
+  windowWithDataLayer.dataLayer = windowWithDataLayer.dataLayer || [];
+
+  windowWithDataLayer.dataLayer.push({
+    event: 'tutor_prompt_submitted',
+    event_source: 'subject_tutor',
+    subject,
+    mode,
+    audience,
+    is_signed_in: isSignedIn,
+    plan: plan || 'free',
+    has_image: hasImage,
+    page_path: window.location.pathname,
+    grade_level: gradeLevel,
+    is_follow_up: isFollowUp,
+    has_email_for_history: hasEmailForHistory,
+    graph_only_bypass: graphOnlyBypass
+  });
+}
 
 function ReadOnlyField({ value }: { value: string }) {
   return (
@@ -700,6 +749,19 @@ export default function SubjectTutor({
         setShowGraphForCurrentTurn(false);
         return;
       }
+
+      pushTutorPromptSubmittedEvent({
+        subject: payload.subject,
+        mode: payload.mode,
+        audience: payload.audience,
+        isSignedIn: Boolean(accountEmail || planAccess.signedIn),
+        plan: planAccess.plan || 'free',
+        hasImage: Boolean(payload.image),
+        gradeLevel: payload.gradeLevel,
+        isFollowUp: Boolean(payload.conversationId),
+        hasEmailForHistory: Boolean(accountEmail || payload.email),
+        graphOnlyBypass: Boolean(payload.graphOnlyBypass)
+      });
 
       setAnswer(data.answer || 'No response returned.');
 

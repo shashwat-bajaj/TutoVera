@@ -34,7 +34,8 @@ type DataLayerEvent = {
   item_id?: string;
   item_name?: string;
   event_source?: string;
-  ecommerce?: {
+  source_page?: string;
+  ecommerce?: null | {
     transaction_id?: string;
     currency: string;
     value: number;
@@ -48,11 +49,13 @@ type DataLayerEvent = {
   };
 };
 
-declare global {
-  interface Window {
-    paypal?: any;
-  }
-}
+type WindowWithPayPal = Window & {
+  paypal?: any;
+};
+
+type WindowWithDataLayer = Window & {
+  dataLayer?: Object[];
+};
 
 let expandedPayPalScriptPromise: Promise<void> | null = null;
 let expandedPayPalScriptClientId = '';
@@ -60,31 +63,30 @@ let expandedPayPalScriptClientId = '';
 function loadExpandedPayPalScript(clientId: string) {
   if (typeof window === 'undefined') return Promise.resolve();
 
+  const windowWithPayPal = window as WindowWithPayPal;
+
   const existingScript = document.querySelector<HTMLScriptElement>(
     'script[data-tutovera-paypal-expanded]'
   );
 
   const existingClientId = existingScript?.dataset.paypalClientId || '';
 
-  if (window.paypal?.CardFields && expandedPayPalScriptClientId === clientId) {
+  if (windowWithPayPal.paypal?.CardFields && expandedPayPalScriptClientId === clientId) {
     return Promise.resolve();
   }
 
-  if (window.paypal?.CardFields && existingClientId === clientId) {
+  if (windowWithPayPal.paypal?.CardFields && existingClientId === clientId) {
     expandedPayPalScriptClientId = clientId;
     return Promise.resolve();
   }
 
-  if (
-    expandedPayPalScriptPromise &&
-    expandedPayPalScriptClientId === clientId
-  ) {
+  if (expandedPayPalScriptPromise && expandedPayPalScriptClientId === clientId) {
     return expandedPayPalScriptPromise;
   }
 
   if (existingScript && existingClientId && existingClientId !== clientId) {
     existingScript.remove();
-    window.paypal = undefined;
+    windowWithPayPal.paypal = undefined;
     expandedPayPalScriptPromise = null;
     expandedPayPalScriptClientId = '';
   }
@@ -97,7 +99,7 @@ function loadExpandedPayPalScript(clientId: string) {
     expandedPayPalScriptClientId = clientId;
 
     expandedPayPalScriptPromise = new Promise<void>((resolve, reject) => {
-      if (window.paypal?.CardFields) {
+      if (windowWithPayPal.paypal?.CardFields) {
         resolve();
         return;
       }
@@ -180,6 +182,43 @@ function getPlanDescription(plan: PaidPlanKey) {
   return 'The highest TutoVera access for heavier study, larger worksheet use, and deeper revision workflows.';
 }
 
+function getSourcePage() {
+  if (typeof window === 'undefined') return '/pricing';
+  return window.location.pathname || '/pricing';
+}
+
+function getPurchaseStorageKey(transactionId: string) {
+  return `tutovera_purchase_tracked_${transactionId}`;
+}
+
+function wasPurchaseAlreadyTracked(transactionId: string) {
+  if (typeof window === 'undefined' || !transactionId) return false;
+
+  try {
+    return window.sessionStorage.getItem(getPurchaseStorageKey(transactionId)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function markPurchaseTracked(transactionId: string) {
+  if (typeof window === 'undefined' || !transactionId) return;
+
+  try {
+    window.sessionStorage.setItem(getPurchaseStorageKey(transactionId), 'true');
+  } catch {
+    // Tracking should never block checkout.
+  }
+}
+
+function pushDataLayerEvent(eventPayload: DataLayerEvent) {
+  if (typeof window === 'undefined') return;
+
+  const windowWithDataLayer = window as WindowWithDataLayer;
+  windowWithDataLayer.dataLayer = windowWithDataLayer.dataLayer || [];
+  windowWithDataLayer.dataLayer.push(eventPayload);
+}
+
 function pushCheckoutEvent({
   event,
   plan,
@@ -195,14 +234,22 @@ function pushCheckoutEvent({
 }) {
   if (typeof window === 'undefined') return;
 
+  if (event === 'purchase' && transactionId && wasPurchaseAlreadyTracked(transactionId)) {
+    return;
+  }
+
   const value = getCheckoutValue(plan, billingCycle);
   const priceLabel = getPriceLabel(plan, billingCycle);
   const itemId = getCheckoutItemId(plan, billingCycle);
   const itemName = getCheckoutItemName(plan, billingCycle);
+  const sourcePage = getSourcePage();
 
-  window.dataLayer = window.dataLayer || [];
+  pushDataLayerEvent({
+    event: 'ecommerce_clear',
+    ecommerce: null
+  });
 
-  window.dataLayer.push({
+  pushDataLayerEvent({
     event,
     plan,
     billing_cycle: billingCycle,
@@ -213,6 +260,7 @@ function pushCheckoutEvent({
     item_id: itemId,
     item_name: itemName,
     event_source: eventSource,
+    source_page: sourcePage,
     ecommerce: {
       ...(transactionId ? { transaction_id: transactionId } : {}),
       currency: 'USD',
@@ -228,6 +276,10 @@ function pushCheckoutEvent({
       ]
     }
   });
+
+  if (event === 'purchase' && transactionId) {
+    markPurchaseTracked(transactionId);
+  }
 }
 
 export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpandedCheckoutProps) {
@@ -291,6 +343,8 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
   }
 
   async function captureOrder(orderId: string) {
+    if (isWorking) return;
+
     setIsWorking(true);
     setStatusKind('info');
     setStatusMessage('Confirming your TutoVera checkout...');
@@ -307,6 +361,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
 
     const result = (await response.json()) as {
       error?: string;
+      alreadyCaptured?: boolean;
       hasPaymentToken?: boolean;
       nextRenewalAt?: string;
     };
@@ -332,13 +387,15 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
       );
     }
 
-    pushCheckoutEvent({
-      event: 'purchase',
-      plan,
-      billingCycle,
-      transactionId: orderId,
-      eventSource: 'paypal_expanded_checkout'
-    });
+    if (!result.alreadyCaptured) {
+      pushCheckoutEvent({
+        event: 'purchase',
+        plan,
+        billingCycle,
+        transactionId: orderId,
+        eventSource: 'paypal_expanded_checkout'
+      });
+    }
 
     router.refresh();
   }
@@ -347,6 +404,8 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
     let isMounted = true;
 
     async function renderCardCheckout() {
+      const windowWithPayPal = window as WindowWithPayPal;
+
       setCardFieldsEligible(false);
       setCardFieldsReady(false);
       setCardFieldsPreparing(false);
@@ -376,9 +435,9 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
       try {
         await loadExpandedPayPalScript(clientId);
 
-        if (!isMounted || !window.paypal) return;
+        if (!isMounted || !windowWithPayPal.paypal) return;
 
-        if (!window.paypal.CardFields) {
+        if (!windowWithPayPal.paypal.CardFields) {
           setCardFieldsEligible(false);
           setCardFieldsPreparing(false);
           setStatusKind('error');
@@ -388,7 +447,7 @@ export default function PayPalExpandedCheckout({ plan, isSignedIn }: PayPalExpan
           return;
         }
 
-        const cardFields = window.paypal.CardFields({
+        const cardFields = windowWithPayPal.paypal.CardFields({
           style: {
             input: {
               color: '#0B1D3A',
