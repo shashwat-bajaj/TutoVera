@@ -1,4 +1,4 @@
-import { type EmailOtpType } from '@supabase/supabase-js';
+import { type EmailOtpType, type User } from '@supabase/supabase-js';
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { upsertProfileForUser } from '@/lib/profiles';
@@ -50,14 +50,27 @@ function buildConfirmedSignupRedirectUrl({
   return redirectUrl;
 }
 
+async function syncProfile(user: User | null) {
+  if (!user) return;
+
+  const adminSupabase = createAdminSupabase();
+
+  await upsertProfileForUser({
+    supabase: adminSupabase,
+    user
+  });
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const token_hash = searchParams.get('token_hash');
   const type = searchParams.get('type') as EmailOtpType | null;
+  const code = searchParams.get('code');
   const next = getSafeNext(searchParams.get('next'));
 
+  const supabase = await createClient();
+
   if (token_hash && type) {
-    const supabase = await createClient();
     const { data, error } = await supabase.auth.verifyOtp({
       type,
       token_hash
@@ -67,14 +80,7 @@ export async function GET(request: NextRequest) {
       const userFromVerification = data.user as AuthConfirmUser | null;
 
       try {
-        if (data.user) {
-          const adminSupabase = createAdminSupabase();
-
-          await upsertProfileForUser({
-            supabase: adminSupabase,
-            user: data.user
-          });
-        }
+        await syncProfile(data.user);
       } catch (profileError) {
         console.warn('PROFILE SYNC AFTER EMAIL CONFIRM FAILED:', profileError);
       }
@@ -91,6 +97,36 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.redirect(new URL(next, origin));
     }
+
+    console.warn('EMAIL CONFIRM TOKEN_HASH FLOW FAILED:', error.message);
+  }
+
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (!error) {
+      const userFromSession = data.user as AuthConfirmUser | null;
+
+      try {
+        await syncProfile(data.user);
+      } catch (profileError) {
+        console.warn('PROFILE SYNC AFTER EMAIL CONFIRM CODE FLOW FAILED:', profileError);
+      }
+
+      if (userFromSession) {
+        return NextResponse.redirect(
+          buildConfirmedSignupRedirectUrl({
+            next,
+            origin,
+            user: userFromSession
+          })
+        );
+      }
+
+      return NextResponse.redirect(new URL(next, origin));
+    }
+
+    console.warn('EMAIL CONFIRM CODE FLOW FAILED:', error.message);
   }
 
   return NextResponse.redirect(new URL('/login?error=auth_confirm_failed', origin));
