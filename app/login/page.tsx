@@ -77,17 +77,6 @@ function hasRealSupabaseIdentity(user: unknown) {
   return maybeUser.identities.length > 0;
 }
 
-function isSafariBrowser() {
-  if (typeof navigator === 'undefined') return false;
-
-  const userAgent = navigator.userAgent;
-
-  return (
-    /Safari/i.test(userAgent) &&
-    !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Android/i.test(userAgent)
-  );
-}
-
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -177,8 +166,21 @@ function LoginPageInner() {
       }
     }
 
+    function handleAuthStorageMessage(event: StorageEvent) {
+      if (event.key !== 'tutovera-auth-complete' || !event.newValue) return;
+
+      try {
+        const data = JSON.parse(event.newValue) as { type?: string; success?: boolean };
+
+        if (data?.type === 'tutovera-auth-complete' && data.success) {
+          void checkForSignedInUser();
+        }
+      } catch {}
+    }
+
     window.addEventListener('focus', checkForSignedInUser);
     window.addEventListener('message', handleAuthPopupMessage);
+    window.addEventListener('storage', handleAuthStorageMessage);
     document.addEventListener('visibilitychange', handleFocusOrVisibilityChange);
 
     return () => {
@@ -186,6 +188,7 @@ function LoginPageInner() {
       subscription.unsubscribe();
       window.removeEventListener('focus', checkForSignedInUser);
       window.removeEventListener('message', handleAuthPopupMessage);
+      window.removeEventListener('storage', handleAuthStorageMessage);
       document.removeEventListener('visibilitychange', handleFocusOrVisibilityChange);
     };
   }, [nextPath, router, supabase]);
@@ -297,25 +300,6 @@ function LoginPageInner() {
     if (loading) return;
 
     setLoading(true);
-
-    if (isSafariBrowser()) {
-      setStatus('Redirecting to Google...');
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getAuthCallbackUrl()
-        }
-      });
-
-      if (error) {
-        setStatus(error.message);
-        setLoading(false);
-      }
-
-      return;
-    }
-
     setStatus('Opening Google sign-in in a new tab...');
 
     const authWindow = window.open('about:blank', '_blank', 'width=520,height=760');

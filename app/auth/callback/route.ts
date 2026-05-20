@@ -70,7 +70,7 @@ function buildTrackedRedirectUrl({
   return redirectUrl;
 }
 
-function buildAuthCompletionResponse({
+function buildPopupCompletionResponse({
   success,
   redirectUrl,
   errorMessage
@@ -85,7 +85,8 @@ function buildAuthCompletionResponse({
     type: 'tutovera-auth-complete',
     success,
     redirectTo,
-    error: errorMessage || null
+    error: errorMessage || null,
+    timestamp: Date.now()
   };
 
   const html = `<!doctype html>
@@ -93,7 +94,7 @@ function buildAuthCompletionResponse({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TutoVera sign-in</title>
+    <title>TutoVera sign-in complete</title>
     <style>
       :root {
         color-scheme: dark;
@@ -133,10 +134,26 @@ function buildAuthCompletionResponse({
         line-height: 1.6;
       }
 
+      button,
       a {
-        color: #11b5a6;
+        display: inline-flex;
+        margin-top: 16px;
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 16px;
+        background: #ff7a1a;
+        color: #ffffff;
+        font: inherit;
         font-weight: 700;
         text-decoration: none;
+        cursor: pointer;
+      }
+
+      a.secondary {
+        margin-left: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f8fbff;
+        border: 1px solid rgba(207, 225, 247, 0.16);
       }
     </style>
   </head>
@@ -146,19 +163,18 @@ function buildAuthCompletionResponse({
       <p id="message">
         ${
           success
-            ? 'Returning you to TutoVera...'
+            ? 'Returning you to the original TutoVera tab. This tab should close automatically.'
             : 'Please close this tab and try signing in again from TutoVera.'
         }
       </p>
-      <p style="margin-top: 14px;">
-        <a href="${redirectUrl.toString()}">Continue to TutoVera</a>
-      </p>
+
+      <button type="button" onclick="window.close()">Close this tab</button>
+      <a class="secondary" href="${redirectUrl.toString()}">Continue here instead</a>
     </main>
 
     <script>
       (function () {
         var message = ${JSON.stringify(message)};
-        var redirectTo = ${JSON.stringify(redirectUrl.toString())};
 
         function updateMessage(text) {
           var messageNode = document.getElementById('message');
@@ -167,37 +183,37 @@ function buildAuthCompletionResponse({
           }
         }
 
-        var hasOpener = false;
+        try {
+          localStorage.setItem('tutovera-auth-complete', JSON.stringify(message));
+        } catch (error) {}
 
         try {
-          hasOpener = Boolean(window.opener && !window.opener.closed);
-        } catch (error) {
-          hasOpener = false;
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(message, window.location.origin);
+          }
+        } catch (error) {}
+
+        if (${success ? 'true' : 'false'}) {
+          updateMessage('Sign-in complete. Returning you to the original TutoVera tab...');
         }
 
-        if (hasOpener) {
+        var closeAttempts = 0;
+
+        function tryClose() {
+          closeAttempts += 1;
+
           try {
-            window.opener.postMessage(message, window.location.origin);
+            window.close();
           } catch (error) {}
 
-          updateMessage('Sign-in complete. This tab should close automatically.');
-
-          window.setTimeout(function () {
-            window.close();
-          }, 250);
-
-          window.setTimeout(function () {
+          if (closeAttempts < 8) {
+            window.setTimeout(tryClose, 250);
+          } else {
             updateMessage('Sign-in complete. You can close this tab and return to the original TutoVera tab.');
-          }, 1200);
-
-          return;
+          }
         }
 
-        updateMessage('Sign-in complete. Redirecting back to TutoVera...');
-
-        window.setTimeout(function () {
-          window.location.replace(redirectTo);
-        }, 500);
+        window.setTimeout(tryClose, 250);
       })();
     </script>
   </body>
@@ -216,6 +232,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const next = getSafeNext(searchParams.get('next'));
+  const isPopup = searchParams.get('popup') === '1';
 
   const fallbackRedirectUrl = new URL('/login?error=auth_callback_failed', origin);
 
@@ -240,26 +257,40 @@ export async function GET(request: NextRequest) {
       }
 
       if (userFromSession) {
-        return buildAuthCompletionResponse({
+        const trackedRedirectUrl = buildTrackedRedirectUrl({
+          next,
+          origin,
+          user: userFromSession
+        });
+
+        if (isPopup) {
+          return buildPopupCompletionResponse({
+            success: true,
+            redirectUrl: trackedRedirectUrl
+          });
+        }
+
+        return NextResponse.redirect(trackedRedirectUrl);
+      }
+
+      if (isPopup) {
+        return buildPopupCompletionResponse({
           success: true,
-          redirectUrl: buildTrackedRedirectUrl({
-            next,
-            origin,
-            user: userFromSession
-          })
+          redirectUrl: new URL(next, origin)
         });
       }
 
-      return buildAuthCompletionResponse({
-        success: true,
-        redirectUrl: new URL(next, origin)
-      });
+      return NextResponse.redirect(new URL(next, origin));
     }
   }
 
-  return buildAuthCompletionResponse({
-    success: false,
-    redirectUrl: fallbackRedirectUrl,
-    errorMessage: 'The sign-in callback failed.'
-  });
+  if (isPopup) {
+    return buildPopupCompletionResponse({
+      success: false,
+      redirectUrl: fallbackRedirectUrl,
+      errorMessage: 'The sign-in callback failed.'
+    });
+  }
+
+  return NextResponse.redirect(fallbackRedirectUrl);
 }
