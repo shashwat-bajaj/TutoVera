@@ -2179,8 +2179,3 @@ html[data-theme='light'] .turnLabel {
     min-height: 118px;
   }
 }
-
-/* Hide decorative hero/page-label badges while preserving useful status/plan/tool badges */
-.spotlightCard > div:first-child > .badge:first-child {
-  display: none;
-}
