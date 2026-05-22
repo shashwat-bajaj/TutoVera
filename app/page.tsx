@@ -119,16 +119,14 @@ export default function HomePage() {
       <Reveal delay={0.04}>
         <section className="grid cols-3">
           <div className="card featureCard">
-            <span className="badge">1</span>
-            <h2 style={{ margin: 0 }}>Ask</h2>
+            <h2 style={{ margin: 0 }}>Solve</h2>
             <p className="small" style={{ margin: 0 }}>
-              Type a question, paste your work, choose a subject, or use the parent workspace to
-              help a child without just giving away the answer.
+              Ask a subject question, paste your work, or share the step you are stuck on.
+              TutoVera helps you start clearly without turning learning into answer-copying.
             </p>
           </div>
 
           <div className="card featureCard">
-            <span className="badge">2</span>
             <h2 style={{ margin: 0 }}>Understand</h2>
             <p className="small" style={{ margin: 0 }}>
               Get clear explanations, follow-up guidance, hints, mistake checks, and step-by-step
@@ -137,7 +135,6 @@ export default function HomePage() {
           </div>
 
           <div className="card featureCard">
-            <span className="badge">3</span>
             <h2 style={{ margin: 0 }}>Improve</h2>
             <p className="small" style={{ margin: 0 }}>
               Save sessions, return to earlier work, upload worksheets on paid plans, and use review
