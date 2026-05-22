@@ -12,7 +12,6 @@ export default function HomePage() {
       <section className="homeLead">
         <div className="homeLeadGrid" style={{ alignItems: 'center' }}>
           <div className="homeLeadCopy">
-            <span className="badge">TutoVera</span>
 
             <h1 className="homeLeadTitle">
               Solve. Understand. <span>Improve.</span>

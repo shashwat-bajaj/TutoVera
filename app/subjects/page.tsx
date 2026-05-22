@@ -9,7 +9,6 @@ export default function SubjectsPage() {
     <div className="grid" style={{ gap: 24 }}>
       <Reveal delay={0.02}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
-          <span className="badge">Subjects</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
             <h1 style={{ margin: 0 }}>Choose the subject branch you want to work in.</h1>

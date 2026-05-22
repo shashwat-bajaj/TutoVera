@@ -26,7 +26,6 @@ export default function ParentsPage() {
     <div className="grid" style={{ gap: 24 }}>
       <Reveal delay={0.02}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
-          <span className="badge">Parent workspaces</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
             <h1 style={{ margin: 0 }}>Choose the subject your child needs help with.</h1>

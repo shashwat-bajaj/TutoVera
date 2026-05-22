@@ -9,7 +9,6 @@ export default function AboutPage() {
     <div className="grid" style={{ gap: 24 }}>
       <Reveal delay={0.02}>
         <section className="card spotlightCard" style={{ display: 'grid', gap: 14 }}>
-          <span className="badge">About TutoVera</span>
 
           <div style={{ display: 'grid', gap: 10 }}>
             <h1 style={{ margin: 0 }}>Learning support built to feel clearer and more continuous.</h1>
